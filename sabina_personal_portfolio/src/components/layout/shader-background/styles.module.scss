@@ -1,0 +1,27 @@
+// Vrstva shaderu pod celým webem. Fixed, takže při scrollu drží na místě
+// a sekce po ní přejíždějí.
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.overlay{
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: rgba(21, 22, 24, 0.5);
+  z-index: 1;
+}
+
+// Do <Landscape> se posílá JEN rozměr. Pozicování patří na .layer výš —
+// komponenta si na svůj kořen dává vlastní position: relative a se stejně
+// specifickým pravidlem se přebíjí, načež canvas zůstane bez výšky.
+.canvas {
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}

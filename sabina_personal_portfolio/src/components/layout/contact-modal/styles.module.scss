@@ -1,0 +1,605 @@
+// ContactModal — celoobrazovkový kontaktní overlay podle Figma návrhu.
+// Otevírá ho tlačítko „Domluvit spolupráci" v hlavičce.
+//
+// JEDNOTKY: rozvržení na vh/vw jako sekce, ALE blok značky a horní lišta
+// jedou v rem, protože kopírují hlavičku a musí s ní sedět na pixel.
+
+$accent: #bec948;
+$ink: #2e2e2e;
+$ink-soft: #4f4f4f;
+$ink-muted: rgba(46, 46, 46, 0.55);
+$line: rgba(46, 46, 46, 0.14);
+
+$header-height: 5.75rem;
+$gutter: clamp(1.5rem, 4vw, 3.25rem);
+
+// Backdrop kryje celý viewport, panel je z něj odsazený — ten rám kolem
+// dokola je klikací plocha na zavření.
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(12, 12, 12, 0.74);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+}
+
+.panel {
+  position: absolute;
+  inset: 2vh 1.6vw;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden auto;
+  border-radius: 0.75vw;
+  color: $ink;
+  // Světlejší sourozenec podkladu sekcí — modal má být nadhled nad
+  // stránkou, ne její pokračování, ale zůstává ve stejné rodině tónů.
+  background: linear-gradient(150deg, #e2e0dc 0%, #d7d5d0 48%, #ccc9c4 100%);
+  box-shadow: 0 4vh 10vh rgba(8, 8, 8, 0.45);
+}
+
+// Velký měkký tvar vlevo uprostřed, jak ho má návrh.
+.glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    34% 46% at 38% 52%,
+    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0.16) 58%,
+    transparent 78%
+  );
+}
+
+// Aktivní položka nemění barvu, jen dostane accentovou tečku pod sebou —
+// přesně tak je v návrhu zvýrazněný CONTACT.
+.isActive {
+  position: relative;
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -0.55rem;
+    width: 0.22rem;
+    height: 0.22rem;
+    border-radius: 50%;
+    background: $accent;
+    transform: translateX(-50%);
+  }
+}
+
+// Tečkovaný rastr oříznutý maskou do prstence na hraně světlého tvaru.
+// Návrh má tu hranu rozstříknutou do teček, ne plynule rozostřenou.
+//
+// Rozteč teček je schválně v px, ne ve vw — je to textura, která má mít
+// stejnou hrubost na malém i velkém monitoru.
+.grain {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.9) 0.9px, transparent 1px);
+  background-size: 4px 4px;
+  mask-image: radial-gradient(
+    36% 50% at 34% 52%,
+    transparent 50%,
+    #000 68%,
+    transparent 88%
+  );
+  -webkit-mask-image: radial-gradient(
+    36% 50% at 34% 52%,
+    transparent 50%,
+    #000 68%,
+    transparent 88%
+  );
+}
+
+/* ---------- Horní lišta ---------- */
+
+.bar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  // NE space-between: v návrhu sedí navigace hned vedle značky
+  // (kolem 21 % šířky panelu) a všechno volné místo je až za ní,
+  // před křížkem. Ten se odsune sám přes margin-left: auto.
+  justify-content: flex-start;
+  gap: clamp(2rem, 7vw, 11rem);
+  flex-shrink: 0;
+  height: $header-height;
+  padding-inline: $gutter;
+}
+
+// Rozměry 1:1 z layout/header — modal musí na značku navazovat bez skoku.
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-shrink: 0;
+}
+
+.brandMark {
+  width: auto;
+  height: 2.15rem;
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.brandName {
+  font-size: 1.32rem;
+  font-weight: 500;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+}
+
+.brandSurname {
+  margin-top: 0.24rem;
+  font-size: 0.62rem;
+  font-weight: 300;
+  letter-spacing: 0.235em;
+  text-transform: uppercase;
+  align-self: flex-end;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: clamp(1.1rem, 2.6vw, 2.5rem);
+}
+
+.navLink {
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: color 0.22s ease;
+
+  &:hover {
+    color: $accent;
+  }
+}
+
+.close {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  flex-shrink: 0;
+  padding: 0;
+  border: 1px solid rgba(46, 46, 46, 0.22);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+  color: $ink;
+  cursor: pointer;
+  transition: background 0.24s ease, border-color 0.24s ease, transform 0.24s ease;
+
+  svg {
+    width: 42%;
+    height: 42%;
+  }
+
+  &:hover {
+    background: $accent;
+    border-color: $accent;
+    transform: rotate(90deg);
+  }
+}
+
+/* ---------- Tělo ---------- */
+
+.body {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 0.85fr 1fr;
+  gap: 8vw;
+  flex: 1;
+  padding: 6vh 7.5vw 6vh;
+}
+
+/* ---------- Levý sloupec ---------- */
+
+// Accentová tečka, krátká linka a text — přesně v tomhle pořadí jako návrh.
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.6vw;
+  margin: 0 0 2.6vh;
+  font-size: clamp(0.55rem, 1.24vh, 1.65rem);
+  font-weight: 400;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: $ink-soft;
+}
+
+.eyebrowDot {
+  width: clamp(0.18rem, 0.34vw, 0.46rem);
+  height: clamp(0.18rem, 0.34vw, 0.46rem);
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: $accent;
+}
+
+.eyebrowArrow {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: rgba(46, 46, 46, 0.5);
+
+  svg {
+    width: clamp(0.85rem, 1.5vw, 2.1rem);
+    height: auto;
+  }
+}
+
+.headline {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 3.4vh;
+  font-size: clamp(1.1rem, 4.6vh, 6rem);
+  font-weight: 200;
+  line-height: 1.16;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.accent {
+  color: $accent;
+}
+
+.lead {
+  margin: 0 0 4.6vh;
+  max-width: 24vw;
+  font-size: clamp(0.7rem, 1.6vh, 2.1rem);
+  font-weight: 300;
+  line-height: 1.62;
+  color: $ink-soft;
+}
+
+/* ---------- Kontaktní řádky ---------- */
+
+.channels {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.channel + .channel {
+  border-top: 1px solid $line;
+}
+
+.channelLink {
+  display: flex;
+  align-items: center;
+  gap: 1.1vw;
+  padding: 1.8vh 0;
+  transition: color 0.22s ease;
+}
+
+a.channelLink:hover {
+  color: $accent;
+}
+
+.channelIcon {
+  display: grid;
+  place-items: center;
+  width: clamp(1.6rem, 4.4vh, 5.8rem);
+  height: clamp(1.6rem, 4.4vh, 5.8rem);
+  flex-shrink: 0;
+  border: 1px solid rgba(46, 46, 46, 0.28);
+  border-radius: 50%;
+
+  svg {
+    width: 46%;
+    height: 46%;
+  }
+}
+
+.channelText {
+  display: flex;
+  flex-direction: column;
+  margin-right: auto;
+  min-width: 0;
+}
+
+.channelLabel {
+  font-size: clamp(0.5rem, 1.16vh, 1.55rem);
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: $ink-muted;
+}
+
+.channelValue {
+  margin-top: 0.6vh;
+  font-size: clamp(0.75rem, 1.94vh, 2.55rem);
+  font-weight: 400;
+  // Mezery v „Po – Pá   9:00" jsou v datech schválně, tohle je udrží.
+  white-space: pre-wrap;
+}
+
+.channelNote {
+  margin-top: 0.5vh;
+  font-size: clamp(0.48rem, 1.14vh, 1.5rem);
+  font-weight: 300;
+  color: $ink-muted;
+}
+
+.channelArrow {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: $accent;
+
+  svg {
+    width: clamp(0.7rem, 1.9vh, 2.5rem);
+    height: clamp(0.7rem, 1.9vh, 2.5rem);
+  }
+}
+
+/* ---------- Formulář ---------- */
+
+.formEyebrow {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2vh;
+  margin: 0 0 3vh;
+  font-size: clamp(0.55rem, 1.24vh, 1.65rem);
+  font-weight: 400;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: $ink-soft;
+}
+
+.formEyebrowRule {
+  width: 2.2vw;
+  height: 2px;
+  background: $accent;
+}
+
+.formTitle {
+  margin: 0;
+  font-size: clamp(1rem, 3.4vh, 4.4rem);
+  font-weight: 300;
+  line-height: 1.2;
+  letter-spacing: 0.005em;
+}
+
+.formTitleRule {
+  display: block;
+  width: 2.2vw;
+  height: 1px;
+  margin: 2.4vh 0;
+  background: rgba(46, 46, 46, 0.3);
+}
+
+.formLead {
+  margin: 0 0 3.4vh;
+  max-width: 26vw;
+  font-size: clamp(0.68rem, 1.55vh, 2.05rem);
+  font-weight: 300;
+  line-height: 1.6;
+  color: $ink-soft;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6vh;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2vw;
+}
+
+// Společný vzhled pro input, select i textarea.
+.field {
+  width: 100%;
+  padding: 2.2vh 1.2vw;
+  border: 1px solid $line;
+  border-radius: 0.3vw;
+  background: rgba(255, 255, 255, 0.55);
+  color: $ink;
+  font-family: inherit;
+  font-size: clamp(0.68rem, 1.55vh, 2.05rem);
+  font-weight: 300;
+  transition: border-color 0.22s ease, background 0.22s ease;
+
+  &::placeholder {
+    color: $ink-muted;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $accent;
+    background: rgba(255, 255, 255, 0.78);
+  }
+}
+
+
+// Vlastní šipka místo systémové, aby select seděl k ostatním polím.
+// Je to inline SVG v data URI, ne trik ze dvou gradientů — ten dělal
+// plný trojúhelník, kdežto návrh má tenký chevron.
+.select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%234f4f4f' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5 6 6.5l5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: calc(100% - 1.2vw) 54%;
+  background-size: clamp(0.5rem, 0.72vw, 1rem) auto;
+  cursor: pointer;
+}
+
+.textareaWrap {
+  position: relative;
+}
+
+.textarea {
+  height: 19vh;
+  min-height: 8rem;
+  padding-bottom: 4.4vh;
+  resize: none;
+  line-height: 1.6;
+}
+
+.counter {
+  position: absolute;
+  right: 1.2vw;
+  bottom: 1.8vh;
+  font-size: clamp(0.5rem, 1.2vh, 1.6rem);
+  font-weight: 300;
+  color: $ink-muted;
+  pointer-events: none;
+}
+
+.submit {
+  display: flex;
+  align-items: center;
+  gap: 1.2vw;
+  width: 100%;
+  margin-top: 1vh;
+  padding: 2vh 1.4vw;
+  border: 0;
+  border-radius: 0.3vw;
+  background: #1a1a1a;
+  color: #f3f2ef;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.24s ease;
+
+  &:hover {
+    background: #0f0f0f;
+  }
+}
+
+.submitIcon {
+  display: grid;
+  place-items: center;
+  width: clamp(1.6rem, 4.4vh, 5.8rem);
+  height: clamp(1.6rem, 4.4vh, 5.8rem);
+  flex-shrink: 0;
+  border: 1px solid $accent;
+  border-radius: 50%;
+  color: $accent;
+
+  svg {
+    width: 46%;
+    height: 46%;
+  }
+}
+
+.submitLabel {
+  margin-right: auto;
+  font-size: clamp(0.6rem, 1.5vh, 2rem);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.submitArrow {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: $accent;
+
+  svg {
+    width: clamp(0.7rem, 1.9vh, 2.5rem);
+    height: clamp(0.7rem, 1.9vh, 2.5rem);
+  }
+}
+
+.privacy {
+  display: flex;
+  align-items: center;
+  gap: 0.7vw;
+  margin: 2.4vh 0 0;
+  font-size: clamp(0.5rem, 1.24vh, 1.65rem);
+  font-weight: 300;
+  color: $ink-muted;
+}
+
+.privacyIcon svg {
+  width: clamp(0.6rem, 1.6vh, 2.1rem);
+  height: clamp(0.6rem, 1.6vh, 2.1rem);
+}
+
+/* ---------- Responsivita ---------- */
+
+@media (max-width: 1100px) {
+  .panel {
+    inset: 1.5vh 3vw;
+    border-radius: 1.4vw;
+  }
+
+  .nav {
+    display: none;
+  }
+
+  .body {
+    grid-template-columns: 1fr;
+    gap: 6vh;
+    padding: 4vh 6vw 6vh;
+  }
+
+  .lead,
+  .formLead {
+    max-width: none;
+  }
+
+  .headline {
+    font-size: clamp(1.4rem, 6.4vw, 2.8rem);
+  }
+
+  .formTitle {
+    font-size: clamp(1.1rem, 5vw, 2rem);
+  }
+
+  .formRow {
+    grid-template-columns: 1fr;
+    gap: 1.6vh;
+  }
+
+  .field,
+  .formLead,
+  .lead {
+    font-size: clamp(0.8rem, 2.4vw, 1rem);
+  }
+}
+
+/* ---------- Pole s ikonou ---------- */
+
+.fieldWrap {
+  position: relative;
+  display: block;
+
+  // Text nesmí podjet ikonu vpravo.
+  .field {
+    padding-right: 3.2vw;
+  }
+}
+
+.fieldIcon {
+  position: absolute;
+  top: 50%;
+  right: 1.2vw;
+  transform: translateY(-50%);
+  color: $ink-muted;
+  pointer-events: none;
+
+  svg {
+    width: clamp(0.6rem, 1.5vh, 2rem);
+    height: clamp(0.6rem, 1.5vh, 2rem);
+  }
+}

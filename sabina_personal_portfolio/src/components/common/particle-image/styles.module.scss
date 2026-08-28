@@ -1,0 +1,13 @@
+// Vrstva se pozicuje INLINE podle boxu změřeného z DOMu (left/top/width/
+// height v useTrackedBox), ne přes inset — proto tu žádné rozměry nejsou.
+// Díky tomu plátno sedí přesně na obrázku a mapování uv je 1:1, takže
+// v shaderu není potřeba žádný přepočet na "cover".
+.root {
+  position: absolute;
+  pointer-events: none;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+}

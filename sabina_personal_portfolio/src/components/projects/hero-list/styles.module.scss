@@ -1,0 +1,501 @@
+// HeroList — úvodní sekce stránky /projects podle Figma návrhu.
+//
+// ROZVRŽENÍ: jedna obrazovka se čtyřmi vrstvami — levá lišta, nadpis,
+// řada karet v perspektivě a pager vpravo dole. Souřadnice jsou
+// přeměřené z návrhu (plátno 1205x685) přepsané na vw/vh.
+//
+// JEDNOTKY: vh/vw se štědrými stropy v clamp(), jako sekce na homepage.
+
+$accent: #bec948;
+$ink: #2e2e2e;
+$ink-soft: #4f4f4f;
+$backdrop: #9c9c9c;
+$violet: #6c5ce7;
+
+// Karty mají vlastní stupnici — jsou to samostatné plochy, tmavé i světlé.
+$card-dark: #141414;
+$card-dark-text: #f0efec;
+$card-dark-muted: #8e8e88;
+$card-light: #f2f1ee;
+$card-light-text: #1c1c1c;
+$card-light-muted: #6f6f68;
+
+
+.heroList {
+  position: relative;
+  height: 100svh;
+  overflow: hidden;
+  color: $ink;
+  // Doslovná kopie podkladu ze sekcí na homepage — web má držet jeden tón.
+  // Průhledné schválně — podklad celého webu dělá globální shader
+  // v _app.tsx. Dřív tu byl sdílený gradient, který ho překrýval.
+  background: transparent;
+}
+
+// Nasvícení z návrhu: klín světla z levého horního rohu, tmavá pravá
+// polovina s odrazivou podlahou a tmavý roh vpravo nahoře.
+//
+// POZOR na horní pruh: tmavý přechod musí začít až za ~80vw, jinak by
+// pod ním skončily odkazy fixní hlavičky, které jsou v ink barvě.
+.stage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      118deg,
+      rgba(255, 255, 255, 0.26) 0%,
+      rgba(255, 255, 255, 0.05) 30%,
+      transparent 52%
+    ),
+    radial-gradient(38% 44% at 106% 0%, rgba(10, 10, 10, 0.8), transparent 72%),
+    radial-gradient(
+      115% 96% at 84% 96%,
+      rgba(6, 6, 6, 0.95) 0%,
+      rgba(12, 12, 12, 0.62) 44%,
+      transparent 78%
+    );
+}
+
+/* ---------- Levá lišta ---------- */
+
+.rail {
+  position: absolute;
+  z-index: 3;
+  top: 30vh;
+  bottom: 4vh;
+  left: 3.4vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2vh;
+  color: $ink-soft;
+}
+
+.railDot {
+  width: clamp(0.2rem, 0.42vw, 0.55rem);
+  height: clamp(0.2rem, 0.42vw, 0.55rem);
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: $accent;
+}
+
+.railLine {
+  flex: 1;
+  width: 1px;
+  min-height: 2vh;
+  background: rgba(46, 46, 46, 0.3);
+}
+
+.railIndex {
+  flex-shrink: 0;
+  font-size: clamp(0.6rem, 1.35vh, 1.8rem);
+  font-weight: 400;
+  letter-spacing: 0.14em;
+}
+
+// Svisle čtený popisek zdola nahoru, jak ho má návrh.
+.railLabel {
+  flex-shrink: 0;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: clamp(0.55rem, 1.2vh, 1.6rem);
+  font-weight: 400;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.railButton {
+  display: grid;
+  place-items: center;
+  width: clamp(2rem, 6.7vh, 8.8rem);
+  height: clamp(2rem, 6.7vh, 8.8rem);
+  flex-shrink: 0;
+  padding: 0;
+  border: 1px solid rgba(46, 46, 46, 0.5);
+  border-radius: 50%;
+  background: transparent;
+  color: $ink;
+  cursor: pointer;
+  transition: background 0.24s ease, border-color 0.24s ease, color 0.24s ease;
+
+  svg {
+    width: 36%;
+    height: 36%;
+  }
+
+  &:hover {
+    background: $accent;
+    border-color: $accent;
+  }
+}
+
+/* ---------- Nadpis ---------- */
+
+.intro {
+  position: absolute;
+  z-index: 3;
+  top: 29vh;
+  left: 10vw;
+  width: 26vw;
+}
+
+.headline {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 5.4vh;
+  font-weight: 200;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.headlineTop {
+  font-size: clamp(2rem, 11.5vh, 15rem);
+  letter-spacing: 0.055em;
+}
+
+// Druhý řádek je menší a lehčí. Kurzívu z návrhu nepřebírám — Poppins
+// se načítá jen v přímém řezu a prohlížeč by ji jen falešně naklonil.
+.headlineBottom {
+  margin-top: 1.4vh;
+  font-size: clamp(1.3rem, 7.4vh, 9.6rem);
+  font-weight: 300;
+  letter-spacing: 0.02em;
+}
+
+.accent {
+  color: $accent;
+}
+
+.lead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5vh;
+  margin: 0;
+  font-size: clamp(0.55rem, 1.45vh, 1.9rem);
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: $ink-soft;
+}
+
+/* ---------- Řada karet v perspektivě ---------- */
+
+// Karty stojí jako rozevřený balíček ubíhající doprava za hranu sekce.
+// Pozicované jsou absolutně (--i je index z JSX), protože ve flexu si
+// rotateY nesníží zabranou šířku a řada by se rozjela do stran.
+.deck {
+  position: absolute;
+  z-index: 2;
+  top: 12vh;
+  left: 38vw;
+  width: 62vw;
+  height: 76vh;
+}
+
+// Perspektiva je NA KARTĚ, ne na kontejneru. Když seděla na .deck,
+// měla každá karta jiný odstup od úběžníku a ty vpravo se lámaly čím
+// dál víc — to byl ten špatný náklon. Takhle dostane každá karta
+// stejné zkreslení bez ohledu na to, kde v řadě stojí.
+.card {
+  position: absolute;
+  z-index: calc(10 - var(--i));
+  display: flex;
+  flex-direction: column;
+  height: 74vh;
+  aspect-ratio: 1 / 2;
+  padding: 3vh 1.6vw;
+  border-radius: 0.4vw;
+  // Pojistka: karta bez vlastního nth-child pravidla (sedmý projekt a
+  // dál) by měla --s nedefinované, scale(var(--s)) by bylo neplatné a
+  // propadl by celý transform — karta by zůstala nenakloněná.
+  --s: 1;
+  transform-origin: left center;
+  transform: perspective(90vw) rotateY(30deg) scale(var(--s));
+  box-shadow: -0.8vw 4vh 7vh rgba(4, 4, 4, 0.6);
+}
+
+// Odstup, svislý posun a zmenšení jsou odečtené z návrhu — levé hrany
+// karet tam leží v 37,8 / 55,2 / 66,8 / 78,8 / 87,1 % šířky. Kroky se
+// postupně zkracují, protože karty ubíhají do dálky. Tohle je místo,
+// kde se vějíř ladí; --s jde do scale() v .card výš.
+.card:nth-child(1) {
+  left: 0;
+  top: 0;
+  --s: 1;
+}
+
+.card:nth-child(2) {
+  left: 17.4vw;
+  top: 0.8vh;
+  --s: 0.91;
+}
+
+.card:nth-child(3) {
+  left: 29vw;
+  top: 5vh;
+  --s: 0.83;
+}
+
+.card:nth-child(4) {
+  left: 41vw;
+  top: 7.6vh;
+  --s: 0.76;
+}
+
+.card:nth-child(5) {
+  left: 49.3vw;
+  top: 9.7vh;
+  --s: 0.7;
+}
+
+.card:nth-child(6) {
+  left: 56.8vw;
+  top: 11.5vh;
+  --s: 0.65;
+}
+
+.isDark {
+  background: $card-dark;
+  color: $card-dark-text;
+
+  .cardIndex,
+  .cardLink {
+    color: $card-dark-muted;
+  }
+
+  .cardCategory {
+    color: $accent;
+  }
+}
+
+.isLight {
+  background: $card-light;
+  color: $card-light-text;
+
+  .cardIndex,
+  .cardLink {
+    color: $card-light-muted;
+  }
+
+  .cardCategory {
+    color: $violet;
+  }
+}
+
+.cardIndex {
+  font-size: clamp(0.5rem, 1.28vh, 1.7rem);
+  font-weight: 400;
+  letter-spacing: 0.16em;
+}
+
+.cardTitle {
+  margin: 1.6vh 0 0;
+  font-size: clamp(0.85rem, 3.4vh, 4.4rem);
+  font-weight: 300;
+  line-height: 1.05;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.cardCategory {
+  margin: 1vh 0 0;
+  font-size: clamp(0.45rem, 1.25vh, 1.65rem);
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+// Obrázek drží povinný formát 3:4 a zbylé místo v kartě si rozdělí
+// nahoře a dole, takže sedí opticky na střed jako v návrhu.
+.cardMedia {
+  width: 100%;
+  min-height: 0;
+  margin-block: auto;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: 0.2vw;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.cardLink {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5vh;
+  transition: color 0.22s ease;
+
+  &:hover {
+    color: $accent;
+  }
+}
+
+.cardLinkTop {
+  display: flex;
+  align-items: center;
+  gap: 0.7vw;
+}
+
+.cardLinkRule {
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.4;
+}
+
+.cardLinkArrow {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  svg {
+    width: clamp(0.6rem, 1.7vh, 2.2rem);
+    height: clamp(0.6rem, 1.7vh, 2.2rem);
+  }
+}
+
+.cardLinkLabel {
+  font-size: clamp(0.44rem, 1.2vh, 1.6rem);
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* ---------- Pager ---------- */
+
+// Leží na tmavé části jeviště, proto světlé barvy.
+.pager {
+  position: absolute;
+  z-index: 3;
+  right: 4vw;
+  bottom: 5vh;
+  display: flex;
+  align-items: center;
+  gap: 1vw;
+  color: #d2d2cc;
+}
+
+.pagerCount {
+  margin-right: 1.4vw;
+  font-size: clamp(0.6rem, 1.6vh, 2.1rem);
+  font-weight: 400;
+  letter-spacing: 0.16em;
+}
+
+.pagerButton {
+  display: grid;
+  place-items: center;
+  width: clamp(1.7rem, 4.7vh, 6.2rem);
+  height: clamp(1.7rem, 4.7vh, 6.2rem);
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.24s ease, border-color 0.24s ease, color 0.24s ease;
+
+  svg {
+    width: 42%;
+    height: 42%;
+  }
+
+  &:hover {
+    border-color: $accent;
+    color: $accent;
+  }
+}
+
+// Šipka zpět je stejná ikona otočená o 180°.
+.isBack {
+  display: grid;
+  place-items: center;
+  transform: rotate(180deg);
+
+  svg {
+    width: clamp(0.7rem, 2vh, 2.6rem);
+    height: clamp(0.7rem, 2vh, 2.6rem);
+  }
+}
+
+.isNext {
+  border-color: $accent;
+  color: $accent;
+}
+
+/* ---------- Responsivita ---------- */
+
+// Pod 1100 px perspektivní vějíř nedává smysl — karty se srovnají do
+// vodorovného scrollu a sekce ustoupí obsahu.
+@media (max-width: 1100px) {
+  .heroList {
+    display: flex;
+    flex-direction: column;
+    gap: 5vh;
+    height: auto;
+    min-height: 100svh;
+    padding: 16vh 5vw 6vh;
+  }
+
+  .rail {
+    display: none;
+  }
+
+  .intro,
+  .deck,
+  .pager {
+    position: static;
+    inset: auto;
+    width: auto;
+    height: auto;
+  }
+
+  .headlineTop {
+    font-size: clamp(2.4rem, 13vw, 5.5rem);
+  }
+
+  .headlineBottom {
+    font-size: clamp(1.5rem, 8vw, 3.4rem);
+  }
+
+  .lead {
+    font-size: clamp(0.6rem, 2.4vw, 0.95rem);
+  }
+
+  .deck {
+    display: flex;
+    gap: 4vw;
+    overflow-x: auto;
+    padding-bottom: 2vh;
+  }
+
+  .card {
+    // Bez tohohle by karty zůstaly absolutní a nth-child offsety výš
+    // by je rozházely mimo řadu.
+    position: static;
+    flex: 0 0 auto;
+    width: 62vw;
+    max-width: 21rem;
+    height: auto;
+    aspect-ratio: auto;
+    padding: 3vh 5vw;
+    transform: none;
+  }
+
+  // Na světlém podkladu potřebuje pager tmavé barvy.
+  .pager {
+    align-self: flex-end;
+    color: $ink-soft;
+  }
+
+  .pagerButton {
+    border-color: rgba(46, 46, 46, 0.4);
+  }
+}

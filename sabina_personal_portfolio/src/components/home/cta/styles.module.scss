@@ -1,0 +1,578 @@
+// CTA — závěrečná sekce pod Process, přestavěná podle Figma návrhu.
+//
+// ROZVRŽENÍ: návrh je jedno „jeviště" přes celý viewport se čtyřmi
+// vrstvami, které se navzájem překrývají (karta recenze jde přes portrét,
+// bannery vytékají za pravou hranu). Grid tohle neuhlídá, proto jsou bloky
+// pozicované absolutně a souřadnice jsou přeměřené z návrhu
+// (plátno 1165x646) přepsané na vw/vh.
+//
+// JEDNOTKY: stejně jako Hero, Info a Process jedou rozměry i písma na
+// vh/vw se štědrými stropy v clamp() — nízký rem strop layout na velkém
+// monitoru srazí zhruba na polovinu.
+
+$accent: #bec948;
+$ink: #2e2e2e;
+$ink-soft: #4f4f4f;
+$backdrop: #9c9c9c;
+
+// Karta recenze je jediná tmavá plocha se sazbou, má vlastní stupnici.
+$card: #232323;
+$card-text: #ececea;
+$card-muted: #97978f;
+$card-line: rgba(255, 255, 255, 0.15);
+
+.cta {
+  position: relative;
+  height: 100svh;
+  overflow: hidden;
+  color: $ink;
+  // Doslovná kopie podkladu z hero/styles.module.scss — sekce na sebe
+  // musí navazovat bez viditelného švu.
+  // Průhledné schválně — podklad celého webu dělá globální shader
+  // v _app.tsx. Dřív tu byl sdílený gradient, který ho překrýval.
+  background: transparent;
+}
+
+/* ---------- Tmavé jeviště ---------- */
+
+// Velká elipsa z návrhu. Rozměry vyšly ze tří podmínek odečtených
+// z Figmy: levý oblouk protíná horní hranu v 52 % šířky, spodní okraj
+// končí v 87 vh (pod ním zůstává světlý pruh pro claim) a portrét i
+// bannery musí ležet uvnitř. Střed (100vw, 30vh), poloosy 56,5vw a 57vh.
+//
+// Leží NAD sdíleným gradientem, ne místo něj — gradient zůstává základem
+// kvůli navazování sekcí, jeviště jen ztmaví pravou půlku, aby na ní
+// portrét a bannery stály stejně jako v návrhu.
+.stage {
+  position: absolute;
+  z-index: 0;
+  top: -27vh;
+  left: 43.5vw;
+  width: 113vw;
+  height: 114vh;
+  border-radius: 50%;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 32% at 63% 77%, rgba(108, 92, 231, 0.2), transparent 68%),
+    linear-gradient(
+      152deg,
+      rgba(96, 96, 96, 0.6) 0%,
+      rgba(44, 44, 44, 0.86) 42%,
+      rgba(14, 14, 14, 0.95) 100%
+    );
+  // Rozptýlený stín místo blur filtru — změkčí hranu elipsy, aniž by se
+  // přes celou plochu počítal drahý blur.
+  box-shadow: 0 0 7vw 2vw rgba(56, 56, 56, 0.42);
+}
+
+/* ---------- Dekorativní křivka ---------- */
+
+// viewBox drží proporce plátna z Figmy, takže se souřadnice cest dají
+// odečítat přímo z návrhu. Levá křivka leží na světlém podkladu (proto
+// tmavý tah), pravá na jevišti (proto světlý).
+.swoosh {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+
+  path:first-of-type {
+    stroke: rgba(46, 46, 46, 0.22);
+  }
+}
+
+/* ---------- Rám obsahu ---------- */
+
+.inner {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---------- Text a výzva ---------- */
+
+.intro {
+  position: absolute;
+  z-index: 5;
+  top: 22vh;
+  left: 5vw;
+  width: 30vw;
+}
+
+.eyebrow {
+  margin: 0 0 2vh;
+  font-size: clamp(0.66rem, 1.42vh, 1.9rem);
+  font-weight: 400;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: $accent;
+}
+
+.headline {
+  margin: 0 0 4.4vh;
+  font-size: clamp(1.35rem, 4.6vh, 6rem);
+  font-weight: 200;
+  line-height: 1.06;
+  letter-spacing: 0.005em;
+  text-transform: uppercase;
+}
+
+.accent {
+  color: $accent;
+}
+
+// Svislá linka vlevo a text odsazený za ní — v návrhu drží podtitul
+// pohromadě jako citaci.
+.lead {
+  position: relative;
+  margin: 0 0 5vh;
+  padding-left: 2vw;
+  font-size: clamp(0.72rem, 1.62vh, 2.15rem);
+  font-weight: 400;
+  line-height: 1.6;
+  color: $ink-soft;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0.2vh;
+    bottom: 0.2vh;
+    left: 0;
+    width: 1px;
+    background: rgba(46, 46, 46, 0.45);
+  }
+
+  strong {
+    display: block;
+    font-weight: 600;
+    color: $ink;
+  }
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 2vw;
+}
+
+.actionDisc {
+  display: grid;
+  place-items: center;
+  width: clamp(2.6rem, 10.2vh, 13.6rem);
+  height: clamp(2.6rem, 10.2vh, 13.6rem);
+  flex-shrink: 0;
+  border: 1px solid rgba(46, 46, 46, 0.55);
+  border-radius: 50%;
+  transition: background 0.26s ease, border-color 0.26s ease, transform 0.26s ease;
+
+  svg {
+    width: 34%;
+    height: 34%;
+  }
+}
+
+.actionLabel {
+  font-size: clamp(0.72rem, 1.66vh, 2.2rem);
+  font-weight: 400;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.action:hover .actionDisc {
+  background: $accent;
+  border-color: $accent;
+  transform: translateX(0.4vw);
+}
+
+// Stav dostupnosti v levém dolním rohu — leží ve světlém pruhu, který
+// zůstává mimo jeviště, proto může být v ink barvě.
+.status {
+  position: absolute;
+  z-index: 5;
+  bottom: 6vh;
+  left: 5vw;
+  display: flex;
+  align-items: center;
+  gap: 1vw;
+  margin: 0;
+  font-size: clamp(0.6rem, 1.28vh, 1.7rem);
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: $ink-soft;
+}
+
+.statusDot {
+  width: clamp(0.3rem, 1.1vh, 1.5rem);
+  height: clamp(0.3rem, 1.1vh, 1.5rem);
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: $ink;
+}
+
+/* ---------- Mockup recenze ---------- */
+
+.review {
+  position: absolute;
+  z-index: 4;
+  top: 23.5vh;
+  left: 35.9vw;
+  display: flex;
+  flex-direction: column;
+  width: 24.9vw;
+  height: 62vh;
+  margin: 0;
+  padding: 3.4vh 1.75vw;
+  border-radius: 0.3vw;
+  background: $card;
+  color: $card-text;
+  box-shadow: 0 3vh 6vh rgba(10, 10, 10, 0.42);
+}
+
+.reviewMark {
+  display: block;
+  margin-bottom: 2.2vh;
+  color: $accent;
+
+  svg {
+    width: clamp(1.1rem, 3.4vh, 4.5rem);
+    height: auto;
+  }
+}
+
+.reviewText {
+  margin: 0;
+  font-size: clamp(0.7rem, 1.62vh, 2.15rem);
+  font-weight: 300;
+  line-height: 1.62;
+}
+
+.reviewAuthor {
+  display: flex;
+  align-items: center;
+  gap: 0.9vw;
+  // Odsune autora i statistiky ke spodní hraně karty, jak je v návrhu.
+  margin-top: auto;
+  padding-top: 2.6vh;
+  border-top: 1px solid $card-line;
+}
+
+// Kroužek s monogramem klienta místo fotky — v public žádná není.
+.reviewAvatar {
+  display: grid;
+  place-items: center;
+  width: clamp(1.5rem, 5.4vh, 7.2rem);
+  height: clamp(1.5rem, 5.4vh, 7.2rem);
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  font-size: clamp(0.42rem, 1.06vh, 1.4rem);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: $card-text;
+}
+
+.reviewName {
+  display: block;
+  margin-right: auto;
+  font-size: clamp(0.58rem, 1.3vh, 1.75rem);
+
+  strong {
+    display: block;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+}
+
+.reviewRole {
+  display: block;
+  margin-top: 0.4vh;
+  font-weight: 300;
+  color: $card-muted;
+}
+
+.reviewStars {
+  display: flex;
+  gap: 0.18vw;
+  flex-shrink: 0;
+  color: $accent;
+
+  svg {
+    width: clamp(0.52rem, 1.34vh, 1.8rem);
+    height: clamp(0.52rem, 1.34vh, 1.8rem);
+  }
+}
+
+.reviewStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 3vh;
+  padding-top: 2.8vh;
+  border-top: 1px solid $card-line;
+  text-align: center;
+}
+
+// Svislý předěl mezi čísly — v návrhu dělí patičku karty na půl.
+.stat:first-child {
+  border-right: 1px solid $card-line;
+}
+
+.statValue {
+  display: block;
+  font-size: clamp(1rem, 3.1vh, 4.1rem);
+  font-weight: 200;
+  line-height: 1.1;
+}
+
+.statLabel {
+  display: block;
+  margin-top: 0.9vh;
+  font-size: clamp(0.44rem, 1.04vh, 1.4rem);
+  font-weight: 300;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: $card-muted;
+}
+
+/* ---------- Portrét ---------- */
+
+// V návrhu stojí postava od hlavy zhruba po stehna: vršek ve 12 vh,
+// spodek v 90 vh. Vodorovně ji drží střed v 68,7 % šířky, protože vlastní
+// šířka rámu závisí na poměru stran viewportu.
+.portrait {
+  position: absolute;
+  z-index: 2;
+  top: 12vh;
+  left: 68.7vw;
+  height: 78vh;
+  transform: translateX(-50%);
+  pointer-events: none;
+  // Spodní hrana se jen změkčí, ne rozpustí — v návrhu je ořez čitelný.
+  mask-image: linear-gradient(to bottom, #000 90%, transparent 100%);
+}
+
+.portraitImage {
+  width: auto;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+}
+
+/* ---------- Bannery v perspektivě ---------- */
+
+// Řada stojících desek ubíhajících doprava za hranu sekce. Panely jsou
+// pozicované absolutně, protože ve flexu si rotateY nesníží zabranou
+// šířku a řada by se rozjela do stran. Rozestup 9vw dává mezi natočenými
+// panely stejný překryv jako návrh.
+.banners {
+  position: absolute;
+  z-index: 3;
+  top: 29vh;
+  left: 78vw;
+  width: 40vw;
+  height: 46vh;
+  // Úběžník leží vlevo od řady, jak se na panely dívá návrh. Delší
+  // perspektiva drží zkreslení třetího panelu ještě čitelné.
+  perspective: 80vw;
+  perspective-origin: 6% 46%;
+}
+
+.banner {
+  position: absolute;
+  top: 0;
+  height: 44vh;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: 0.3vw;
+  // Kladný rotateY posílá PRAVOU hranu od diváka, takže bližší zůstává
+  // levá — přesně tak panely stojí v návrhu. Otáčení kolem levé hrany
+  // drží panel ukotvený na svém left a zužuje ho jen doprava.
+  transform-origin: left center;
+  transform: rotateY(46deg);
+  box-shadow: -0.6vw 3vh 6vh rgba(8, 8, 8, 0.55);
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &:nth-child(1) {
+    left: 0;
+    z-index: 3;
+  }
+
+  &:nth-child(2) {
+    left: 9vw;
+    z-index: 2;
+  }
+
+  &:nth-child(3) {
+    left: 18vw;
+    z-index: 1;
+  }
+}
+
+/* ---------- Claim v patě ---------- */
+
+// Sedí ve světlém pruhu pod jevištěm, proto zůstává v ink barvě.
+.claim {
+  position: absolute;
+  z-index: 5;
+  bottom: 4.6vh;
+  left: 50vw;
+  right: 4vw;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: end;
+  column-gap: 2vw;
+  margin: 0;
+  font-size: clamp(0.6rem, 1.4vh, 1.85rem);
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  line-height: 1.9;
+  text-transform: uppercase;
+
+  > span:nth-child(1) {
+    grid-area: 1 / 1;
+  }
+
+  > span:nth-child(2) {
+    grid-area: 2 / 1;
+  }
+}
+
+// Linka doprava zakončená accentovou tečkou.
+.claimRule {
+  position: relative;
+  grid-area: 2 / 2;
+  height: 1px;
+  margin-bottom: 0.8vh;
+  background: rgba(46, 46, 46, 0.32);
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: 0.4vw;
+    height: 0.4vw;
+    border-radius: 50%;
+    background: $accent;
+    transform: translate(50%, -50%);
+  }
+}
+
+/* ---------- Responsivita ---------- */
+
+// Pod 1100 px absolutní rozvržení nedává smysl — sekce se rozbalí do
+// běžného toku, portrét a dekorace odpadnou.
+@media (max-width: 1100px) {
+  .cta {
+    height: auto;
+    min-height: 100svh;
+    padding: 12vh 5vw 8vh;
+  }
+
+  .stage {
+    top: auto;
+    bottom: -34vh;
+    left: 8vw;
+    width: 110vw;
+    height: 76vh;
+  }
+
+  .swoosh,
+  .portrait {
+    display: none;
+  }
+
+  .inner {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    gap: 6vh;
+  }
+
+  .intro,
+  .status,
+  .review,
+  .banners,
+  .claim {
+    position: static;
+    inset: auto;
+    width: auto;
+    height: auto;
+  }
+
+  .intro {
+    max-width: 34rem;
+  }
+
+  .headline {
+    font-size: clamp(1.7rem, 5.4vw, 3.4rem);
+  }
+
+  .eyebrow,
+  .lead,
+  .actionLabel,
+  .status,
+  .claim {
+    font-size: clamp(0.72rem, 2vw, 1.05rem);
+  }
+
+  .actionDisc {
+    width: clamp(3rem, 9vw, 4.5rem);
+    height: clamp(3rem, 9vw, 4.5rem);
+  }
+
+  .review {
+    max-width: 34rem;
+    padding: 4vh 6vw;
+  }
+
+  .reviewText {
+    font-size: clamp(0.85rem, 2.2vw, 1.05rem);
+  }
+
+  .reviewAuthor {
+    margin-top: 4vh;
+  }
+
+  .statValue {
+    font-size: clamp(1.4rem, 5vw, 2.2rem);
+  }
+
+  // Bez perspektivy — prostá řada, poslední panel odpadá.
+  .banners {
+    display: flex;
+    gap: 3vw;
+    perspective: none;
+  }
+
+  .banner {
+    position: static;
+    width: 40vw;
+    max-width: 16rem;
+    height: auto;
+    transform: none;
+
+    &:nth-child(3) {
+      display: none;
+    }
+  }
+
+  .claim {
+    grid-template-columns: auto;
+    letter-spacing: 0.18em;
+  }
+
+  .claimRule {
+    display: none;
+  }
+}

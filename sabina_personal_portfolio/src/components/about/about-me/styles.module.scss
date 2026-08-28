@@ -1,0 +1,458 @@
+// AboutMe — celá stránka /o-mne podle Figma návrhu. Sekce je 170vh vysoká.
+//
+// MĚŘÍTKO: stránka je 170vh. Horní blok (nadpis + portrét) zabírá
+// prvních 100vh, karty zbylých 70vh.
+//
+// Referenční snímek horní části je 1301 x 709 px = 100vw x 100vh, tedy
+//   1 px snímku = 100/709 = 0,1411 vh  svisle
+//   1 px snímku = 100/1301 = 0,0769 vw  vodorovně
+//
+// POZOR na dřívější chybu: klíč byl odvozený z 200vh, takže všechny
+// svislé hodnoty vycházely o 18 % větší, než měly.
+//
+// JEDNOTKY: vh/vw se štědrými stropy v clamp(), jako zbytek webu.
+
+$accent: #bec948;
+$ink: #2e2e2e;
+$ink-soft: #4f4f4f;
+$ink-muted: rgba(46, 46, 46, 0.55);
+$backdrop: #9c9c9c;
+
+// Karty jsou jediné tmavé plochy na stránce, mají vlastní stupnici.
+$card: #1b1b1b;
+$card-text: #f0efec;
+$card-muted: #96968f;
+$card-line: rgba(255, 255, 255, 0.12);
+
+.about {
+  position: relative;
+  height: 170vh;
+  overflow: hidden;
+  color: $ink;
+  // Gradient sekcí, ale roztažený přes celých 200vh místo opakování —
+  // opakováním by v polovině stránky vznikl viditelný šev.
+  // Průhledné schválně — podklad celého webu dělá globální shader
+  // v _app.tsx. Dřív tu byl sdílený gradient, který ho překrýval.
+  background: transparent;
+}
+
+// Velký světlý kruh vpravo (střed v návrhu x 750, y 295, poloměr 230 px)
+// a ztmavení k pravému dolnímu rohu za portrétem.
+.stage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      27vw 49vh at 74vw 50vh,
+      rgba(255, 255, 255, 0.5),
+      rgba(255, 255, 255, 0.2) 62%,
+      transparent 78%
+    ),
+    radial-gradient(58% 46% at 88% 104%, rgba(12, 12, 12, 0.55), transparent 72%);
+}
+
+/* ---------- Levá lišta ---------- */
+
+// V návrhu běží od 30,6vh (kroužek) po 196vh (tečka), tedy skoro celou
+// výškou stránky. Linky mezi popisky se roztahují samy.
+.rail {
+  position: absolute;
+  z-index: 2;
+  top: 23vh;
+  bottom: 10vh;
+  left: 4vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.6vh;
+  color: $ink-soft;
+}
+
+// Tečka v prstenci, jak ji má návrh nahoře.
+.railRing {
+  display: grid;
+  place-items: center;
+  width: clamp(0.7rem, 1.5vw, 1.9rem);
+  height: clamp(0.7rem, 1.5vw, 1.9rem);
+  flex-shrink: 0;
+  border: 1px solid rgba(190, 201, 72, 0.55);
+  border-radius: 50%;
+
+  &::after {
+    content: "";
+    width: 42%;
+    height: 42%;
+    border-radius: 50%;
+    background: $accent;
+  }
+}
+
+.railLine {
+  flex: 1;
+  width: 1px;
+  min-height: 2vh;
+  background: rgba(46, 46, 46, 0.28);
+}
+
+.railIndex {
+  flex-shrink: 0;
+  font-size: clamp(0.65rem, 1.9vh, 2.5rem);
+  font-weight: 300;
+  letter-spacing: 0.12em;
+}
+
+// Svisle čtené popisky zdola nahoru.
+.railLabel {
+  flex-shrink: 0;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: clamp(0.5rem, 1.35vh, 1.8rem);
+  font-weight: 400;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.railDot {
+  width: clamp(0.3rem, 0.7vw, 0.9rem);
+  height: clamp(0.3rem, 0.7vw, 0.9rem);
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: $ink;
+}
+
+/* ---------- Nadpis ---------- */
+
+.intro {
+  position: absolute;
+  z-index: 2;
+  top: 23vh;
+  left: 11.7vw;
+  width: 34vw;
+}
+
+.eyebrow {
+  margin: 0 0 1.6vh;
+  font-size: clamp(0.55rem, 1.5vh, 2rem);
+  font-weight: 400;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: $ink-soft;
+}
+
+// V návrhu je nadpis ~68 px vysoký, což při měřítku 200vh dává 15,4vh.
+// Řez 200, protože displejový serif z návrhu nepoužíváme — web jede
+// celý na Poppins.
+.headline {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 1.2vh;
+  font-size: clamp(2.2rem, 14.5vh, 20rem);
+  font-weight: 200;
+  // Návrh má řádky přisazené těsně k sobě (proklad ~0,9).
+  line-height: 0.92;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.accent {
+  color: $accent;
+}
+
+// Mezery kolem linky jsou schválně těsné — subtext se tím zvedne blíž
+// ke středu a pod ním zůstane vzduch až ke kartám.
+.introRule {
+  display: block;
+  width: 2.9vw;
+  height: 1px;
+  margin-bottom: 1.1vh;
+  background: rgba(46, 46, 46, 0.45);
+}
+
+// Odstup ke kartám je zapsaný jako margin-bottom, ne jen jako prázdné
+// místo mezi dvěma absolutně pozicovanými bloky. Hodnota odpovídá
+// naměřené mezeře: subtext končí v 67,9vh, karty začínají v 85vh.
+// Karty samotné zůstávají ukotvené na top: 85vh podle návrhu.
+.lead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6vh;
+  margin: 0 0 17.1vh;
+  font-size: clamp(0.63rem, 2.73vh, 3.5rem);
+  font-weight: 300;
+  line-height: 1.32;
+}
+
+/* ---------- Portrét ---------- */
+
+// Návrh ji vede od 15vh dolů až za spodní hranu. Rám má průhledné okraje,
+// takže viditelná postava vyjde užší než box.
+//
+// POZOR: při 200vh je tohle vyšší, než na co má zdroj rozlišení
+// (612x1019) — obrázek se na velkém monitoru zvětšuje zhruba 1,7x.
+.portrait {
+  position: absolute;
+  z-index: 1;
+  top: 13vh;
+  left: 76.9vw;
+  height: 110vh;
+  transform: translateX(-50%);
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, #000 92%, transparent 100%);
+}
+
+.portraitImage {
+  width: auto;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+}
+
+/* ---------- Karty ---------- */
+
+// POZOR: 0,8 platí jen na VÝŠKU řad. Šířky karet zůstávají podle návrhu —
+// když jsem zúžil i je, text se do spodních karet přestal vejít.
+//
+// Rozměry odečtené z návrhu a přepočtené na 200vh (viz klíč v hlavičce):
+//   horní řada  y 463-675 px -> top 103vh, výška 48vh
+//   spodní řada y 687-878 px -> top 154vh, výška 43vh
+// Spodní řada je ZÁMĚRNĚ širší (74,3vw proti 56,9vw) a zasahuje pod
+// portrét — v návrhu to tak je.
+.cards {
+  position: absolute;
+  z-index: 3;
+  top: 85vh;
+  left: 11.7vw;
+  display: flex;
+  flex-direction: column;
+  gap: 2.4vh;
+}
+
+.rowTop {
+  display: grid;
+  grid-template-columns: repeat(3, 17.8vw);
+  gap: 0.95vw;
+  height: 38.4vh;
+}
+
+.rowBottom {
+  display: grid;
+  grid-template-columns: 34.9vw 36.2vw;
+  gap: 1.14vw;
+  height: 34.4vh;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 2.08vh 1.12vw;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.6vw;
+  background: $card;
+  color: $card-text;
+  box-shadow: 0 2.4vh 5vh rgba(8, 8, 8, 0.35);
+}
+
+// Linková kresba v pravém horním rohu — jen textura, proto tak potlačená.
+.cardArt {
+  position: absolute;
+  top: -2vh;
+  right: -1.6vw;
+  width: 9.6vw;
+  color: rgba(255, 255, 255, 0.07);
+  pointer-events: none;
+
+  svg {
+    width: 100%;
+    height: auto;
+  }
+}
+
+.cardBadge {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(1.28rem, 4.48vh, 5.6rem);
+  height: clamp(1.28rem, 4.48vh, 5.6rem);
+  flex-shrink: 0;
+  margin-bottom: 1.92vh;
+  border: 1px solid rgba(190, 201, 72, 0.35);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+  color: $accent;
+
+  svg {
+    width: 46%;
+    height: 46%;
+  }
+}
+
+.cardLabel {
+  position: relative;
+  margin: 0 0 0.96vh;
+  font-size: clamp(0.35rem, 1.37vh, 1.82rem);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: $accent;
+}
+
+.cardTitle {
+  position: relative;
+  margin: 0;
+  font-size: clamp(0.63rem, 3.22vh, 4.2rem);
+  font-weight: 200;
+  line-height: 1.16;
+  letter-spacing: 0.005em;
+}
+
+.cardSubtitle {
+  position: relative;
+  margin: 0.8vh 0 0;
+  font-size: clamp(0.42rem, 1.75vh, 2.24rem);
+  font-weight: 300;
+}
+
+.cardBody {
+  position: relative;
+  // Odsune popis ke spodní hraně karty, jak je v návrhu.
+  margin: auto 0 0;
+  padding-top: 1.92vh;
+  font-size: clamp(0.39rem, 1.51vh, 1.96rem);
+  font-weight: 300;
+  line-height: 1.5;
+  color: $card-muted;
+}
+
+/* ---------- Široké karty ve spodní řadě ---------- */
+
+// Text vlevo, štítky vpravo. Sloupec textu má PEVNOU šířku, ne zlomek —
+// štítky mají nowrap, takže si přes min-content ukrajovaly z textu, dokud
+// se popis nezalomil do pěti řádků místo tří.
+.panel {
+  display: grid;
+  grid-template-columns: 13.2vw 1fr;
+  gap: 0.6vw;
+  align-items: start;
+}
+
+.panelText {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+}
+
+.tags {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  // Štítky si drží šířku podle obsahu, nerovnají se do stejné mřížky.
+  justify-items: start;
+  align-content: center;
+  gap: 1.04vh 0.4vw;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag {
+  display: flex;
+  align-items: center;
+  gap: 0.45vw;
+  padding: 0.88vh 0.62vw;
+  border: 1px solid $card-line;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: clamp(0.35rem, 1.37vh, 1.82rem);
+  font-weight: 300;
+  white-space: nowrap;
+}
+
+.tagMarker {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: $accent;
+
+  svg {
+    width: clamp(0.35rem, 1.33vh, 1.75rem);
+    height: clamp(0.35rem, 1.33vh, 1.75rem);
+  }
+}
+
+/* ---------- Responsivita ---------- */
+
+// Pod 1100 px absolutní rozvržení ani 200vh nedávají smysl — stránka se
+// rozbalí do běžného toku, lišta a portrét odpadnou.
+@media (max-width: 1100px) {
+  .about {
+    height: auto;
+    min-height: 100svh;
+    padding: 16vh 5vw 8vh;
+  }
+
+  .rail,
+  .portrait {
+    display: none;
+  }
+
+  .intro,
+  .cards {
+    position: static;
+    inset: auto;
+    width: auto;
+  }
+
+  .headline {
+    font-size: clamp(2.4rem, 13vw, 5.5rem);
+  }
+
+  .lead {
+    font-size: clamp(1rem, 4vw, 1.6rem);
+  }
+
+  .cards {
+    margin-top: 8vh;
+    gap: 3vw;
+  }
+
+  .rowTop,
+  .rowBottom {
+    grid-template-columns: 1fr;
+    gap: 3vw;
+    height: auto;
+  }
+
+  .card {
+    padding: 3vh 6vw;
+    border-radius: 1.4vw;
+  }
+
+  .panel {
+    grid-template-columns: 1fr;
+    gap: 3vh;
+  }
+
+  .cardLabel,
+  .cardBody,
+  .tag {
+    font-size: clamp(0.75rem, 2.4vw, 1rem);
+  }
+
+  .cardTitle {
+    font-size: clamp(1.2rem, 5vw, 2rem);
+  }
+
+  .cardSubtitle {
+    font-size: clamp(0.85rem, 3vw, 1.2rem);
+  }
+
+  .cardArt {
+    width: 34vw;
+  }
+}

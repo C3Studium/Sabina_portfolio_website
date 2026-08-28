@@ -1,0 +1,381 @@
+// Footer — společná pata webu podle Figma návrhu.
+//
+// JEDNOTKY: vlastní rozvržení jede na vh/vw se štědrými stropy jako
+// sekce. VÝJIMKA je blok značky — ten je v rem, protože přebírá rozměry
+// z hlavičky (ta je taky rem, má pevnou výšku) a footer s ní má sedět
+// na svislici i velikosti písma.
+
+$accent: #bec948;
+$ink: #2e2e2e;
+$ink-soft: #4f4f4f;
+$backdrop: #9c9c9c;
+
+// Stejný gutter jako hlavička — díky němu je logo v patě přesně pod
+// logem v navbaru.
+$gutter: clamp(1.5rem, 4vw, 3.25rem);
+
+.footer {
+  position: relative;
+  height: 40vh;
+  // Na nízkém viewportu by se obsah do 40vh nevešel, proto podlaha.
+  min-height: 21rem;
+  overflow: hidden;
+  color: $ink;
+  // Identický gradient jako sekce, ale vykreslený na viewport-velkém
+  // boxu (background-size) — footer je jen 40vh vysoký, takže z něj
+  // ukazuje horní výsek a tón i sklon zůstávají stejné jako v sekcích.
+  // Průhledné schválně — podklad celého webu dělá globální shader
+  // v _app.tsx. Dřív tu byl sdílený gradient, který ho překrýval.
+  background: transparent;
+}
+
+// Měkký kruh vlevo a diagonální prosvětlení vpravo nahoře — obojí má
+// návrh, obojí je jen světelná vrstva nad sdíleným gradientem.
+.decor {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      118deg,
+      transparent 56%,
+      rgba(255, 255, 255, 0.1) 72%,
+      transparent 88%
+    ),
+    radial-gradient(
+      circle 22vh at 12vw 16vh,
+      rgba(255, 255, 255, 0.09),
+      rgba(255, 255, 255, 0.045) 62%,
+      transparent 78%
+    );
+}
+
+.inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 10vh $gutter 3vh;
+}
+
+.top {
+  display: grid;
+  grid-template-columns: 26vw 1fr auto;
+  align-items: start;
+  gap: 4vw;
+}
+
+/* ---------- Značka ---------- */
+
+.brandCol {
+  min-width: 0;
+}
+
+// Rozměry přebrané 1:1 z .brand v hero/styles.module.scss.
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-shrink: 0;
+}
+
+.brandMark {
+  width: auto;
+  height: 2.15rem;
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.brandName {
+  font-size: 1.32rem;
+  font-weight: 500;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+}
+
+.brandSurname {
+  margin-top: 0.24rem;
+  font-size: 0.62rem;
+  font-weight: 300;
+  letter-spacing: 0.235em;
+  text-transform: uppercase;
+  align-self: flex-end;
+}
+
+// Accentová tečka za jménem, jak ji má návrh za druhým řádkem loga.
+.brandDot {
+  align-self: flex-end;
+  width: 0.34rem;
+  height: 0.34rem;
+  margin-bottom: 0.12rem;
+  border-radius: 50%;
+  background: $accent;
+}
+
+/* ---------- Claim pod značkou ---------- */
+
+// Svislá linka s accentovou tečkou nahoře a text odsazený za ní.
+.tagline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1vh;
+  margin: 5.4vh 0 0;
+  padding-left: 2.6vw;
+  font-size: clamp(0.66rem, 1.5vh, 2rem);
+  font-weight: 300;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: $ink-soft;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0.4vh;
+    bottom: 0.4vh;
+    left: 0;
+    width: 1px;
+    background: rgba(46, 46, 46, 0.3);
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: -1.8vh;
+    left: 0;
+    width: clamp(0.2rem, 0.36vw, 0.5rem);
+    height: clamp(0.2rem, 0.36vw, 0.5rem);
+    border-radius: 50%;
+    background: $accent;
+    transform: translateX(-50%);
+  }
+}
+
+.accent {
+  color: $accent;
+}
+
+/* ---------- Sloupce vpravo ---------- */
+
+// Návrh drží popisky obou sloupců na jedné lince s claimem pod značkou,
+// ne se značkou samotnou — proto odsazení shora.
+.legal,
+.follow {
+  padding-top: 8.4vh;
+}
+
+.follow {
+  justify-self: end;
+}
+
+.colLabel {
+  margin: 0 0 2.6vh;
+  font-size: clamp(0.58rem, 1.26vh, 1.7rem);
+  font-weight: 400;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(46, 46, 46, 0.55);
+}
+
+/* ---------- Právní odkazy ---------- */
+
+.legalList {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5vw;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  // Accentová tečka jako oddělovač — jen mezi položkami, ne za poslední.
+  li + li::before {
+    content: "";
+    display: inline-block;
+    width: clamp(0.16rem, 0.3vw, 0.42rem);
+    height: clamp(0.16rem, 0.3vw, 0.42rem);
+    margin-right: 1.5vw;
+    border-radius: 50%;
+    background: $accent;
+    vertical-align: middle;
+  }
+}
+
+.legalLink {
+  font-size: clamp(0.62rem, 1.34vh, 1.8rem);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: color 0.22s ease;
+
+  &:hover {
+    color: $accent;
+  }
+}
+
+/* ---------- Sociální sítě ---------- */
+
+.socials {
+  display: flex;
+  gap: 0.9vw;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.social {
+  display: grid;
+  place-items: center;
+  width: clamp(2rem, 5.6vh, 7.4rem);
+  height: clamp(2rem, 5.6vh, 7.4rem);
+  border: 1px solid rgba(46, 46, 46, 0.4);
+  border-radius: 50%;
+  color: $ink;
+  transition: background 0.24s ease, border-color 0.24s ease, color 0.24s ease;
+
+  svg {
+    width: 42%;
+    height: 42%;
+  }
+
+  &:hover {
+    background: $accent;
+    border-color: $accent;
+    color: #ffffff;
+  }
+}
+
+/* ---------- Spodní pruh ---------- */
+
+.bottom {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3vw;
+  // Přisadí pruh ke spodní hraně bez ohledu na výšku obsahu nad ním.
+  margin-top: auto;
+  padding-top: 3vh;
+}
+
+// Linka přes celou šířku s accentovou tečkou na obou koncích.
+.bottomRule {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: rgba(46, 46, 46, 0.28);
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: clamp(0.18rem, 0.34vw, 0.46rem);
+    height: clamp(0.18rem, 0.34vw, 0.46rem);
+    border-radius: 50%;
+    background: $accent;
+  }
+
+  &::before {
+    left: 0;
+    transform: translate(-50%, -50%);
+  }
+
+  &::after {
+    right: 0;
+    transform: translate(50%, -50%);
+  }
+}
+
+.copy,
+.sign {
+  margin: 0;
+  font-size: clamp(0.55rem, 1.2vh, 1.6rem);
+  font-weight: 300;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: $ink-soft;
+}
+
+.sign {
+  white-space: nowrap;
+}
+
+/* ---------- Responsivita ---------- */
+
+// Pod 1100 px se tři sloupce nevejdou — footer se rozbalí do sloupce
+// a pevná výška ustoupí obsahu.
+@media (max-width: 1100px) {
+  .footer {
+    height: auto;
+    min-height: 0;
+  }
+
+  .inner {
+    padding: 8vh $gutter 4vh;
+  }
+
+  .top {
+    grid-template-columns: 1fr;
+    gap: 5vh;
+  }
+
+  .legal,
+  .follow {
+    padding-top: 0;
+  }
+
+  .follow {
+    justify-self: start;
+  }
+
+  .tagline {
+    margin-top: 4vh;
+  }
+
+  .legalList {
+    gap: 3vw;
+
+    li + li::before {
+      margin-right: 3vw;
+    }
+  }
+
+  .socials {
+    gap: 3vw;
+  }
+
+  .social {
+    width: clamp(2.4rem, 9vw, 3.4rem);
+    height: clamp(2.4rem, 9vw, 3.4rem);
+  }
+
+  .bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.5vh;
+    padding-top: 4vh;
+  }
+}
+
+@media (max-width: 620px) {
+  .legalList {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.6vh;
+
+    // Ve sloupci by tečka mezi řádky rušila.
+    li + li::before {
+      display: none;
+    }
+  }
+}

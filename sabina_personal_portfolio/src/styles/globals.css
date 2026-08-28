@@ -1,33 +1,36 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   padding: 0;
   margin: 0;
+}
+
+/* POZOR: tady NESMÍ být overflow-x: hidden.
+   Hidden na jedné ose vynutí na druhé ose overflow: auto — z body se tím
+   stane scroll container a position: sticky uvnitř přestane fungovat.
+   clip ořízne stejně, ale scroll container nevytváří, takže sticky
+   zůstává vázaný na viewport. */
+html,
+body {
+  overflow-x: clip;
+}
+
+/* Poppins se aplikuje přes wrapper v _app.tsx (next/font) a dědí se dolů.
+   Tady zůstává jen fallback stack pro případ, než se font načte. */
+/* Podklad celého webu dělá globální shader v layout/shader-background.
+   Barva na html je jen záloha, než se WebGL vrstva načte, a pro případ,
+   že ji prohlížeč nedá vůbec. */
+html {
+  background: #9c9c9c;
+}
+
+body {
+  font-family: var(--font-poppins), system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #2e2e2e;
+  background: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -35,8 +38,16 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+img,
+svg {
+  display: block;
+}
+
+/* Shader je fixed na z-indexu 0, takže obsah musí nad něj. Stačí to dát
+   na main a footer — vlastní z-indexy uvnitř sekcí se tím uzavřou do
+   jejich stacking kontextu a shader je nepřebije. */
+main,
+footer {
+  position: relative;
+  z-index: 1;
 }

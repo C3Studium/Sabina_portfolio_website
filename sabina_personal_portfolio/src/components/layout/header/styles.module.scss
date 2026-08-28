@@ -1,0 +1,172 @@
+// Header — globální navigace webu.
+//
+// Původně žil uvnitř Hero (absolutně nad jeho sticky boxem). Teď je
+// fixed a mountuje se v _app.tsx, takže drží na obrazovce nad všemi
+// sekcemi i stránkami.
+//
+// JEDNOTKY: rem, ne vh/vw. Chrome webu má mít stejnou velikost na malém
+// i velkém monitoru — na rozdíl od sekcí, které se viewportu přizpůsobují.
+
+$accent: #bec948;
+$ink: #2e2e2e;
+
+// Stejné hodnoty jako v hero/styles.module.scss — hero si $header-height
+// nechává, aby o něj odsadil headline pod hlavičkou.
+$header-height: 5.75rem;
+$gutter: clamp(1.5rem, 4vw, 3.25rem);
+
+.header {
+  position: fixed;
+  // inset místo width: 100vw — 100vw počítá i šířku scrollbaru a
+  // hlavička by o ni přetekla doprava.
+  inset: 0 0 auto;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 4.5vh 3vh;
+  height: $header-height;
+  color: $ink;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-shrink: 0;
+  color: white;
+}
+
+.brandMark {
+  width: auto;
+  height: 4rem;
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.brandName {
+  font-size: 1.8rem;
+  font-weight: 500;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+}
+
+.brandSurname {
+  margin-top: 0.24rem;
+  font-size: 1rem;
+  font-weight: 300;
+  letter-spacing: 0.235em;
+  text-transform: uppercase;
+  align-self: flex-end;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: clamp(1.1rem, 2.6vw, 2.5rem);
+}
+
+.navLink {
+  position: relative;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: color 0.22s ease;
+  color: white;
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -0.4rem;
+    width: 100%;
+    height: 1px;
+    background: $accent;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.28s ease;
+  }
+
+  &:hover {
+    color: $accent;
+  }
+
+  &:hover::after {
+    transform: scaleX(1);
+  }
+}
+
+// Od přesunu do layoutu je to <button> (otevírá modal), ne odkaz —
+// proto reset rámečku, kurzoru a písma, které si button nedědí.
+.cta {
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-shrink: 0;
+  padding: 1rem 1.35rem;
+  background: rgba(70, 70, 66, 0.82);
+  color: $accent;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  border-radius: 5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: background 0.24s ease;
+
+  &:hover {
+    background: rgba(52, 52, 48, 0.92);
+  }
+}
+
+.ctaArrow {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+
+  svg {
+    width: 1.6rem;
+    height: 1.6rem;
+  }
+}
+
+/* ---------- Responsivita ---------- */
+
+// Breakpointy i hodnoty přenesené 1:1 z hero/styles.module.scss, aby se
+// chování hlavičky přesunem nezměnilo.
+@media (max-width: 1180px) {
+  .nav {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .ctaLabel {
+    display: none;
+  }
+
+  .cta {
+    padding: 0.6rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navLink,
+  .navLink::after,
+  .cta {
+    transition: none;
+  }
+}
