@@ -1,0 +1,9 @@
+@use "../styles/system/_shortcuts.scss" as *;
+
+.veil {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    background: var(--transition-bg, #111);
+    pointer-events: none;
+}

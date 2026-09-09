@@ -109,7 +109,12 @@ export default function Hero() {
                 width={612}
                 height={1019}
                 className={styles.portraitImage}
-                preload
+                // Tenhle portrét je LCP prvek stránky. `preload` sám vloží
+                // jen <link rel=preload> do hlavičky a na <img> nechá
+                // výchozí loading="lazy" — proto na něj Next 16 nadával.
+                // Dokumentace u obrázku nad ohybem chce tohle.
+                loading="eager"
+                fetchPriority="high"
                 sizes="(max-width: 900px) 70vw, 45vw"
               />
               {/* Všechny propy jsou vypsané schválně — i ty na výchozí

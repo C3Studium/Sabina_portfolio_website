@@ -196,7 +196,10 @@ export default function AboutMe() {
           height={1019}
           className={styles.portraitImage}
           sizes="(max-width: 1100px) 70vw, 56vw"
-          priority
+          // `priority` je od Next 16 deprecated. Portrét je i tady nad
+          // ohybem a je to LCP prvek /about.
+          loading="eager"
+          fetchPriority="high"
         />
       </div>
 

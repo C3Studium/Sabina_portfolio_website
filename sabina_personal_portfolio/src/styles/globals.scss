@@ -1,0 +1,17 @@
+// Vstupní bod stylů webu.
+//
+// `_generated-styles.scss` sepisuje `valescss sync` — je to seznam všech
+// nemodulových stylů v src/, aby žádný nezůstal nezapojený jen proto, že se
+// na něj zapomnělo. Ručně do něj nepiš, přepíše se.
+@use "./system/colors";
+
+// STYLE-SYSTEM ENTRY START
+@use "./_generated-styles.scss";
+// STYLE-SYSTEM ENTRY END
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+}

@@ -1,4 +1,4 @@
-import "@/styles/globals.css";
+import "@/styles/globals.scss";
 import { useEffect, useState } from "react";
 import type { AppProps } from "next/app";
 import { Poppins, Caveat } from "next/font/google";
@@ -7,6 +7,10 @@ import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
 import ContactModal from "@/components/layout/contact-modal";
 import ShaderBackground from "@/components/layout/shader-background";
+import { withStudio } from "@c3studium/valecms";
+import Preloader from "@/motion/Preloader";
+import PageTransition from "@/motion/PageTransition";
+import { LoadProvider } from "@/motion/LoadProvider";
 
 // latin-ext je nutný kvůli české diakritice (ě, š, ž, í, ý, ú).
 const poppins = Poppins({
@@ -34,7 +38,7 @@ declare global {
   }
 }
 
-export default function App({ Component, pageProps }: AppProps) {
+function App({ Component, pageProps }: AppProps) {
   // Stav kontaktního modalu žije tady: otevírá ho tlačítko v hlavičce,
   // ale modal je její sourozenec, ne potomek.
   const [contactOpen, setContactOpen] = useState(false);
@@ -86,3 +90,5 @@ export default function App({ Component, pageProps }: AppProps) {
     </div>
   );
 }
+
+export default withStudio(App, { chrome: [Preloader, PageTransition], provider: LoadProvider })

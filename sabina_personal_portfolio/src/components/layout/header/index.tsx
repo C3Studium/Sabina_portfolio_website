@@ -32,7 +32,10 @@ export default function Header({ onContactClick }: HeaderProps) {
           width={64}
           height={58}
           className={styles.brandMark}
-          preload
+          // Logo je nad ohybem na každé stránce. Podle dokumentace se pro
+          // takový obrázek hodí loading="eager", ne preload — ten by jen
+          // přidával <link> do hlavičky pro pár kilobajtů.
+          loading="eager"
         />
         <span className={styles.brandText}>
           <span className={styles.brandName}>Sabina</span>
