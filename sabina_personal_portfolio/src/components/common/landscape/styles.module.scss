@@ -1,3 +1,5 @@
+@use "../../../styles/system/_shortcuts.scss" as *;
+
 // Landscape — obal pro WebGL terén. V originále to byly Tailwind utility
 // (`relative overflow-hidden`, `absolute inset-0`, `relative z-10 h-full
 // w-full`); projekt Tailwind nemá, tak jsou přepsané sem.

@@ -1,0 +1,9 @@
+allowBuilds:
+  '@parcel/watcher': true
+  unrs-resolver: true
+
+# pnpm 11 odmítá balíčky mladší než 24 h (ochrana proti kompromitovaným
+# novinkám v registru). Náš vlastní balíček z GitHub Packages tím ale
+# procházet nemusí – publikujeme ho my a instalujeme hned po vydání.
+minimumReleaseAgeExclude:
+  - '@c3studium/valecms'
