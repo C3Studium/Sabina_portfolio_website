@@ -1,14 +1,77 @@
 import Image from "next/image";
 import Link from "next/link";
+import { editableIn } from "@c3studium/valecms/edit";
+import type { CopyItem, GlobalBlock } from "@/lib/site/globals";
 import styles from "./styles.module.scss";
 
-// Odkazy jsou zatím zástupné — až budou stránky existovat, stačí přepsat
-// href, značení i pořadí odpovídá návrhu.
-const LEGAL_LINKS = [
-  { label: "Zásady ochrany údajů", href: "#" },
-  { label: "Obchodní podmínky", href: "#" },
-  { label: "Cookies", href: "#" },
-];
+// Rok je zapsaný natvrdo schválně — new Date() na serveru a v prohlížeči
+// může spadnout do jiného roku a rozbít hydrataci kvůli jedinému číslu.
+const YEAR = 2026;
+
+/**
+ * Co patička říká, když CMS mlčí.
+ *
+ * Tytéž texty, jaké tu stály natvrdo — poslední síť pro stránky bez
+ * `getStaticProps` a pro nedostupnou databázi. Odkazy jsou zatím zástupné —
+ * až budou stránky existovat, stačí přepsat href; značení i pořadí odpovídá
+ * návrhu.
+ */
+const FALLBACK = {
+  logo: "/assets/rest/logo.png",
+  brandName: "Sabina",
+  brandSurname: "Hudrmentová",
+  tagline: ["Strategie.", "Design.", "Výsledky."],
+  legalTitle: "Právní informace",
+  legal: [
+    { label: "Zásady ochrany údajů", href: "#" },
+    { label: "Obchodní podmínky", href: "#" },
+    { label: "Cookies", href: "#" },
+  ],
+  followTitle: "Sledujte mě",
+  socials: [
+    { label: "Instagram", href: "#" },
+    { label: "LinkedIn", href: "#" },
+    { label: "Behance", href: "#" },
+  ],
+  copyright: `© ${YEAR} Sabina Hudrmentová. Všechna práva vyhrazena.`,
+  sign: "Pojďme tvořit.",
+};
+
+/**
+ * Která položka `global.footer` je co. Blok je seznam a řádky se adresují
+ * pozicí; tady je jediné místo, kde se pozice pojmenovávají, a anotace níž
+ * opisují totéž číslo. Seed (scripts/seed/layout.mjs) zakládá položky v tomhle
+ * pořadí — přehodit je znamená přehodit obojí.
+ *
+ * U odkazů je `label` text a `value` cíl: dvě půlky jednoho odkazu v jedné
+ * položce.
+ */
+const LINES = {
+  brand: 0,
+  taglineFrom: 1, // tři řádky claimu, poslední je zvýrazněný
+  legalTitle: 4,
+  legalFrom: 5, // tři právní odkazy
+  followTitle: 8,
+  socialsFrom: 9, // tři sítě — ikony jsou z kódu, vázané pořadím
+  copyright: 12,
+  sign: 13,
+} as const;
+
+/**
+ * Text z CMS na dané pozici, jinak ten z kódu.
+ *
+ * Prázdný řetězec se bere jako „nic nenapsáno": vymazané pole ve Studiu nesmí
+ * vyrobit sloupec s prázdným nadpisem.
+ */
+const textAt = (
+  items: CopyItem[] | undefined,
+  index: number,
+  key: "label" | "value",
+  zaloha: string,
+) => {
+  const value = items?.[index]?.[key];
+  return (typeof value === "string" && value.trim()) || zaloha;
+};
 
 function InstagramIcon() {
   return (
@@ -36,17 +99,20 @@ function BehanceIcon() {
   );
 }
 
-const SOCIALS = [
-  { label: "Instagram", href: "#", Icon: InstagramIcon },
-  { label: "LinkedIn", href: "#", Icon: LinkedinIcon },
-  { label: "Behance", href: "#", Icon: BehanceIcon },
-];
+// Ikony jsou kód, ne obsah — k položkám z CMS se váží pořadím.
+const SOCIAL_ICONS = [InstagramIcon, LinkedinIcon, BehanceIcon];
 
-// Rok je zapsaný natvrdo schválně — new Date() na serveru a v prohlížeči
-// může spadnout do jiného roku a rozbít hydrataci kvůli jedinému číslu.
-const YEAR = 2026;
+type FooterProps = {
+  // Blok `global.footer` z `props.globals` stránky; `null` bez CMS i na 404.
+  copy?: GlobalBlock | null;
+};
 
-export default function Footer() {
+export default function Footer({ copy = null }: FooterProps) {
+  // Dokument zadaný jednou, ne u každé anotace. Mimo Studio je `docId`
+  // undefined a `edit(...)` vrací prázdno, takže na web se nerozprostře nic.
+  const edit = editableIn(copy?.docId ?? null);
+  const items = copy?.items;
+
   return (
     <footer className={styles.footer}>
       <div className={styles.decor} aria-hidden="true" />
@@ -58,58 +124,99 @@ export default function Footer() {
             {/* Stejná stavba i rozměry jako brand v hlavičce, aby footer
                 seděl na svislici s navbarem. */}
             <Link className={styles.brand} href="/">
+              {/* `alt` prázdný i s obrázkem z CMS: jméno je hned vedle jako
+                  text a čtečka by ho slyšela dvakrát. */}
               <Image
-                src="/assets/rest/logo.png"
+                {...edit.image("image")}
+                src={copy?.image?.src || FALLBACK.logo}
                 alt=""
                 width={64}
                 height={58}
                 className={styles.brandMark}
               />
               <span className={styles.brandText}>
-                <span className={styles.brandName}>Sabina</span>
-                <span className={styles.brandSurname}>Hudrmentová</span>
+                <span className={styles.brandName} {...edit(`items.${LINES.brand}.label`)}>
+                  {textAt(items, LINES.brand, "label", FALLBACK.brandName)}
+                </span>
+                <span className={styles.brandSurname} {...edit(`items.${LINES.brand}.value`)}>
+                  {textAt(items, LINES.brand, "value", FALLBACK.brandSurname)}
+                </span>
               </span>
               <span className={styles.brandDot} aria-hidden="true" />
             </Link>
 
+            {/* Každý řádek ve vlastním <span> a s vlastní anotací: překryv
+                ukládá textContent a jeden prvek se třemi řádky by slil. Třetí
+                řádek je zvýrazněný třídou, ne značkou v textu, takže zůstává
+                prostý text. */}
             <p className={styles.tagline}>
-              <span>Strategie.</span>
-              <span>Design.</span>
-              <span className={styles.accent}>Výsledky.</span>
+              {FALLBACK.tagline.map((line, i) => {
+                const at = LINES.taglineFrom + i;
+                const last = i === FALLBACK.tagline.length - 1;
+                return (
+                  <span
+                    key={at}
+                    className={last ? styles.accent : undefined}
+                    {...edit(`items.${at}.label`)}
+                  >
+                    {textAt(items, at, "label", line)}
+                  </span>
+                );
+              })}
             </p>
           </div>
 
           {/* ---------- Právní odkazy ---------- */}
           <nav className={styles.legal} aria-label="Právní informace">
-            <h2 className={styles.colLabel}>Právní informace</h2>
+            <h2 className={styles.colLabel} {...edit(`items.${LINES.legalTitle}.label`)}>
+              {textAt(items, LINES.legalTitle, "label", FALLBACK.legalTitle)}
+            </h2>
             <ul className={styles.legalList}>
-              {LEGAL_LINKS.map((link) => (
-                <li key={link.label}>
-                  <a className={styles.legalLink} href={link.href}>
-                    {link.label}
-                  </a>
-                </li>
-              ))}
+              {FALLBACK.legal.map((link, i) => {
+                const at = LINES.legalFrom + i;
+                return (
+                  <li key={at}>
+                    {/* Text i cíl z jedné položky: `label` je slovo na stránce,
+                        `value` adresa. */}
+                    <a
+                      className={styles.legalLink}
+                      href={textAt(items, at, "value", link.href)}
+                      {...edit.link({ text: `items.${at}.label`, href: `items.${at}.value` })}
+                    >
+                      {textAt(items, at, "label", link.label)}
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
           </nav>
 
           {/* ---------- Sociální sítě ---------- */}
           <div className={styles.follow}>
-            <h2 className={styles.colLabel}>Sledujte mě</h2>
+            <h2 className={styles.colLabel} {...edit(`items.${LINES.followTitle}.label`)}>
+              {textAt(items, LINES.followTitle, "label", FALLBACK.followTitle)}
+            </h2>
             <ul className={styles.socials}>
-              {SOCIALS.map(({ label, href, Icon }) => (
-                <li key={label}>
-                  <a
-                    className={styles.social}
-                    href={href}
-                    aria-label={label}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                  >
-                    <Icon />
-                  </a>
-                </li>
-              ))}
+              {FALLBACK.socials.map((social, i) => {
+                const at = LINES.socialsFrom + i;
+                const Icon = SOCIAL_ICONS[i];
+                return (
+                  <li key={at}>
+                    {/* Ikona nemá slova na obrazovce, takže se upravuje jen
+                        cíl; `label` slouží čtečce. */}
+                    <a
+                      className={styles.social}
+                      href={textAt(items, at, "value", social.href)}
+                      aria-label={textAt(items, at, "label", social.label)}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      {...edit.link({ href: `items.${at}.value` })}
+                    >
+                      <Icon />
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
@@ -117,10 +224,12 @@ export default function Footer() {
         {/* ---------- Spodní pruh ---------- */}
         <div className={styles.bottom}>
           <span className={styles.bottomRule} aria-hidden="true" />
-          <p className={styles.copy}>
-            © {YEAR} Sabina Hudrmentová. Všechna práva vyhrazena.
+          <p className={styles.copy} {...edit(`items.${LINES.copyright}.label`)}>
+            {textAt(items, LINES.copyright, "label", FALLBACK.copyright)}
           </p>
-          <p className={styles.sign}>Pojďme tvořit.</p>
+          <p className={styles.sign} {...edit(`items.${LINES.sign}.label`)}>
+            {textAt(items, LINES.sign, "label", FALLBACK.sign)}
+          </p>
         </div>
       </div>
     </footer>

@@ -8,6 +8,7 @@ import Footer from "@/components/layout/footer";
 import ContactModal from "@/components/layout/contact-modal";
 import ShaderBackground from "@/components/layout/shader-background";
 import { withStudio } from "@c3studium/valecms";
+import type { GlobalCopy } from "@/lib/site/globals";
 import Preloader from "@/motion/Preloader";
 import PageTransition from "@/motion/PageTransition";
 import CookieBanner from "@/providers/CookieBanner";
@@ -42,10 +43,18 @@ declare global {
   }
 }
 
+// Texty hlavičky, patičky a modálu cestují na propech KAŽDÉ stránky
+// (`getGlobalCopy` v jejím getStaticProps → `props.globals`), protože `_app`
+// vlastní načítání nemá: `App.getInitialProps` by celý web odhlásil ze
+// statické generace. Stránka bez getStaticProps (404) nepředá nic a komponenty
+// sáhnou po záloze z kódu.
+type GlobalPageProps = { globals?: GlobalCopy | null };
+
 function App({ Component, pageProps }: AppProps) {
   // Stav kontaktního modalu žije tady: otevírá ho tlačítko v hlavičce,
   // ale modal je její sourozenec, ne potomek.
   const [contactOpen, setContactOpen] = useState(false);
+  const globals = (pageProps as GlobalPageProps).globals ?? null;
 
   useEffect(() => {
     // Initialize Lenis for smooth scrolling
@@ -84,12 +93,13 @@ function App({ Component, pageProps }: AppProps) {
   return (
     <div className={`${poppins.variable} ${caveat.variable} ${poppins.className}`}>
       <ShaderBackground />
-      <Header onContactClick={() => setContactOpen(true)} />
+      <Header onContactClick={() => setContactOpen(true)} copy={globals?.header} />
       <Component {...pageProps} />
-      <Footer />
+      <Footer copy={globals?.footer} />
       <ContactModal
         open={contactOpen}
         onClose={() => setContactOpen(false)}
+        copy={globals?.contact}
       />
     </div>
   );

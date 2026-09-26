@@ -1,26 +1,21 @@
-// Tenhle web, jako konfigurace.
+// Tenhle web, jako konfigurace — složená z jednoho souboru na stránku.
 //
-// VALECMS je knihovna; tenhle soubor je jediný popis toho, z čeho se skládá
-// TENHLE web. Stránka je route, dokumenty, které drží, a to, kam jejich pole
-// padají do props, které dostanou sekce.
+// Rozdělení není kvůli délce, ale kvůli práci: stránky vznikají paralelně a
+// jeden soubor by byl jedno místo, kde se čtyři lidi (nebo agenti) přepisují.
+// Tady se jen skládá; definice bydlí v ./cms/*.ts a klíče v ./cms/keys.ts.
 //
 // Musí projít přes `defineSite`. Holý objekt se stejnými klíči projde čtením
 // i buildem a rozbije se až při publikaci: revalidace se ptá téhle konfigurace,
 // které stránky přegenerovat, a na nezpracovaném objektu neví.
-import { defineGlobals, definePage, defineSite } from '@c3studium/valecms/site'
+import { defineSite } from '@c3studium/valecms/site'
 
-const homepage = definePage({
-    route: '/',
-    title: 'Domů',
-    // Všechny bloky typu siteCopy, které mají `page: 'index'`.
-    copy: 'index',
-    // Pojmenované zdroje dokumentů. Klíč je jméno, pod kterým dorazí do props.
-    sources: {},
-})
+import { homepage } from './cms/home.ts'
+import { aboutPage } from './cms/about.ts'
+import { projectsPage, projectPages } from './cms/projects.ts'
+import { globals, surfaces } from './cms/layout.ts'
 
 export default defineSite({
-    pages: [homepage],
-    // Co `_app` vykresluje pod každou routou — patička, kontakt. Publikace
-    // takového bloku sáhne na každou stránku, a proto se to říká tady nahlas.
-    globals: defineGlobals({ copy: 'global', sources: {} }),
+    pages: [homepage, aboutPage, projectsPage, ...projectPages],
+    globals,
+    surfaces,
 })

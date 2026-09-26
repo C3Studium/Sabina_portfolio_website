@@ -1,6 +1,15 @@
 import { useRef, type CSSProperties } from "react";
 import Image from "next/image";
 import { motion, useScroll, useTransform } from "framer-motion";
+import { editableIn, type BoundEditable } from "@c3studium/valecms/edit";
+import Lines, {
+  hasLines,
+  picture,
+  pictures,
+  text,
+  type CmsImage,
+  type MarkedLine,
+} from "../lines";
 import styles from "./styles.module.scss";
 
 // Uzly na křivce. x/y jsou zlomky celého tracku (455vw) a výšky sekce.
@@ -39,6 +48,104 @@ const WAVE_PATH = [
   "Q 3355 810, 3477 701 Q 3600 592, 3845 520", // vzhůru k uzlu 05
   "Q 4080 450, 4197 438 Q 4315 426, 4550 380", // doběh
 ].join(" ");
+
+// Co sekce říká, když CMS mlčí — tytéž texty, jaké tu stály natvrdo.
+// Tučné fráze kroků jsou zvýraznění dekódovaná po slovech, jako na serveru.
+const FALLBACK = {
+  eyebrow: "Jak probíhá spolupráce",
+  // Tečka je součástí posledního slova; Lines ji vyndá do vlastního spanu.
+  heading: [
+    [["Od zadání", false]],
+    [
+      ["k", false],
+      ["výsledku.", true],
+    ],
+  ] as MarkedLine[],
+  lead: "Jasný a efektivní proces, který mění nápady ve funkční vizuály a výsledky.",
+  scrollHint: "Objevujte posunutím",
+  steps: [
+    {
+      number: "01",
+      label: "Seznámení",
+      text: [
+        ["Začínáme", false],
+        ["pochopením vašich cílů,", true],
+        ["cílové skupiny a toho,", false],
+        ["čeho má grafika dosáhnout.", true],
+      ],
+    },
+    {
+      number: "02",
+      label: "Koncept",
+      text: [
+        ["Vizuální směr vychází z barev samotného produktu. Důraz je kladen na", false],
+        ["kontrast, detail produktu", true],
+        ["a charakter značky.", false],
+      ],
+    },
+    {
+      number: "03",
+      label: "Tvorba",
+      text: [
+        ["Tvořím s jasným záměrem.", false],
+        ["Každý prvek má svou funkci", true],
+        ["– zaujmout, komunikovat a podpořit výsledek.", false],
+      ],
+    },
+    {
+      number: "04",
+      label: "Doladění",
+      text: [
+        ["Na základě zpětné vazby", false],
+        ["dolaďuji detaily,", true],
+        ["dokud není vše připravené do finální podoby.", false],
+      ],
+    },
+    {
+      number: "05",
+      label: "Předání",
+      text: [
+        ["Finální grafiku předávám ve všech potřebných formátech,", false],
+        ["připravenou pro použití", true],
+        ["napříč platformami.", false],
+      ],
+    },
+  ] as { number: string; label: string; text: MarkedLine }[],
+  portrait: {
+    src: "/assets/rest/main_photo.png",
+    alt: "",
+    width: 612,
+    height: 1019,
+  },
+  // Sedm ukázek v pořadí, v jakém je track kreslí: tvorba (3), doladění (1),
+  // předání (3). Rozměry jsou skutečné rozměry souborů.
+  shots: [
+    { src: "/assets/banners/jordan_banner4.png", alt: "Reklamní vizuál pro značku Jordan", width: 305, height: 381 },
+    { src: "/assets/banners/jordan_banner1.png", alt: "Varianta vizuálu", width: 293, height: 366 },
+    { src: "/assets/banners/jordan_banner3.png", alt: "Varianta vizuálu", width: 205, height: 256 },
+    { src: "/assets/banners/jordan_banner4.png", alt: "Doladěná verze vizuálu", width: 305, height: 381 },
+    { src: "/assets/banners/jordan_banner6.png", alt: "Formát 1080 × 1920 px, story na výšku", width: 231, height: 410 },
+    { src: "/assets/banners/jordan_banner1.png", alt: "Formát 1080 × 1350 px na výšku", width: 293, height: 366 },
+    { src: "/assets/banners/jordan_banner5.png", alt: "Čtvercový formát 1080 × 1080 px, 1:1", width: 194, height: 194 },
+  ],
+};
+
+// Kde v `items` bloku `index.process` co bydlí — musí sedět na src/lib/cms/home.ts.
+// 0–1 řádky nadpisu, 2 nápověda posunu, 3–7 kroky.
+const AT = { scrollHint: 2, steps: 3 };
+
+// Blok `index.process`, jak ho tvaruje src/lib/cms/home.ts.
+export type ProcessCopy = {
+  docId?: string;
+  eyebrow?: string;
+  labels?: MarkedLine[];
+  labelMark?: string;
+  lead?: string;
+  scrollHint?: string;
+  steps?: { lead?: string; note?: string }[];
+  portrait?: CmsImage | null;
+  gallery?: CmsImage[] | string;
+};
 
 function ArrowIcon() {
   return (
@@ -108,26 +215,65 @@ function Annotation({
   );
 }
 
+// Hlava kroku: číslo (items.i.lead), název (items.i.note) a text (items.i.label).
+// Text sedí v `label`, protože jediné pole položky s deklarovaným zvýrazněním
+// je tohle — a tučné fráze kroků jsou právě zvýraznění, jinak by se ztratily.
 function StepHead({
+  index,
   number,
   label,
-  children,
+  text: line,
+  edit,
+  mark,
 }: {
+  index: number;
   number: string;
   label: string;
-  children: React.ReactNode;
+  text: MarkedLine;
+  edit: BoundEditable;
+  mark?: string;
 }) {
+  const at = AT.steps + index;
   return (
     <div className={styles.stepHead}>
-      <span className={styles.stepNumber}>{number}</span>
-      <span className={styles.stepLabel}>{label}</span>
-      <p className={styles.stepText}>{children}</p>
+      <span className={styles.stepNumber} {...edit(`items.${at}.lead`)}>
+        {number}
+      </span>
+      <span className={styles.stepLabel} {...edit(`items.${at}.note`)}>
+        {label}
+      </span>
+      {/* Interpunkce za tučnou frází stojí mimo <strong>, jako v návrhu. */}
+      <p className={styles.stepText} {...edit(`items.${at}.label`, "text", mark)}>
+        <Lines lines={[line]} markTag="strong" trailClass="" />
+      </p>
     </div>
   );
 }
 
-export default function Process() {
+export default function Process({ copy = null }: { copy?: ProcessCopy | null }) {
   const containerRef = useRef<HTMLElement>(null);
+  const edit = editableIn(copy?.docId ?? null);
+
+  const labels = hasLines(copy?.labels) ? copy.labels : null;
+  const heading =
+    labels && labels.length >= FALLBACK.heading.length
+      ? labels.slice(0, FALLBACK.heading.length)
+      : FALLBACK.heading;
+  const eyebrow = text(copy?.eyebrow, FALLBACK.eyebrow);
+  const lead = text(copy?.lead, FALLBACK.lead);
+  const scrollHint = text(copy?.scrollHint, FALLBACK.scrollHint);
+  // Pět kroků dává křivka i rozvržení screenů; CMS dodává slova po indexu.
+  const steps = FALLBACK.steps.map((step, index) => {
+    const line = labels?.[AT.steps + index];
+    return {
+      number: text(copy?.steps?.[index]?.lead, step.number),
+      label: text(copy?.steps?.[index]?.note, step.label),
+      text: line && line.length ? line : step.text,
+    };
+  });
+  const portrait = picture(copy?.portrait, FALLBACK.portrait);
+  const gallery = pictures(copy?.gallery);
+  const shots = FALLBACK.shots.map((shot, index) => picture(gallery[index], shot));
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -180,17 +326,27 @@ export default function Process() {
           {/* ---------- Screen 1 (150vw): úvod + krok 01 ---------- */}
           <div className={`${styles.screen} ${styles.screenOne}`}>
             <div className={styles.lead}>
-              <p className={styles.eyebrow}>Jak probíhá spolupráce</p>
-              <h2 className={styles.headline}>
-                <span className={styles.headlineRow}>Od zadání</span>
-                <span className={styles.headlineRow}>
-                  k <span className={styles.accent}>výsledku</span>
-                  <span className={styles.dot}>.</span>
-                </span>
+              <p className={styles.eyebrow} {...edit("title")}>
+                {eyebrow}
+              </p>
+              {/* Řádky jsou spany bez <br>, proto anotace `lines`: každé dítě
+                  <h2> je jeden řádek a ukládá se do items.i.label. */}
+              <h2
+                className={styles.headline}
+                {...edit.lines("items.*.label", copy?.labelMark)}
+              >
+                {heading.map((row, index) => (
+                  <span key={index} className={styles.headlineRow}>
+                    <Lines
+                      lines={[row]}
+                      markClass={styles.accent}
+                      trailClass={styles.dot}
+                    />
+                  </span>
+                ))}
               </h2>
-              <p className={styles.leadText}>
-                Jasný a efektivní proces, který mění nápady ve funkční vizuály a
-                výsledky.
+              <p className={styles.leadText} {...edit("body")}>
+                {lead}
               </p>
 
               <div className={styles.scrollHint} aria-hidden="true">
@@ -200,28 +356,27 @@ export default function Process() {
                   <span className={styles.scrollCircle}>
                     <ArrowIcon />
                   </span>
-                  Objevujte posunutím
+                  <span {...edit(`items.${AT.scrollHint}.label`)}>{scrollHint}</span>
                 </span>
               </div>
             </div>
 
-            <div className={styles.portrait}>
+            <div className={styles.portrait} {...edit.image("image")}>
               <Image
-                src="/assets/rest/main_photo.png"
-                alt=""
-                width={612}
-                height={1019}
+                src={portrait.src}
+                alt={portrait.alt}
+                width={portrait.width}
+                height={portrait.height}
                 className={styles.portraitImage}
                 sizes="(max-width: 1000px) 50vw, 26vw"
               />
             </div>
 
             <div className={`${styles.step} ${styles.stepOne}`}>
-              <StepHead number="01" label="Seznámení">
-                Začínáme <strong>pochopením vašich cílů</strong>, cílové skupiny a
-                toho, <strong>čeho má grafika dosáhnout</strong>.
-              </StepHead>
+              <StepHead index={0} {...steps[0]} edit={edit} mark={copy?.labelMark} />
 
+              {/* Zadání, paleta, bubliny i popisky formátů níž jsou ilustrace
+                  procesu — kulisy z návrhu, ne texty webu. Zůstávají v kódu. */}
               <div className={styles.briefComposition}>
                 <div className={styles.briefCard}>
                   <p className={styles.briefTitle}>Zadání grafiky</p>
@@ -268,10 +423,7 @@ export default function Process() {
           {/* ---------- Screen 2 (135vw): kroky 02 a 03 ---------- */}
           <div className={`${styles.screen} ${styles.screenTwo}`}>
             <div className={`${styles.step} ${styles.stepTwo}`}>
-              <StepHead number="02" label="Koncept">
-                Vizuální směr vychází z barev samotného produktu. Důraz je kladen
-                na <strong>kontrast, detail produktu</strong> a charakter značky.
-              </StepHead>
+              <StepHead index={1} {...steps[1]} edit={edit} mark={copy?.labelMark} />
 
               <div className={styles.conceptComposition}>
                 <div className={styles.typeCard}>
@@ -295,36 +447,35 @@ export default function Process() {
             </div>
 
             <div className={`${styles.step} ${styles.stepThree}`}>
-              <StepHead number="03" label="Tvorba">
-                Tvořím s jasným záměrem. <strong>Každý prvek má svou funkci</strong>{" "}
-                – zaujmout, komunikovat a podpořit výsledek.
-              </StepHead>
+              <StepHead index={2} {...steps[2]} edit={edit} mark={copy?.labelMark} />
 
-              <div className={styles.makeComposition}>
+              {/* Jedna sada obrázků pro celý proces; každá kompozice je vstup
+                  do téže sady, takže se dá otevřít z místa, kde ji editor vidí. */}
+              <div className={styles.makeComposition} {...edit.set("gallery")}>
                 <div className={`${styles.shot} ${styles.shotMain}`}>
                   <Image
-                    src="/assets/banners/jordan_banner4.png"
-                    alt="Reklamní vizuál pro značku Jordan"
-                    width={305}
-                    height={381}
+                    src={shots[0].src}
+                    alt={shots[0].alt}
+                    width={shots[0].width}
+                    height={shots[0].height}
                     sizes="18vw"
                   />
                 </div>
                 <div className={`${styles.shot} ${styles.shotTop}`}>
                   <Image
-                    src="/assets/banners/jordan_banner1.png"
-                    alt="Varianta vizuálu"
-                    width={293}
-                    height={366}
+                    src={shots[1].src}
+                    alt={shots[1].alt}
+                    width={shots[1].width}
+                    height={shots[1].height}
                     sizes="12vw"
                   />
                 </div>
                 <div className={`${styles.shot} ${styles.shotBottom}`}>
                   <Image
-                    src="/assets/banners/jordan_banner3.png"
-                    alt="Varianta vizuálu"
-                    width={205}
-                    height={256}
+                    src={shots[2].src}
+                    alt={shots[2].alt}
+                    width={shots[2].width}
+                    height={shots[2].height}
                     sizes="12vw"
                   />
                 </div>
@@ -340,12 +491,9 @@ export default function Process() {
           {/* ---------- Screen 3 (170vw): kroky 04 a 05 ---------- */}
           <div className={`${styles.screen} ${styles.screenThree}`}>
             <div className={`${styles.step} ${styles.stepFour}`}>
-              <StepHead number="04" label="Doladění">
-                Na základě zpětné vazby <strong>dolaďuji detaily</strong>, dokud
-                není vše připravené do finální podoby.
-              </StepHead>
+              <StepHead index={3} {...steps[3]} edit={edit} mark={copy?.labelMark} />
 
-              <div className={styles.tuneComposition}>
+              <div className={styles.tuneComposition} {...edit.set("gallery")}>
                 <div className={`${styles.bubble} ${styles.bubbleClient}`}>
                   <span className={`${styles.bubbleTag} ${styles.tagClient}`}>
                     Klient
@@ -358,10 +506,10 @@ export default function Process() {
                 </div>
                 <div className={`${styles.shot} ${styles.shotTune}`}>
                   <Image
-                    src="/assets/banners/jordan_banner4.png"
-                    alt="Doladěná verze vizuálu"
-                    width={305}
-                    height={381}
+                    src={shots[3].src}
+                    alt={shots[3].alt}
+                    width={shots[3].width}
+                    height={shots[3].height}
                     sizes="17vw"
                   />
                 </div>
@@ -375,19 +523,16 @@ export default function Process() {
             </div>
 
             <div className={`${styles.step} ${styles.stepFive}`}>
-              <StepHead number="05" label="Předání">
-                Finální grafiku předávám ve všech potřebných formátech,{" "}
-                <strong>připravenou pro použití</strong> napříč platformami.
-              </StepHead>
+              <StepHead index={4} {...steps[4]} edit={edit} mark={copy?.labelMark} />
 
-              <div className={styles.deliverComposition}>
+              <div className={styles.deliverComposition} {...edit.set("gallery")}>
                 <figure className={`${styles.deliver} ${styles.deliverStory}`}>
                   <div className={styles.cropMarks}>
                     <Image
-                      src="/assets/banners/jordan_banner6.png"
-                      alt="Formát 1080 × 1920 px, story na výšku"
-                      width={231}
-                      height={410}
+                      src={shots[4].src}
+                      alt={shots[4].alt}
+                      width={shots[4].width}
+                      height={shots[4].height}
                       sizes="13vw"
                     />
                   </div>
@@ -401,10 +546,10 @@ export default function Process() {
                 <figure className={`${styles.deliver} ${styles.deliverPortrait}`}>
                   <div className={styles.cropMarks}>
                     <Image
-                      src="/assets/banners/jordan_banner1.png"
-                      alt="Formát 1080 × 1350 px na výšku"
-                      width={293}
-                      height={366}
+                      src={shots[5].src}
+                      alt={shots[5].alt}
+                      width={shots[5].width}
+                      height={shots[5].height}
                       sizes="11vw"
                     />
                   </div>
@@ -418,10 +563,10 @@ export default function Process() {
                 <figure className={`${styles.deliver} ${styles.deliverSquare}`}>
                   <div className={styles.cropMarks}>
                     <Image
-                      src="/assets/banners/jordan_banner5.png"
-                      alt="Čtvercový formát 1080 × 1080 px, 1:1"
-                      width={194}
-                      height={194}
+                      src={shots[6].src}
+                      alt={shots[6].alt}
+                      width={shots[6].width}
+                      height={shots[6].height}
                       sizes="11vw"
                     />
                   </div>

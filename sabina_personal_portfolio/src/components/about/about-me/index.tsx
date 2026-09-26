@@ -1,9 +1,70 @@
+import { Fragment } from "react";
 import Image from "next/image";
+import { editableIn } from "@c3studium/valecms/edit";
 import styles from "./styles.module.scss";
 
+/* ------------------------------------------------------------ tvar obsahu -- */
+
+// Jeden úsek řádku a zda je zvýrazněný — tvar, ve kterém `f.lines` dekóduje
+// hvězdičky z pole `headline` (schemas/marks.js).
+type Part = [string, boolean];
+
+type Heading = { text?: string; lines?: Part[][]; mark?: string };
+
+type Picture = {
+  src: string;
+  url: string;
+  alt: string;
+  width?: number;
+  height?: number;
+  sizes?: string;
+};
+
+type CardRow = { lead: string; label: string; note: string; value: string };
+
+type Block = { docId?: string };
+
+type PanelBlock = Block & {
+  label?: string;
+  heading?: Heading;
+  text?: string;
+  tags?: { label: string }[];
+};
+
+/** Bloky stránky /about, jak je skládá `getPageContent` podle src/lib/cms/about.ts. */
+export type AboutContent = {
+  me?: Block & { eyebrow?: string; heading?: Heading; image?: Picture | null };
+  lead?: Block & { heading?: Heading };
+  highlights?: Block & { cards?: CardRow[]; titleMark?: string };
+  courses?: PanelBlock;
+  skills?: PanelBlock;
+};
+
+/* ------------------------------------------------------------- záloha ----- */
+
+// Texty, se kterými komponenta přišla. Nejsou to náhražky, je to poslední síť:
+// prázdný CMS (nebo vymazané pole ve Studiu) vykreslí stránku beze změny.
+//
 // POZOR: obsah karet je PŘEVZATÝ Z NÁVRHU a je zástupný — jazyková
 // úroveň, certifikát i rozsah zkušeností jsou konkrétní tvrzení o Sabině,
 // která nemám jak ověřit. Před spuštěním je nutné je nahradit skutečnými.
+const FALLBACK = {
+  eyebrow: "Pojďme se poznat",
+  heading: [[["Něco", false]], [["o mně", true]]] as Part[][],
+  lead: [
+    [["Měním nápady ve vizuály,", false]],
+    [["které", false], ["spojují, mluví", true]],
+    // Tečka jako vlastní úsek, aby zůstala v barvě textu jako dnes. Značka
+    // v CMS zvýrazňuje po slovech, takže po seedu bude tečka zelená.
+    [["a", false], ["prodávají", true], [".", false]],
+  ] as Part[][],
+  portrait: { src: "/assets/rest/main_photo.png", alt: "Sabina Hudrmentová", width: 612, height: 1019 },
+  portraitSizes: "(max-width: 1100px) 70vw, 56vw",
+};
+
+// Ikony zůstávají v kódu a váží se na pozici karty — do CMS jdou jen texty.
+// Z toho plyne jediné pravidlo, které se dá porušit: pořadí položek v bloku
+// `about.highlights` musí odpovídat pořadí tady.
 const HIGHLIGHTS = [
   {
     icon: "bookmark",
@@ -18,7 +79,7 @@ const HIGHLIGHTS = [
     art: "discs",
     label: "Zkušenosti",
     title: "Spolupráce se silnými značkami",
-    subtitle: null,
+    subtitle: "",
     body: "Kampaně pro e-shopy a značky z oblasti krásy, módy a lifestylu napříč Evropou.",
   },
   {
@@ -26,7 +87,7 @@ const HIGHLIGHTS = [
     art: "rosette",
     label: "Certifikáty",
     title: "Google Digital Garage",
-    subtitle: null,
+    subtitle: "",
     body: "Dokončený certifikát digitálního marketingu — strategie, SEO, reklama a analytika.",
   },
 ];
@@ -36,7 +97,7 @@ const PANELS = [
     icon: "cap",
     marker: "dot",
     label: "Kurzy",
-    title: "Neustálé vzdělávání",
+    title: [[["Neustálé vzdělávání", false]]] as Part[][],
     body: "Průběžné kurzy motion designu, UI/UX, brandingu a marketingu, abych držela krok s oborem.",
     tags: [
       "Motion design",
@@ -51,7 +112,7 @@ const PANELS = [
     icon: "star",
     marker: "check",
     label: "Specializace",
-    title: "Co umím nejlíp",
+    title: [[["Co umím nejlíp", false]]] as Part[][],
     body: "Zaměřuju se na výkonné bannery, media kity a vizuální systémy, které přinášejí výsledky.",
     tags: [
       "Bannery",
@@ -63,6 +124,49 @@ const PANELS = [
     ],
   },
 ];
+
+/* ---------------------------------------------------------- pomocníci ----- */
+
+/**
+ * Text z CMS, jinak ten z kódu. Prázdný řetězec se bere jako „nic nenapsáno":
+ * vymazané pole ve Studiu nesmí vyrobit kartu s prázdným řádkem.
+ */
+const pick = (value: unknown, zaloha: string) =>
+  (typeof value === "string" && value.trim()) || zaloha;
+
+/** Řádky nadpisu z CMS, jinak z kódu. Prázdné `headline` dává `[[]]`, ne `[]`. */
+const linesOf = (heading: Heading | undefined, zaloha: Part[][]) => {
+  const lines = heading?.lines;
+  return Array.isArray(lines) && lines.some((parts) => parts.length) ? lines : zaloha;
+};
+
+/**
+ * Ručně zalomený text se zvýrazněnými úseky.
+ *
+ * Řádky odděluje `<br />`, ne vlastní blok: překryv Studia čte `<br>` jako `\n`
+ * uložené hodnoty, zatímco dva bloky by při editaci svařil do jednoho řádku.
+ * Mezera jde mezi úseky, ale ne před interpunkci — kvůli záloze „a prodávají.".
+ */
+function Lines({ lines }: { lines: Part[][] }) {
+  return lines.map((parts, line) => (
+    <Fragment key={line}>
+      {line > 0 ? <br /> : null}
+      {parts.map(([piece, marked], run) => {
+        const gap = run > 0 && !/^[.,;:!?]/.test(piece) ? " " : "";
+        return marked ? (
+          <Fragment key={run}>
+            {gap}
+            <span className={styles.accent}>{piece}</span>
+          </Fragment>
+        ) : (
+          <Fragment key={run}>{gap + piece}</Fragment>
+        );
+      })}
+    </Fragment>
+  ));
+}
+
+/* --------------------------------------------------------------- ikony ---- */
 
 function BadgeIcon({ name }: { name: string }) {
   return (
@@ -146,13 +250,78 @@ function MarkerIcon({ name }: { name: string }) {
   );
 }
 
-export default function AboutMe() {
+/* --------------------------------------------------------------- panel ---- */
+
+function Panel({ copy, zaloha }: { copy: PanelBlock | undefined; zaloha: (typeof PANELS)[number] }) {
+  // Vlastní dokument, tedy i vlastní `edit`: prvek musí pojmenovat blok, do
+  // kterého zapisuje. Mimo Studio je `docId` undefined a anotace jsou prázdné.
+  const edit = editableIn(copy?.docId ?? null);
+  const tags = copy?.tags?.length ? copy.tags.map((tag) => tag.label) : zaloha.tags;
+
+  return (
+    <article className={`${styles.card} ${styles.panel}`}>
+      <div className={styles.panelText}>
+        <span className={styles.cardBadge} aria-hidden="true">
+          <BadgeIcon name={zaloha.icon} />
+        </span>
+        <p className={styles.cardLabel} {...edit("title")}>
+          {pick(copy?.label, zaloha.label)}
+        </p>
+        <h2 className={styles.cardTitle} {...edit("headline", "text", copy?.heading?.mark)}>
+          <Lines lines={linesOf(copy?.heading, zaloha.title)} />
+        </h2>
+        <p className={styles.cardBody} {...edit("body")}>
+          {pick(copy?.text, zaloha.body)}
+        </p>
+      </div>
+
+      {/* Každý štítek zvlášť, ne `edit.lines` na obal: štítek nese i ikonu a
+          překryv by ji při editaci celého seznamu počítal do textu. Přidat
+          nebo ubrat štítek jde ve formuláři bloku ve Studiu. */}
+      <ul className={styles.tags}>
+        {tags.map((tag, index) => (
+          <li key={`${index}-${tag}`} className={styles.tag}>
+            <span className={styles.tagMarker} aria-hidden="true">
+              <MarkerIcon name={zaloha.marker} />
+            </span>
+            <span {...edit(`items.${index}.label`)}>{tag}</span>
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
+}
+
+/* ----------------------------------------------------------- komponenta --- */
+
+export default function AboutMe({ content = null }: { content?: AboutContent | null }) {
+  const me = content?.me;
+  const lead = content?.lead;
+  const highlights = content?.highlights;
+
+  const editMe = editableIn(me?.docId ?? null);
+  const editLead = editableIn(lead?.docId ?? null);
+  const editCards = editableIn(highlights?.docId ?? null);
+
+  // Fotka z knihovny médií, jinak ta z /public. Rozměry jen když je asset má —
+  // holá adresa je nemá a `object-fit: contain` si s poměrem stran poradí.
+  const portrait = me?.image?.url
+    ? {
+        src: me.image.url,
+        alt: pick(me.image.alt, FALLBACK.portrait.alt),
+        width: me.image.width ?? FALLBACK.portrait.width,
+        height: me.image.height ?? FALLBACK.portrait.height,
+      }
+    : FALLBACK.portrait;
+
   return (
     <section className={styles.about}>
       {/* Světlý kruh vpravo a ztmavení k pravému dolnímu rohu. */}
       <div className={styles.stage} aria-hidden="true" />
 
       {/* ---------- Levá lišta ---------- */}
+      {/* Bez anotací schválně: index sekce a pokyn k posunu jsou navigace
+          stránky, ne text o Sabině. */}
       <div className={styles.rail}>
         <span className={styles.railRing} aria-hidden="true" />
         <span className={styles.railLine} aria-hidden="true" />
@@ -167,35 +336,34 @@ export default function AboutMe() {
 
       {/* ---------- Nadpis ---------- */}
       <div className={styles.intro}>
-        <p className={styles.eyebrow}>Pojďme se poznat</p>
+        <p className={styles.eyebrow} {...editMe("title")}>
+          {pick(me?.eyebrow, FALLBACK.eyebrow)}
+        </p>
 
-        <h1 className={styles.headline}>
-          <span>Něco</span>
-          <span className={styles.accent}>o mně</span>
+        {/* Anotace na <h1> samotném: zalomení je `\n` v uložené hodnotě
+            a zvýraznění je značka pole, takže `mark` cestuje spolu s `docId`. */}
+        <h1 className={styles.headline} {...editMe("headline", "text", me?.heading?.mark)}>
+          <Lines lines={linesOf(me?.heading, FALLBACK.heading)} />
         </h1>
 
         <span className={styles.introRule} aria-hidden="true" />
 
-        <p className={styles.lead}>
-          <span>Měním nápady ve vizuály,</span>
-          <span>
-            které <span className={styles.accent}>spojují, mluví</span>
-          </span>
-          <span>
-            a <span className={styles.accent}>prodávají</span>.
-          </span>
+        <p className={styles.lead} {...editLead("headline", "text", lead?.heading?.mark)}>
+          <Lines lines={linesOf(lead?.heading, FALLBACK.lead)} />
         </p>
       </div>
 
       {/* ---------- Portrét ---------- */}
-      <div className={styles.portrait}>
+      {/* Rám, ne <Image>: maska i fotka jsou jedna fotografie, takže to, co
+          editor myslí „tímhle obrázkem", je box, který ji drží. */}
+      <div className={styles.portrait} {...editMe.image("image")}>
         <Image
-          src="/assets/rest/main_photo.png"
-          alt="Sabina Hudrmentová"
-          width={612}
-          height={1019}
+          src={portrait.src}
+          alt={portrait.alt}
+          width={portrait.width}
+          height={portrait.height}
           className={styles.portraitImage}
-          sizes="(max-width: 1100px) 70vw, 56vw"
+          sizes={me?.image?.sizes ?? FALLBACK.portraitSizes}
           priority
         />
       </div>
@@ -203,51 +371,43 @@ export default function AboutMe() {
       {/* ---------- Karty ---------- */}
       <div className={styles.cards}>
         <div className={styles.rowTop}>
-          {HIGHLIGHTS.map((item) => (
-            <article key={item.label} className={styles.card}>
-              <span className={styles.cardArt} aria-hidden="true">
-                <ArtIcon name={item.art} />
-              </span>
-              <span className={styles.cardBadge} aria-hidden="true">
-                <BadgeIcon name={item.icon} />
-              </span>
-              <p className={styles.cardLabel}>{item.label}</p>
-              <h2 className={styles.cardTitle}>{item.title}</h2>
-              {item.subtitle && (
-                <p className={styles.cardSubtitle}>{item.subtitle}</p>
-              )}
-              <p className={styles.cardBody}>{item.body}</p>
-            </article>
-          ))}
+          {HIGHLIGHTS.map((item, index) => {
+            // Karta z CMS na téže pozici; chybějící řádek = záloha z kódu.
+            const row = highlights?.cards?.[index];
+            const subtitle = pick(row?.note, item.subtitle);
+            return (
+              <article key={item.label} className={styles.card}>
+                <span className={styles.cardArt} aria-hidden="true">
+                  <ArtIcon name={item.art} />
+                </span>
+                <span className={styles.cardBadge} aria-hidden="true">
+                  <BadgeIcon name={item.icon} />
+                </span>
+                <p className={styles.cardLabel} {...editCards(`items.${index}.lead`)}>
+                  {pick(row?.lead, item.label)}
+                </p>
+                <h2
+                  className={styles.cardTitle}
+                  {...editCards(`items.${index}.label`, "text", highlights?.titleMark)}
+                >
+                  {pick(row?.label, item.title)}
+                </h2>
+                {subtitle && (
+                  <p className={styles.cardSubtitle} {...editCards(`items.${index}.note`)}>
+                    {subtitle}
+                  </p>
+                )}
+                <p className={styles.cardBody} {...editCards(`items.${index}.value`)}>
+                  {pick(row?.value, item.body)}
+                </p>
+              </article>
+            );
+          })}
         </div>
 
         <div className={styles.rowBottom}>
-          {PANELS.map((panel) => (
-            <article
-              key={panel.label}
-              className={`${styles.card} ${styles.panel}`}
-            >
-              <div className={styles.panelText}>
-                <span className={styles.cardBadge} aria-hidden="true">
-                  <BadgeIcon name={panel.icon} />
-                </span>
-                <p className={styles.cardLabel}>{panel.label}</p>
-                <h2 className={styles.cardTitle}>{panel.title}</h2>
-                <p className={styles.cardBody}>{panel.body}</p>
-              </div>
-
-              <ul className={styles.tags}>
-                {panel.tags.map((tag) => (
-                  <li key={tag} className={styles.tag}>
-                    <span className={styles.tagMarker} aria-hidden="true">
-                      <MarkerIcon name={panel.marker} />
-                    </span>
-                    {tag}
-                  </li>
-                ))}
-              </ul>
-            </article>
-          ))}
+          <Panel copy={content?.courses} zaloha={PANELS[0]} />
+          <Panel copy={content?.skills} zaloha={PANELS[1]} />
         </div>
       </div>
     </section>

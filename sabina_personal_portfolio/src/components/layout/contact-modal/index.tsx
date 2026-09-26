@@ -1,49 +1,129 @@
 import { useEffect, useId, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
+import { editableIn, surfaceRoot, useStudioSurface } from "@c3studium/valecms/edit";
+import type { CopyItem, GlobalBlock } from "@/lib/site/globals";
 import { NAV_ITEMS } from "../nav-items";
 import styles from "./styles.module.scss";
 
-// POZOR: telefon i e-mail jsou ZÁSTUPNÉ, skutečné kontakty neznám.
-// Před spuštěním je nutné je přepsat.
-const CHANNELS = [
-  {
-    icon: "phone",
-    label: "Zavolejte mi",
-    value: "+420 123 456 789",
-    note: null,
-    href: "tel:+420123456789",
-  },
-  {
-    icon: "mail",
-    label: "Napište mi",
-    value: "ahoj@sabinahudrmentova.cz",
-    note: null,
-    href: "mailto:ahoj@sabinahudrmentova.cz",
-  },
-  {
-    icon: "clock",
-    label: "Dostupnost",
-    value: "Po – Pá   9:00 – 18:00",
-    note: "Obvykle odpovím do pár hodin",
-    href: null,
-  },
-  {
-    icon: "calendar",
-    label: "Domluvit schůzku",
-    value: "Vybrat termín online",
-    note: "Vyberte si čas, který vám vyhovuje",
-    href: null,
-  },
-] as const;
+// Jméno povrchu z `defineSurface` v src/lib/cms/layout.ts. Literál schválně:
+// konfigurace webu je server/Studio, komponenta ji do bundlu tahat nemá.
+const SURFACE = "contact";
 
-const PROJECT_TYPES = [
-  "Bannerová kampaň",
-  "Obsah pro sociální sítě",
-  "Vizuály pro e-shop",
-  "Kompletní vizuální identita",
-  "Něco jiného",
-];
+// POZOR: telefon i e-mail jsou ZÁSTUPNÉ, skutečné kontakty neznám.
+// Před spuštěním je nutné je přepsat — ve Studiu, blok „Kontakt".
+type ChannelIconName = "phone" | "mail" | "clock" | "calendar";
+
+type ChannelFallback = {
+  icon: ChannelIconName;
+  label: string;
+  value: string;
+  note: string;
+};
+
+/**
+ * Co modál říká, když CMS mlčí.
+ *
+ * Tytéž texty, jaké tu stály natvrdo — poslední síť pro stránky bez
+ * `getStaticProps` a pro nedostupnou databázi, ne náhražka.
+ */
+const FALLBACK = {
+  logo: "/assets/rest/logo.png",
+  brandName: "Sabina",
+  brandSurname: "Hudrmentová",
+  close: "Zavřít",
+  eyebrow: "Pojďme do toho spolu",
+  lead:
+    "Máte v hlavě projekt? Pojďme si o něm říct. Vyplňte formulář a ozvu se vám co nejdřív.",
+  channels: [
+    { icon: "phone", label: "Zavolejte mi", value: "+420 123 456 789", note: "" },
+    { icon: "mail", label: "Napište mi", value: "ahoj@sabinahudrmentova.cz", note: "" },
+    {
+      icon: "clock",
+      label: "Dostupnost",
+      value: "Po – Pá   9:00 – 18:00",
+      note: "Obvykle odpovím do pár hodin",
+    },
+    {
+      icon: "calendar",
+      label: "Domluvit schůzku",
+      value: "Vybrat termín online",
+      note: "Vyberte si čas, který vám vyhovuje",
+    },
+  ] satisfies ChannelFallback[],
+  formEyebrow: "Poslat zprávu",
+  formTitle: "Mám zájem o spolupráci.",
+  formLead: "Nechte mi jméno a telefon — ozvu se vám osobně a probereme váš projekt.",
+  placeholders: {
+    name: "Vaše jméno *",
+    phone: "Telefon *",
+    type: "Typ projektu (nepovinné)",
+    message: "Napište mi pár slov o projektu",
+  },
+  submit: "Odeslat — ozvu se obratem",
+  privacy: "Vaše údaje jsou v bezpečí a nikdy je nikomu nepředám.",
+  projectTypes: [
+    "Bannerová kampaň",
+    "Obsah pro sociální sítě",
+    "Vizuály pro e-shop",
+    "Kompletní vizuální identita",
+    "Něco jiného",
+  ],
+};
+
+/**
+ * Která položka `global.contact` je co. Blok je seznam a řádky se adresují
+ * pozicí; tady je jediné místo, kde se pozice pojmenovávají, a anotace níž
+ * opisují totéž číslo. Seed (scripts/seed/layout.mjs) zakládá položky v tomhle
+ * pořadí — přehodit je znamená přehodit obojí.
+ *
+ * Typy projektu jsou OCAS seznamu, ne pevné pozice: je to jediná část, kde je
+ * počet položek obsah (pátý typ přidat, třetí smazat), a ocas jako jediný může
+ * růst, aniž by posunul něco za sebou.
+ */
+const LINES = {
+  brand: 0, // label = jméno, value = příjmení
+  eyebrow: 1,
+  channelsFrom: 2, // čtyři kanály: label, value, note — ikony z kódu, pořadím
+  formEyebrow: 6,
+  formTitle: 7,
+  formLead: 8,
+  placeholderName: 9,
+  placeholderPhone: 10,
+  placeholderType: 11,
+  placeholderMessage: 12,
+  submit: 13,
+  privacy: 14,
+  close: 15,
+  projectTypesFrom: 16,
+} as const;
+
+/**
+ * Text z CMS na dané pozici, jinak ten z kódu.
+ *
+ * Prázdný řetězec se bere jako „nic nenapsáno": vymazané pole ve Studiu nesmí
+ * vyrobit kanál bez popisku.
+ */
+const textAt = (
+  items: CopyItem[] | undefined,
+  index: number,
+  key: "label" | "value" | "note",
+  zaloha: string,
+) => {
+  const value = items?.[index]?.[key];
+  return (typeof value === "string" && value.trim()) || zaloha;
+};
+
+/**
+ * Cíl kanálu se odvozuje z jeho hodnoty, ne z vlastního pole: kdyby editor
+ * přepsal číslo a odkaz zůstal starý, volalo by tlačítko jinam, než ukazuje.
+ * Dostupnost a schůzka zatím nikam nevedou.
+ */
+const channelHref = (icon: ChannelIconName, value: string) => {
+  if (icon === "phone") return `tel:${value.replace(/\s+/g, "")}`;
+  if (icon === "mail") return `mailto:${value}`;
+  return null;
+};
 
 const MESSAGE_LIMIT = 300;
 
@@ -123,17 +203,37 @@ function LockIcon() {
 type ContactModalProps = {
   open: boolean;
   onClose: () => void;
+  // Blok `global.contact` z `props.globals` stránky; `null` bez CMS i na 404.
+  copy?: GlobalBlock | null;
 };
 
-export default function ContactModal({ open, onClose }: ContactModalProps) {
+export default function ContactModal({ open, onClose, copy = null }: ContactModalProps) {
   const [message, setMessage] = useState("");
   const titleId = useId();
+
+  // Povrch: Studio modál otevře, i když ho žádné tlačítko nestisklo. Na
+  // veřejném webu je hook vždy `false`, takže se chování nemění.
+  const studioOpen = useStudioSurface(SURFACE);
+  const isOpen = open || studioOpen;
+
+  // Dokument zadaný jednou, ne u každé anotace. Mimo Studio je `docId`
+  // undefined a `edit(...)` vrací prázdno, takže na web se nerozprostře nic.
+  const edit = editableIn(copy?.docId ?? null);
+  const items = copy?.items;
+
+  // Typy projektu jsou ocas seznamu — cokoli od `projectTypesFrom` dál.
+  // Prázdný ocas znamená „v CMS nic", ne „žádné typy", proto záloha.
+  const projectTypes = (items ?? [])
+    .slice(LINES.projectTypesFrom)
+    .map((item) => item.label.trim())
+    .filter(Boolean);
+  const types = projectTypes.length ? projectTypes : FALLBACK.projectTypes;
 
   // Escape zavírá a po dobu otevření se zastaví scroll. Lenis si scroll
   // řídí sám, takže nestačí overflow na body — instanci je nutné stopnout,
   // jinak by se pozadí pod modalem dál posouvalo.
   useEffect(() => {
-    if (!open) return;
+    if (!isOpen) return;
 
     function handleKey(event: KeyboardEvent) {
       if (event.key === "Escape") onClose();
@@ -149,11 +249,11 @@ export default function ContactModal({ open, onClose }: ContactModalProps) {
       document.body.style.overflow = "";
       window.removeEventListener("keydown", handleKey);
     };
-  }, [open, onClose]);
+  }, [isOpen, onClose]);
 
   return (
     <AnimatePresence>
-      {open && (
+      {isOpen && (
         <motion.div
           className={styles.backdrop}
           onClick={onClose}
@@ -162,7 +262,10 @@ export default function ContactModal({ open, onClose }: ContactModalProps) {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.28, ease: "easeOut" }}
         >
+          {/* `surfaceRoot` na panelu, ne na pozadí: výběr ve Studiu se uzavře
+              do obsahu modálu a nenajde patičku ani hero pod ním. */}
           <motion.div
+            {...surfaceRoot(SURFACE)}
             className={styles.panel}
             role="dialog"
             aria-modal="true"
@@ -180,19 +283,28 @@ export default function ContactModal({ open, onClose }: ContactModalProps) {
 
             <div className={styles.bar}>
               <span className={styles.brand}>
+                {/* `alt` prázdný i s obrázkem z CMS: jméno je hned vedle jako
+                    text a čtečka by ho slyšela dvakrát. */}
                 <Image
-                  src="/assets/rest/logo.png"
+                  {...edit.image("image")}
+                  src={copy?.image?.src || FALLBACK.logo}
                   alt=""
                   width={64}
                   height={58}
                   className={styles.brandMark}
                 />
                 <span className={styles.brandText}>
-                  <span className={styles.brandName}>Sabina</span>
-                  <span className={styles.brandSurname}>Hudrmentová</span>
+                  <span className={styles.brandName} {...edit(`items.${LINES.brand}.label`)}>
+                    {textAt(items, LINES.brand, "label", FALLBACK.brandName)}
+                  </span>
+                  <span className={styles.brandSurname} {...edit(`items.${LINES.brand}.value`)}>
+                    {textAt(items, LINES.brand, "value", FALLBACK.brandSurname)}
+                  </span>
                 </span>
               </span>
 
+              {/* Navigace bez anotace schválně: názvy rout sdílené s hlavičkou
+                  (../nav-items), ne texty bloku. */}
               <nav className={styles.nav} aria-label="Hlavní navigace">
                 {NAV_ITEMS.map((item) => (
                   <a
@@ -208,11 +320,13 @@ export default function ContactModal({ open, onClose }: ContactModalProps) {
                 ))}
               </nav>
 
+              {/* Popisek je atribut, na stránce se kliknout nedá — upravuje se
+                  ve formuláři povrchu. */}
               <button
                 type="button"
                 className={styles.close}
                 onClick={onClose}
-                aria-label="Zavřít"
+                aria-label={textAt(items, LINES.close, "label", FALLBACK.close)}
               >
                 <CloseIcon />
               </button>
@@ -225,9 +339,19 @@ export default function ContactModal({ open, onClose }: ContactModalProps) {
                   <span className={styles.eyebrowArrow} aria-hidden="true">
                     <TailArrowIcon />
                   </span>
-                  Pojďme do toho spolu
+                  {/* Slova ve vlastním <span>: tečka a šipka jsou značky, ne
+                      text, a uložení celého odstavce by je smazalo. */}
+                  <span {...edit(`items.${LINES.eyebrow}.label`)}>
+                    {textAt(items, LINES.eyebrow, "label", FALLBACK.eyebrow)}
+                  </span>
                 </p>
 
+                {/* Natvrdo schválně. Tři ručně zalomené řádky a uprostřed
+                    třetího zvýrazněné slovo — překryv ukládá textContent,
+                    takže by první uložení řádky slilo a značku sežralo. Pole
+                    `headline` + `accent` bloku by to uneslo jen s akcentem NA
+                    KONCI, a tady za ním stojí ještě otazník. Až se návrh nebo
+                    schéma posune, přejde sem `headline`. */}
                 <h2 className={styles.headline} id={titleId}>
                   <span>Pustíme se</span>
                   <span>do něčeho,</span>
@@ -236,35 +360,49 @@ export default function ContactModal({ open, onClose }: ContactModalProps) {
                   </span>
                 </h2>
 
-                <p className={styles.lead}>
-                  Máte v hlavě projekt? Pojďme si o něm říct. Vyplňte formulář
-                  a ozvu se vám co nejdřív.
+                <p className={styles.lead} {...edit("body")}>
+                  {copy?.body?.trim() || FALLBACK.lead}
                 </p>
 
                 <ul className={styles.channels}>
-                  {CHANNELS.map((channel) => (
-                    <li key={channel.label} className={styles.channel}>
-                      <ChannelRow channel={channel} />
-                    </li>
-                  ))}
+                  {FALLBACK.channels.map((channel, i) => {
+                    const at = LINES.channelsFrom + i;
+                    return (
+                      <li key={at} className={styles.channel}>
+                        <ChannelRow
+                          icon={channel.icon}
+                          label={textAt(items, at, "label", channel.label)}
+                          value={textAt(items, at, "value", channel.value)}
+                          note={textAt(items, at, "note", channel.note)}
+                          annotate={(key) => edit(`items.${at}.${key}`)}
+                        />
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
 
               <div className={styles.formCol}>
                 <p className={styles.formEyebrow}>
-                  Poslat zprávu
+                  <span {...edit(`items.${LINES.formEyebrow}.label`)}>
+                    {textAt(items, LINES.formEyebrow, "label", FALLBACK.formEyebrow)}
+                  </span>
                   <span className={styles.formEyebrowRule} aria-hidden="true" />
                 </p>
 
-                <p className={styles.formTitle}>Mám zájem o spolupráci.</p>
+                <p className={styles.formTitle} {...edit(`items.${LINES.formTitle}.label`)}>
+                  {textAt(items, LINES.formTitle, "label", FALLBACK.formTitle)}
+                </p>
                 <span className={styles.formTitleRule} aria-hidden="true" />
 
-                <p className={styles.formLead}>
-                  Nechte mi jméno a telefon — ozvu se vám osobně a probereme
-                  váš projekt.
+                <p className={styles.formLead} {...edit(`items.${LINES.formLead}.label`)}>
+                  {textAt(items, LINES.formLead, "label", FALLBACK.formLead)}
                 </p>
 
-                {/* Formulář zatím nikam neodesílá, backend neexistuje. */}
+                {/* Formulář zatím nikam neodesílá, backend neexistuje.
+                    Placeholdery a typy projektu jsou atributy a <option>,
+                    na stránce se kliknout nedají — upravují se ve formuláři
+                    povrchu „Kontakt". */}
                 <form
                   className={styles.form}
                   onSubmit={(event) => event.preventDefault()}
@@ -274,7 +412,7 @@ export default function ContactModal({ open, onClose }: ContactModalProps) {
                       className={styles.field}
                       type="text"
                       name="jmeno"
-                      placeholder="Vaše jméno *"
+                      placeholder={textAt(items, LINES.placeholderName, "label", FALLBACK.placeholders.name)}
                       autoComplete="name"
                       required
                     />
@@ -283,7 +421,7 @@ export default function ContactModal({ open, onClose }: ContactModalProps) {
                         className={styles.field}
                         type="tel"
                         name="telefon"
-                        placeholder="Telefon *"
+                        placeholder={textAt(items, LINES.placeholderPhone, "label", FALLBACK.placeholders.phone)}
                         autoComplete="tel"
                         required
                       />
@@ -299,9 +437,9 @@ export default function ContactModal({ open, onClose }: ContactModalProps) {
                     defaultValue=""
                   >
                     <option value="" disabled>
-                      Typ projektu (nepovinné)
+                      {textAt(items, LINES.placeholderType, "label", FALLBACK.placeholders.type)}
                     </option>
-                    {PROJECT_TYPES.map((type) => (
+                    {types.map((type) => (
                       <option key={type} value={type}>
                         {type}
                       </option>
@@ -312,7 +450,7 @@ export default function ContactModal({ open, onClose }: ContactModalProps) {
                     <textarea
                       className={`${styles.field} ${styles.textarea}`}
                       name="zprava"
-                      placeholder="Napište mi pár slov o projektu"
+                      placeholder={textAt(items, LINES.placeholderMessage, "label", FALLBACK.placeholders.message)}
                       maxLength={MESSAGE_LIMIT}
                       value={message}
                       onChange={(event) => setMessage(event.target.value)}
@@ -326,8 +464,8 @@ export default function ContactModal({ open, onClose }: ContactModalProps) {
                     <span className={styles.submitIcon} aria-hidden="true">
                       <SendIcon />
                     </span>
-                    <span className={styles.submitLabel}>
-                      Odeslat — ozvu se obratem
+                    <span className={styles.submitLabel} {...edit(`items.${LINES.submit}.label`)}>
+                      {textAt(items, LINES.submit, "label", FALLBACK.submit)}
                     </span>
                     <span className={styles.submitArrow} aria-hidden="true">
                       <ArrowIcon />
@@ -339,7 +477,9 @@ export default function ContactModal({ open, onClose }: ContactModalProps) {
                   <span className={styles.privacyIcon} aria-hidden="true">
                     <LockIcon />
                   </span>
-                  Vaše údaje jsou v bezpečí a nikdy je nikomu nepředám.
+                  <span {...edit(`items.${LINES.privacy}.label`)}>
+                    {textAt(items, LINES.privacy, "label", FALLBACK.privacy)}
+                  </span>
                 </p>
               </div>
             </div>
@@ -350,21 +490,30 @@ export default function ContactModal({ open, onClose }: ContactModalProps) {
   );
 }
 
-type Channel = (typeof CHANNELS)[number];
+type ChannelRowProps = {
+  icon: ChannelIconName;
+  label: string;
+  value: string;
+  note: string;
+  // Anotace pole položky (`label` | `value` | `note`) — pozici zná volající.
+  // Tvar odpovídá `EditAttrs` knihovny: mimo Studio prázdný objekt.
+  annotate: (key: "label" | "value" | "note") => Record<string, string | undefined>;
+};
 
 // Telefon a e-mail jsou proklikávací, dostupnost a schůzka zatím ne —
 // proto se obal přepíná mezi <a> a <span>.
-function ChannelRow({ channel }: { channel: Channel }) {
+function ChannelRow({ icon, label, value, note, annotate }: ChannelRowProps) {
+  const href = channelHref(icon, value);
   const content = (
     <>
       <span className={styles.channelIcon} aria-hidden="true">
-        <ChannelIcon name={channel.icon} />
+        <ChannelIcon name={icon} />
       </span>
       <span className={styles.channelText}>
-        <span className={styles.channelLabel}>{channel.label}</span>
-        <span className={styles.channelValue}>{channel.value}</span>
-        {channel.note && (
-          <span className={styles.channelNote}>{channel.note}</span>
+        <span className={styles.channelLabel} {...annotate("label")}>{label}</span>
+        <span className={styles.channelValue} {...annotate("value")}>{value}</span>
+        {note && (
+          <span className={styles.channelNote} {...annotate("note")}>{note}</span>
         )}
       </span>
       <span className={styles.channelArrow} aria-hidden="true">
@@ -373,9 +522,9 @@ function ChannelRow({ channel }: { channel: Channel }) {
     </>
   );
 
-  if (channel.href) {
+  if (href) {
     return (
-      <a className={styles.channelLink} href={channel.href}>
+      <a className={styles.channelLink} href={href}>
         {content}
       </a>
     );

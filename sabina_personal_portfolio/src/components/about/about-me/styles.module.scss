@@ -147,9 +147,11 @@ $card-line: rgba(255, 255, 255, 0.12);
 // V návrhu je nadpis ~68 px vysoký, což při měřítku 200vh dává 15,4vh.
 // Řez 200, protože displejový serif z návrhu nepoužíváme — web jede
 // celý na Poppins.
+// Řádky odděluje `<br />`, ne flex-column ze spanů: překryv Studia čte `<br>`
+// jako zalomení uložené hodnoty, samostatné bloky by při editaci svařil.
+// Výška řádku je stejná — jeden line-box na řádek, jako dřív jeden flex item.
 .headline {
-  display: flex;
-  flex-direction: column;
+  display: block;
   margin: 0 0 1.2vh;
   font-size: clamp(2.2rem, 14.5vh, 20rem);
   font-weight: 200;
@@ -177,14 +179,14 @@ $card-line: rgba(255, 255, 255, 0.12);
 // místo mezi dvěma absolutně pozicovanými bloky. Hodnota odpovídá
 // naměřené mezeře: subtext končí v 67,9vh, karty začínají v 85vh.
 // Karty samotné zůstávají ukotvené na top: 85vh podle návrhu.
+// Stejný důvod jako u .headline: řádky přes `<br />`. Dřívější `gap: 0.6vh`
+// mezi flex řádky je složený do prokladu (1,32 × 2,73vh + 0,6vh ≈ 1,54 × 2,73vh).
 .lead {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6vh;
+  display: block;
   margin: 0 0 17.1vh;
   font-size: clamp(0.63rem, 2.73vh, 3.5rem);
   font-weight: 300;
-  line-height: 1.32;
+  line-height: 1.54;
 }
 
 /* ---------- Portrét ---------- */
