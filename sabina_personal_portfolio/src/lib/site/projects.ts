@@ -23,14 +23,12 @@ import {
 export type View = { draft: boolean; at: string | null }
 
 /**
- * `viewOf(context)` pro TypeScript.
- *
- * Běh bere celý kontext `getStaticProps` a čte z něj `draftMode` a
- * `previewData`; deklarace v types/index.d.ts ale slibuje jen `{ draft, at }`,
- * takže přímé volání s kontextem neprojde. Jedno přetypování tady místo dvou
- * v každé stránce.
+ * `viewOf` z kontextu `getStaticProps`. Do 0.1.50 deklarovala knihovna
+ * `viewOf` obráceně (brala `{ draft, at }`, vracela `unknown`) a každé volání
+ * chtělo přetypování; od 0.1.51 sedí typ s během a tohle je jen pojmenování
+ * na jednom místě, aby obě stránky projektů četly pohled stejně.
  */
-export const viewFrom = (context: unknown): View => viewOf(context as { draft?: boolean }) as View
+export const viewFrom = (context: { draftMode?: boolean; previewData?: unknown } | null | undefined): View => viewOf(context)
 
 /** Obrázek, jak ho vrací `imageValue`: `src` i `url` je tatáž adresa. */
 export type ProjectImage = {

@@ -20,7 +20,7 @@ type View = { draft?: boolean; at?: string | null };
 const REVALIDATE_SECONDS = 600;
 
 export const getStaticProps: GetStaticProps<Props> = async (context) => {
-  const view = viewOf(context as View) as View;
+  const view = viewOf(context);
 
   // Globální bloky (hlavička, patička) `getPageContent` nevrací — prochází jen
   // bloky své routy. `_app` je bere z pageProps, takže je nese každá stránka.

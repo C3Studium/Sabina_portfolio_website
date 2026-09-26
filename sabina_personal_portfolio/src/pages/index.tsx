@@ -36,7 +36,7 @@ type HomeProps = {
  * pod každou routou, `_app` si je bere z pageProps (viz src/lib/site/globals.ts).
  */
 export async function getStaticProps(context: GetStaticPropsContext) {
-  const view = viewOf(context as View) as View;
+  const view = viewOf(context);
   const [content, globals] = await Promise.all([
     getPageContent("/", view),
     getGlobalCopy(view),
