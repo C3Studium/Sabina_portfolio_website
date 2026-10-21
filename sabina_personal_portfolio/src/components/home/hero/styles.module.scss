@@ -374,3 +374,10 @@ $track-width: 160vw;
     transition: none;
   }
 }
+
+// Vnitřní obal řádku nadpisu kvůli vstupu přes bránu (posun + krytí).
+// Řádek sám zůstává blokem, tenhle je inline-block, aby šel posouvat.
+.headlineRise {
+  display: inline-block;
+  will-change: transform, opacity;
+}

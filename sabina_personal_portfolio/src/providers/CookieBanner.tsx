@@ -11,13 +11,19 @@ import { useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 
 import { useCookies } from './CookiesProvider'
+import { useGate } from '@/motion/LoadProvider'
 import styles from './CookieBanner.module.scss'
 
 export default function CookieBanner() {
-    const { showBanner, categories, preferences, acceptAll, rejectAll, savePreferences } = useCookies()
+    const { showBanner: wanted, categories, preferences, acceptAll, rejectAll, savePreferences } = useCookies()
     const [detail, setDetail] = useState(false)
     const [draft, setDraft] = useState(preferences)
     const reduced = useReducedMotion()
+    // Lišta stojí mimo `main`, takže ji opona nedrží — a framer jí píše krytí
+    // inline, takže by ji nepodržel ani `data-motion-hold`. Počká si tedy na
+    // bránu: ukáže se až s ostatními slovy, ne přes oponu.
+    const { go } = useGate()
+    const showBanner = wanted && go
 
     const toggle = (id: string) => setDraft((prev) => ({ ...prev, [id]: !prev[id] }))
 

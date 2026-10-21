@@ -7,6 +7,7 @@ import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
 import ContactModal from "@/components/layout/contact-modal";
 import ShaderBackground from "@/components/layout/shader-background";
+import Cursor from "@/components/common/cursor";
 import { withStudio } from "@c3studium/valecms";
 import type { GlobalCopy } from "@/lib/site/globals";
 import Preloader from "@/motion/Preloader";
@@ -16,6 +17,7 @@ import { Toaster } from "sonner";
 import { CookiesProvider } from "@/providers/CookiesProvider";
 import { PerformanceProvider } from "@/providers/PerformanceProvider";
 import { LoadProvider } from "@/motion/LoadProvider";
+import { RefProvider } from "@/providers/RefContext";
 
 // latin-ext je nutný kvůli české diakritice (ě, š, ž, í, ý, ú).
 const poppins = Poppins({
@@ -56,6 +58,16 @@ function App({ Component, pageProps }: AppProps) {
   const [contactOpen, setContactOpen] = useState(false);
   const globals = (pageProps as GlobalPageProps).globals ?? null;
 
+  // Proměnné písem i na <html>: opona a závoj (chrome z withStudio) stojí
+  // MIMO obal níž, takže by `--font-poppins` nezdědily a padly na serif.
+  // Až v efektu, protože `<html>` server nevykresluje a na obalu zůstávají
+  // třídy kvůli prvnímu snímku stránky.
+  useEffect(() => {
+    const classes = [poppins.variable, caveat.variable, poppins.className];
+    document.documentElement.classList.add(...classes);
+    return () => document.documentElement.classList.remove(...classes);
+  }, []);
+
   useEffect(() => {
     // Initialize Lenis for smooth scrolling
     const lenis = new Lenis({
@@ -93,6 +105,8 @@ function App({ Component, pageProps }: AppProps) {
   return (
     <div className={`${poppins.variable} ${caveat.variable} ${poppins.className}`}>
       <ShaderBackground />
+      {/* Tečka za myší. Jen pro jemný ukazatel; na dotyku se nespustí. */}
+      <Cursor />
       <Header onContactClick={() => setContactOpen(true)} copy={globals?.header} />
       <Component {...pageProps} />
       <Footer copy={globals?.footer} />
@@ -105,4 +119,4 @@ function App({ Component, pageProps }: AppProps) {
   );
 }
 
-export default withStudio(App, { chrome: [Preloader, PageTransition, CookieBanner, Toaster], providers: [CookiesProvider, PerformanceProvider, LoadProvider] })
+export default withStudio(App, { chrome: [Preloader, PageTransition, CookieBanner, Toaster], providers: [CookiesProvider, PerformanceProvider, LoadProvider, RefProvider] })

@@ -1,121 +1,95 @@
-// Překryv při prvním načtení: nápis a proužek, který doběhne.
+// Opona při prvním načtení — SCÉNA Sabiny. Mechaniku dělá engine z knihovny.
 //
-// Když doběhne, otevře bránu — sekce pod ním si přes `useGate()` přečtou `go`
-// a spustí své animace.
+// Engine drží stránku schovanou od prvního snímku (`data-preload`
+// z `_document`), tiká hodiny s náhodnými zastávkami, zastaví Lenis, otevře
+// bránu (`ground` → `go`) a na konci nad stránkou otevře okno — obdélník
+// rámečku, který tahle scéna označí přes `registerWindow`. Na editační ploše
+// Studia a s `?nopl=1` v adrese se opona přeskočí.
 //
-// Při zapnutém "omezit pohyb" se opona nevypíná, jen se zjednoduší: ukáže se
-// stejně, jen kratší, bez prolnutí a bez rostoucího proužku. Rozdíl je celý
-// v těch dvou objektech níž, jinde se na preferenci nesahá.
+// Scéna je PRŮHLEDNÁ: pod ní prosvítá shader, který web má jako podklad. Ve
+// středu stojí rámeček se jménem stránky (z něj se stane okno), vlevo dole
+// se píše jméno po znacích, vpravo dole běží procenta a po spodní hraně
+// proužek. V poslední vteřině rámeček naroste a ostatní se ztiší; při
+// otevírání okna scéna zhasne.
 //
-// Je to schválně to nejjednodušší, co dává smysl. Přepiš si to.
+// Zápis procent a proužku jde mimo render (`useProgressRef`): mění se každý
+// snímek a překreslovat kvůli tomu celou oponu by bylo zbytečné.
 
-import { useEffect, useState } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { Preloader as PreloaderEngine, useProgressRef } from "@c3studium/valecms/motion";
+import type { PreloaderSceneProps } from "@c3studium/valecms/motion";
 
-import { useGate } from './LoadProvider'
-import styles from './Preloader.module.scss'
+import { nameFor } from "./names";
+import styles from "./Preloader.module.scss";
 
-// Přepínač pro místní zkoušení. `NEXT_PUBLIC_REDUCE_MOTION_MODE=true` vynutí
-// tlumenou variantu, `false` plnou, prázdno nechá rozhodnout systém.
-//
-// `NODE_ENV` je při překladu konstanta, takže se z produkčního buildu celá tahle
-// větev vyhodí i s tou proměnnou. Nastavit ji na hostingu proto nezmůže nic —
-// a je to tak správně: o tlumeném pohybu rozhoduje nastavení návštěvníka, ne
-// naše env. Kdyby to šlo přepnout z produkce, přebíjeli bychom mu přístupnost.
-const FORCED_MOTION =
-    process.env.NODE_ENV === 'production' ? '' : process.env.NEXT_PUBLIC_REDUCE_MOTION_MODE
+const EYEBROW = "Grafika pro lepší výsledky";
+const NAME = "Sabina Hudrmentová";
 
-function useMotionPreference() {
-    const system = useReducedMotion()
-    if (FORCED_MOTION === 'true') return true
-    if (FORCED_MOTION === 'false') return false
-    return system
+// Každý znak je vlastní prvek, aby se dal napsat postupně. Zpoždění jde
+// inline, protože ho určuje pořadí znaku a CSS ho nespočítá.
+function Chars({ text, className, from, step }: { text: string; className: string; from: number; step: number }) {
+  return (
+    <span className={className}>
+      {text.split("").map((ch, index) => (
+        <span key={index} className={styles.ch} style={{ animationDelay: `${from + index * step}s` }}>
+          {ch === " " ? " " : ch}
+        </span>
+      ))}
+    </span>
+  );
 }
 
-// Všechny časy v sekundách.
-//
-// `hold`  — jak dlouho opona stojí, než začne odcházet
-// `fade`  — prolnutí pryč; 0 znamená zmizet rovnou
-// `bar`   — růst proužku; 0 znamená nakreslit ho rovnou plný
-//
-// Křivka se sem nedává: při nulovém trvání nemá co dělat, a jako řetězec
-// v objektu by se rozšířila na `string`, což framerovu typu `Easing` nesedí.
-const FULL_TRANSITION = {
-    hold: 1.1,
-    fade: 0.4,
-    bar: 1.1,
+function Marks() {
+  return (
+    <>
+      <span className={styles.mark} data-corner="tl" />
+      <span className={styles.mark} data-corner="tr" />
+      <span className={styles.mark} data-corner="br" />
+      <span className={styles.mark} data-corner="bl" />
+    </>
+  );
 }
 
-// Kratší a bez pohybu: nulové trvání znamená skočit rovnou na cíl. Proužek
-// se schválně nehýbe, růst je transformace a právě té se má "omezit pohyb"
-// vyhnout. Opona ale zůstává — uživatel nemá přijít o to, že se stránka
-// načítá, jen o tu animaci.
-const REDUCED_TRANSITION = {
-    hold: 0.5,
-    fade: 0,
-    bar: 0,
+function Scene({ phase, progress, name, registerWindow }: PreloaderSceneProps) {
+  const pct = useProgressRef<HTMLSpanElement>(progress, (el, v) => {
+    el.textContent = `${Math.round(v)} %`;
+  });
+  const bar = useProgressRef<HTMLSpanElement>(progress, (el, v) => {
+    el.style.transform = `scaleX(${v / 100})`;
+  });
+
+  return (
+    <div className={styles.scene} data-phase={phase}>
+      {/* Z tohohle rámečku se stane okno, kterým se stránka odhalí. */}
+      <div className={styles.frame} ref={registerWindow}>
+        <Marks />
+        <span className={styles.frameName}>{name ?? "Portfolio"}</span>
+      </div>
+
+      <p className={styles.word}>
+        <Chars text={EYEBROW} className={styles.eyebrow} from={0.15} step={0.014} />
+        <Chars text={NAME} className={styles.name} from={0.3} step={0.03} />
+      </p>
+
+      <p className={styles.pct}>
+        <span ref={pct} />
+      </p>
+
+      <div className={styles.bar}>
+        <span className={styles.fill} ref={bar} />
+      </div>
+    </div>
+  );
 }
 
 export default function Preloader() {
-    const { setGate } = useGate()
-    const reduced = useMotionPreference()
-
-    // Na serveru `useReducedMotion()` vrací null, takže tam vyjde plná varianta.
-    // Preset proto smí ovlivňovat jen ČASY, nikdy to, co se vykreslí: server o
-    // preferenci neví, takže cokoli z ní odvozeného by se po hydrataci nepotkalo.
-    // Vykreslený strom je díky tomu v obou variantách stejný a liší se až pohyb.
-    const transition = reduced ? REDUCED_TRANSITION : FULL_TRANSITION
-
-    // 'hold' = opona stojí, 'leaving' = prolíná se pryč, 'gone' = odmountováno.
-    const [phase, setPhase] = useState('hold')
-
-    // Postup opony řídí časovač, ne callbacky z animací. Když prohlížeč animace
-    // potlačí kvůli "omezit pohyb", `onAnimationComplete` nedorazí a
-    // `<AnimatePresence>` drží uzel v DOM, dokud odchod neskončí — tedy navždy.
-    // Opona pak zůstane přes celou stránku. Časovač doběhne vždycky.
-    useEffect(() => {
-        // Brána se otevírá, jakmile opona ZAČNE odcházet, ne až zmizí: sekce
-        // mají nastupovat, zatímco se prolíná pryč. Kdyby čekaly na konec,
-        // byla by mezi nimi prodleva.
-        const leave = window.setTimeout(() => {
-            setPhase('leaving')
-            setGate('go')
-        }, transition.hold * 1000)
-
-        const drop = window.setTimeout(
-            () => setPhase('gone'),
-            (transition.hold + transition.fade) * 1000,
-        )
-
-        return () => {
-            window.clearTimeout(leave)
-            window.clearTimeout(drop)
-        }
-    }, [transition, setGate])
-
-    if (phase === 'gone') return null
-
-    return (
-        <motion.div
-            className={styles.overlay}
-            initial={false}
-            animate={{ opacity: phase === 'leaving' ? 0 : 1 }}
-            transition={{ duration: transition.fade, ease: 'easeOut' }}
-            aria-hidden="true"
-        >
-            <span className={styles.label}>Načítání</span>
-            <span className={styles.track}>
-                {/* `initial` tu NESMÍ záviset na presetu. Vykresluje se do
-                    atributu style, a server o omezeném pohybu neví — lišil by
-                    se od klienta a hydratace by se rozešla. Nulové trvání
-                    proužek stejně srazí na plný hned v prvním snímku. */}
-                <motion.span
-                    className={styles.bar}
-                    initial={{ scaleX: 0 }}
-                    animate={{ scaleX: 1 }}
-                    transition={{ duration: transition.bar, ease: 'easeInOut' }}
-                />
-            </span>
-        </motion.div>
-    )
+  // `duration` jsou milisekundy hodin; okno pak trvá 1,25 s. Tlumený pohyb
+  // řeší engine (kratší hodiny, okno bez prolnutí).
+  return (
+    <PreloaderEngine
+      scene={Scene}
+      duration={4200}
+      nameFor={nameFor}
+      reveal={{ frameClassName: styles.revealFrame }}
+    />
+  );
 }

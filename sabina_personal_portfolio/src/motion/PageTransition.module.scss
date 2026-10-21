@@ -1,9 +1,92 @@
 @use "../styles/system/_shortcuts.scss" as *;
 
-.veil {
-    position: fixed;
-    inset: 0;
-    z-index: 9998;
-    background: var(--transition-bg, #111);
-    pointer-events: none;
+// Scéna závoje. Stejná řeč jako opona (Preloader.module.scss), jen bez
+// jména a proužku — přechod má být krátký.
+
+$accent: #bec948;
+$ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+.scene {
+  position: absolute;
+  inset: 0;
+  color: #fff;
+  font-family: var(--font-poppins), system-ui, sans-serif;
+  background: rgba(17, 18, 19, 0.66);
+  animation: sceneIn 0.45s $ease backwards;
+  transition: opacity 0.3s $ease;
+
+  // Okno se otevírá: závoj zhasne, aby bylo vidět, co odhaluje.
+  &[data-phase="reveal"] {
+    opacity: 0;
+  }
+}
+
+@keyframes sceneIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.frame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 36vmin;
+  height: 36vmin;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(2, 14, 21, 0.26);
+  transform: translate(-50%, -50%);
+  animation: sceneIn 0.5s $ease 0.1s backwards;
+  transition: transform 0.45s $ease, opacity 0.15s $ease;
+
+  .scene[data-phase="final"] & {
+    transform: translate(-50%, -50%) scale(1.18);
+  }
+
+  .scene[data-phase="reveal"] & {
+    opacity: 0;
+    transition-duration: 0.1s;
+  }
+}
+
+.mark {
+  position: absolute;
+  width: 0.5625rem;
+  height: 0.5625rem;
+  pointer-events: none;
+
+  &[data-corner="tl"] { top: 0.375rem; left: 0.375rem; border-top: 1px solid $accent; border-left: 1px solid $accent; }
+  &[data-corner="tr"] { top: 0.375rem; right: 0.375rem; border-top: 1px solid $accent; border-right: 1px solid $accent; }
+  &[data-corner="br"] { bottom: 0.375rem; right: 0.375rem; border-bottom: 1px solid $accent; border-right: 1px solid $accent; }
+  &[data-corner="bl"] { bottom: 0.375rem; left: 0.375rem; border-bottom: 1px solid $accent; border-left: 1px solid $accent; }
+}
+
+.frameName {
+  font-weight: 300;
+  font-size: clamp(0.8rem, 1.2vw, 1.1rem);
+  letter-spacing: 0.26em;
+  text-indent: 0.26em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0.7;
+  animation: sceneIn 0.5s $ease 0.25s backwards;
+}
+
+.revealFrame {
+  border: 1px solid rgba(190, 201, 72, 0.5);
+}
+
+@media (max-width: 900px) {
+  .frame {
+    width: 48vw;
+    height: 48vw;
+  }
+
+  .frameName {
+    font-size: clamp(0.66rem, 2.8vw, 0.9rem);
+    letter-spacing: 0.18em;
+    text-indent: 0.18em;
+  }
 }

@@ -3,6 +3,8 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { editableIn } from "@c3studium/valecms/edit";
+import { usePerformance } from "@/providers/PerformanceProvider";
+import { useGate } from "@/motion/LoadProvider";
 import Lines, {
   hasLines,
   picture,
@@ -116,6 +118,22 @@ export default function Hero({ copy = null }: { copy?: HeroCopy | null }) {
   // Částicová vrstva si podle tohohle prvku měří svůj box z DOMu.
   const portraitRef = useRef<HTMLImageElement>(null);
 
+  // Částice jsou druhý WebGL kontext a 150 000 bodů za snímek. Na slabém
+  // stroji nebo při omezeném pohybu zůstane jen fotka — vypadá stejně,
+  // jen se nehýbe.
+  const { heavy, reducedMotion } = usePerformance();
+  const particlesOn = heavy && !reducedMotion;
+
+  // Vstup sekce řídí brána opony: podklad (portrét) smí nastoupit, jakmile se
+  // okno chystá otevřít (`ground`), slova až s otevíráním (`go`). Mimo
+  // preloader (Studio, `?nopl=1`) je brána otevřená hned a vstup proběhne
+  // při prvním snímku. `initial={false}` — bez animace z ničeho při mountu,
+  // server i klient vykreslí tentýž (schovaný) stav.
+  const { go, ground } = useGate();
+  const ENTRANCE = [0.22, 1, 0.36, 1] as const;
+  const enter = (delay: number) =>
+    reducedMotion ? { duration: 0 } : { duration: 1.1, ease: ENTRANCE, delay };
+
   // Dokument zadaný jednou, ne u každé anotace zvlášť. Mimo Studio je `docId`
   // undefined a `edit(...)` vrací prázdný objekt — na web se nerozprostře nic.
   const edit = editableIn(copy?.docId ?? null);
@@ -171,28 +189,49 @@ export default function Hero({ copy = null }: { copy?: HeroCopy | null }) {
               >
                 {rows.map((row, index) => (
                   <span key={index} className={styles.headlineRow}>
-                    <Lines
-                      lines={[row]}
-                      markClass={styles.accent}
-                      trailClass={styles.dot}
-                    />
+                    {/* Vnitřní obal kvůli pohybu: řádek sám zůstává dítětem
+                        <h1>, takže anotace `lines` čte pořád totéž. */}
+                    <motion.span
+                      className={styles.headlineRise}
+                      initial={false}
+                      animate={go ? { y: 0, opacity: 1 } : { y: "0.5em", opacity: 0 }}
+                      transition={enter(0.1 + index * 0.12)}
+                    >
+                      <Lines
+                        lines={[row]}
+                        markClass={styles.accent}
+                        trailClass={styles.dot}
+                      />
+                    </motion.span>
                   </span>
                 ))}
               </h1>
             </div>
 
-            <div className={styles.scrollHint} aria-hidden="true">
+            <motion.div
+              className={styles.scrollHint}
+              aria-hidden="true"
+              initial={false}
+              animate={go ? { opacity: 1 } : { opacity: 0 }}
+              transition={enter(0.6)}
+            >
               <span className={styles.scrollDot} />
               <span className={styles.scrollLine} />
               <span className={styles.scrollLabel} {...edit("items.3.label")}>
                 {scrollHint}
               </span>
-            </div>
+            </motion.div>
 
             {/* Anotace obrázku sedí na rámu, ne na <img>: částice kreslí tenhle
                 soubor ještě jednou na vlastní plátno, takže „tahle fotka" je
                 pro editora celý box, ne jeden z jeho dvou obrazů. */}
-            <div className={styles.portrait} {...edit.image("image")}>
+            <motion.div
+              className={styles.portrait}
+              {...edit.image("image")}
+              initial={false}
+              animate={ground ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 1.04 }}
+              transition={enter(0)}
+            >
               <Image
                 ref={portraitRef}
                 src={portrait.src}
@@ -211,40 +250,43 @@ export default function Hero({ copy = null }: { copy?: HeroCopy | null }) {
               {/* Všechny propy jsou vypsané schválně — i ty na výchozí
                   hodnotě — aby se daly ladit, aniž by se muselo
                   dohledávat, co je default uvnitř komponenty. */}
-              <PortraitParticles
-                src={portrait.src}
-                targetRef={portraitRef}
-                className={styles.portraitParticles}
-                /* Hustota a vzhled. particleCount je hlavní páka — zaokrouhlí
-                   se nahoru na čtvercovou mřížku, 300 000 dá 548x548.
-                   particleSize je o kus níž než dřív, protože při pětkrát
-                   větším počtu se překryvy sčítají a 1,6 px už mazalo
-                   detail siluety. */
-                particleCount={400000}
-                particleSize={0.5}
-                particleOpacity={0.45}
-                additive={false}
-                /* Přesah plátna kolem fotky v px na každou stranu. Bez něj
-                   částice na hraně plátna končí rovným řezem — nahoře
-                   i po stranách. Zvedni, když mají doplout dál. */
-                bleed={72}
-                /* Maska */
-                alphaThreshold={24}
-                /* Proudění */
-                speed={0.5}
-                noiseScale={0.002}
-                noiseStrength={0.025}
-                damping={0.96}
-                lifespan={320}
-                /* Kurzor */
-                cursorInteraction
-                cursorStrength={0.02}
-                cursorRadius={120}
-                /* Běh a výkon */
-                dpr={1.5}
-                paused={false}
-              />
-            </div>
+              {particlesOn && (
+                <PortraitParticles
+                  src={portrait.src}
+                  targetRef={portraitRef}
+                  className={styles.portraitParticles}
+                  /* Hustota a vzhled. particleCount je hlavní páka — zaokrouhlí
+                     se nahoru na čtvercovou mřížku, 150 000 dá 388x388.
+                     Dřív tu bylo 400 000 × 0,5 px: pod 1 px ale GL bod
+                     stejně zaokrouhlí na pixel, takže polovina počtu byla
+                     jen překryv. 1 px bod při 150 000 dá stejnou hustotu
+                     za 2,7× méně práce ve vertex shaderu i v simu. */
+                  particleCount={150000}
+                  particleSize={1}
+                  particleOpacity={0.45}
+                  additive={false}
+                  /* Přesah plátna kolem fotky v px na každou stranu. Bez něj
+                     částice na hraně plátna končí rovným řezem — nahoře
+                     i po stranách. Zvedni, když mají doplout dál. */
+                  bleed={72}
+                  /* Maska */
+                  alphaThreshold={24}
+                  /* Proudění */
+                  speed={0.5}
+                  noiseScale={0.002}
+                  noiseStrength={0.025}
+                  damping={0.96}
+                  lifespan={320}
+                  /* Kurzor */
+                  cursorInteraction
+                  cursorStrength={0.02}
+                  cursorRadius={120}
+                  /* Běh a výkon */
+                  dpr={1.5}
+                  paused={false}
+                />
+              )}
+            </motion.div>
           </div>
 
           {/* ---------- Panel 2: galerie bannerů (60vw) ---------- */}

@@ -114,7 +114,7 @@ export default function Footer({ copy = null }: FooterProps) {
   const items = copy?.items;
 
   return (
-    <footer className={styles.footer}>
+    <footer className={styles.footer} data-motion-hold="">
       <div className={styles.decor} aria-hidden="true" />
 
       <div className={styles.inner}>

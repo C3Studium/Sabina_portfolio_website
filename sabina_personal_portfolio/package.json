@@ -15,7 +15,7 @@
     "cms:seed": "node --import @c3studium/valecms/register.mjs scripts/cms-seed.mjs"
   },
   "dependencies": {
-    "@c3studium/valecms": "^0.1.51",
+    "@c3studium/valecms": "^0.1.53",
     "@react-email/render": "^2.1.0",
     "@react-three/fiber": "^9.7.0",
     "@supabase/supabase-js": "^2.112.4",

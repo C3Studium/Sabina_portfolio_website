@@ -75,7 +75,7 @@ export default function Header({ onContactClick, copy = null }: HeaderProps) {
   const items = copy?.items;
 
   return (
-    <header className={styles.header}>
+    <header className={styles.header} data-motion-hold="lift">
       <Link className={styles.brand} href="/">
         {/* `alt` zůstává prázdný i s obrázkem z CMS: jméno stojí hned vedle
             jako text a čtečka by ho jinak slyšela dvakrát. */}
