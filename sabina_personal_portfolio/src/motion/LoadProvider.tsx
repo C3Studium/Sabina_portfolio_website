@@ -12,7 +12,13 @@ import type { Dispatch, ReactNode, SetStateAction } from 'react'
 
 export type Gate = 'hold' | 'go'
 
-type LoadValue = { gate: Gate; setGate: Dispatch<SetStateAction<Gate>> }
+type LoadValue = {
+    gate: Gate
+    setGate: Dispatch<SetStateAction<Gate>>
+    /** Proběhl už preloader v tomhle sezení? */
+    firstLoad: boolean
+    setFirstLoad: Dispatch<SetStateAction<boolean>>
+}
 
 const LoadContext = createContext<LoadValue | null>(null)
 
@@ -20,7 +26,9 @@ export function LoadProvider({ children, gated = true }: { children: ReactNode; 
     // Server i klient začínají na téže hodnotě, jinak by React hlásil rozdíl
     // po hydrataci. Preloader ji přepne na `go`, až domaluje.
     const [gate, setGate] = useState<Gate>(gated ? 'hold' : 'go')
-    const value = useMemo(() => ({ gate, setGate }), [gate])
+    // Aby se opona neukazovala při každém přechodu, jen napoprvé.
+    const [firstLoad, setFirstLoad] = useState(false)
+    const value = useMemo(() => ({ gate, setGate, firstLoad, setFirstLoad }), [gate, firstLoad])
     return <LoadContext.Provider value={value}>{children}</LoadContext.Provider>
 }
 
@@ -31,5 +39,5 @@ export function LoadProvider({ children, gated = true }: { children: ReactNode; 
  * preloaderu se má vykreslit, ne spadnout.
  */
 export function useGate(): LoadValue {
-    return useContext(LoadContext) ?? { gate: 'go', setGate: () => {} }
+    return useContext(LoadContext) ?? { gate: 'go', setGate: () => {}, firstLoad: true, setFirstLoad: () => {} }
 }

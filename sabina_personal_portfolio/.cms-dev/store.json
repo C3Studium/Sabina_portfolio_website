@@ -3,42 +3,7 @@
   "tables": {
     "cms_document": [],
     "cms_media": [],
-    "cms_user": [
-      {
-        "id": "57cba696-9bc9-4a89-a7c2-6c466e11b473",
-        "email": "admin@valecms.com",
-        "password_hash": "scrypt$32768$8$1$NBPF0V0rBQTIbSoQVE6kcw$W9xCI-1F4vNVE8MXoGEuNaOU3DsrbM3uyaMOqM7fUKVwnSKAi2fOMQNfOJ3VUAAnWsml03jrD7m3U2IhCuvDYA",
-        "name": "admin",
-        "role": "owner",
-        "created_at": "2026-08-31T22:34:46.896Z",
-        "updated_at": "2026-09-01T17:39:12.819Z",
-        "last_login_at": "2026-09-01T17:39:12.819Z",
-        "disabled_at": null,
-        "created_by": null
-      }
-    ],
-    "cms_session": [
-      {
-        "id": "ba411b52-2895-45ee-b4af-76547bc508bc",
-        "created_at": "2026-08-31T22:34:46.969Z",
-        "user_id": "57cba696-9bc9-4a89-a7c2-6c466e11b473",
-        "token_hash": "5ca67cb6e79ed9706d5061367d3158b4034873168527699d3eaffee902b3e58b",
-        "expires_at": "2026-09-30T22:34:46.968Z",
-        "ip_hash": "8edb999ab91fa358bf63ac7b4788c60e",
-        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
-        "revoked_at": null
-      },
-      {
-        "id": "d07c80a2-975f-4166-be43-dafc15956ded",
-        "created_at": "2026-09-01T17:39:12.817Z",
-        "user_id": "57cba696-9bc9-4a89-a7c2-6c466e11b473",
-        "token_hash": "ca81e7137e7c9f749efa59409f551a89d1798115601b5a20f82e1aab2d3881a0",
-        "expires_at": "2026-10-01T17:39:12.816Z",
-        "ip_hash": "8edb999ab91fa358bf63ac7b4788c60e",
-        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
-        "revoked_at": null
-      }
-    ],
-    "cms_setting": []
+    "cms_user": [],
+    "cms_session": []
   }
 }

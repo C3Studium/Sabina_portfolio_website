@@ -1,0 +1,201 @@
+@use "../../styles/system/_shortcuts.scss" as *;
+
+// CaseStudy — detail projektu. Prototyp: drží tón řady karet na /projects
+// (stejný akcent a ink), rozvržení je prosté — hlavička s obrázkem vpravo,
+// text pod ní, galerie a odkaz dál. Podklad je průhledný jako všude: dělá ho
+// globální shader v _app.tsx.
+
+$accent: #bec948;
+$ink: #2e2e2e;
+$ink-soft: #4f4f4f;
+
+.caseStudy {
+  position: relative;
+  padding: 18vh 10vw 12vh;
+  color: $ink;
+  background: transparent;
+}
+
+/* ---------- Hlavička ---------- */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  align-items: end;
+  gap: 4vw;
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  gap: 2vh;
+}
+
+.eyebrow,
+.nextLabel {
+  margin: 0;
+  font-size: clamp(0.55rem, 1.2vh, 1.6rem);
+  font-weight: 400;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: $ink-soft;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(2.4rem, 11vh, 14rem);
+  font-weight: 200;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tagline {
+  margin: 0;
+  font-size: clamp(0.8rem, 2vh, 2.4rem);
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: $accent;
+}
+
+.heroMedia {
+  justify-self: end;
+  width: min(100%, 34vw);
+  overflow: hidden;
+  border-radius: 1.2vh;
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+}
+
+/* ---------- Text ---------- */
+
+.overview {
+  max-width: 62ch;
+  margin-top: 10vh;
+}
+
+.perex {
+  margin: 0 0 3vh;
+  font-size: clamp(1rem, 2.4vh, 2.6rem);
+  font-weight: 300;
+  line-height: 1.5;
+}
+
+.body {
+  font-size: clamp(0.9rem, 1.8vh, 2rem);
+  font-weight: 300;
+  line-height: 1.65;
+  color: $ink-soft;
+
+  p {
+    margin: 0 0 1.4em;
+  }
+
+  h2,
+  h3 {
+    margin: 2em 0 0.6em;
+    font-weight: 400;
+    color: $ink;
+  }
+
+  a {
+    color: inherit;
+    text-decoration-color: $accent;
+  }
+}
+
+/* ---------- Galerie ---------- */
+
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 2vw;
+  margin-top: 10vh;
+}
+
+.galleryItem {
+  margin: 0;
+  overflow: hidden;
+  border-radius: 1.2vh;
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+}
+
+/* ---------- Další projekt ---------- */
+
+.next {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6vh;
+  margin-top: 14vh;
+  padding-top: 4vh;
+  border-top: 1px solid rgba(46, 46, 46, 0.2);
+}
+
+.nextLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.2vw;
+  width: fit-content;
+  color: $ink;
+  text-decoration: none;
+
+  &:hover .nextArrow {
+    background: $accent;
+    border-color: $accent;
+  }
+}
+
+.nextTitle {
+  font-size: clamp(1.6rem, 6vh, 7rem);
+  font-weight: 200;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.nextArrow {
+  display: grid;
+  place-items: center;
+  width: clamp(2rem, 6.7vh, 8.8rem);
+  height: clamp(2rem, 6.7vh, 8.8rem);
+  flex-shrink: 0;
+  border: 1px solid rgba(46, 46, 46, 0.5);
+  border-radius: 50%;
+  transition: background 0.24s ease, border-color 0.24s ease;
+
+  svg {
+    width: 36%;
+    height: 36%;
+  }
+}
+
+/* ---------- Úzké obrazovky ---------- */
+
+@include below-px(900) {
+  .caseStudy {
+    padding: 14vh 6vw 10vh;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .heroMedia {
+    justify-self: start;
+    width: min(100%, 70vw);
+  }
+
+  .title {
+    font-size: clamp(2.2rem, 12vw, 5.5rem);
+  }
+}

@@ -1,76 +1,38 @@
 import { type CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { editableDoc, editableIn } from "@c3studium/valecms/edit";
+import type { Project } from "@/lib/site/projects";
+import { projectsOrFallback } from "../fallback";
 import styles from "./styles.module.scss";
 
-// Šest projektů = "01 / 06" v pageru. Značky jsou SKUTEČNÉ klientky
-// z public/assets/banners — návrh má na kartách Sportisimo, Notino,
-// About You, Billu a Samsung, což jsou cizí firmy a na portfoliu by
-// tvrdily spolupráci, která neexistuje.
-//
-// tone řídí, jestli je karta tmavá nebo světlá — návrh je střídá.
-const PROJECTS = [
-  {
-    slug: "gummylife",
-    client: "Gummylife",
-    category: "Bannerová kampaň",
-    tone: "dark",
-    src: "/assets/banners/gummylife_banner1.png",
-    alt: "Bannerová kampaň pro doplňky stravy Gummylife",
-    width: 1440,
-    height: 2560,
-  },
-  {
-    slug: "vecicky",
-    client: "Věcicky",
-    category: "Sezónní kampaň",
-    tone: "light",
-    src: "/assets/banners/vecicky_banner16.png",
-    alt: "Sezónní kampaň pro e-shop s dětskou módou Věcicky",
-    width: 1468,
-    height: 2587,
-  },
-  {
-    slug: "bruzek",
-    client: "Bruzek",
-    category: "Digitální kampaň",
-    tone: "dark",
-    src: "/assets/banners/bruzek_banner1.png",
-    alt: "Digitální kampaň pro realitní značku Bruzek",
-    width: 973,
-    height: 1216,
-  },
-  {
-    slug: "wooline",
-    client: "Wooline",
-    category: "Obsah pro e-shop",
-    tone: "light",
-    src: "/assets/banners/vlnenezbozi_banner3.png",
-    alt: "Vizuály pro e-shop s vlněnými ponožkami Wooline",
-    width: 1483,
-    height: 1853,
-  },
-  {
-    slug: "mistr-pet",
-    client: "Mistr Pet",
-    category: "Promo vizuály",
-    tone: "dark",
-    src: "/assets/banners/mistrpet_banner1.png",
-    alt: "Promo vizuály pro chovatelské potřeby Mistr Pet",
-    width: 1118,
-    height: 1397,
-  },
-  {
-    slug: "samurai",
-    client: "Samurai",
-    category: "Uvedení produktu",
-    tone: "light",
-    src: "/assets/banners/samurai_banner1.png",
-    alt: "Kampaň k uvedení nealkoholických nápojů Samurai",
-    width: 536,
-    height: 954,
-  },
-];
+// Blok `projects.list`, jak ho tvaruje cms/projects.ts: `headline` jsou řádky
+// nadpisu, `accent` zvýrazněný konec, `lead` řádky úvodu. `docId` jen ve Studiu.
+export type ListCopy = {
+  title?: string;
+  headline?: string[];
+  accent?: string[];
+  lead?: string[];
+  docId?: string;
+};
+
+// Texty stránky, jak stály v kódu — zůstávají jako záloha: prázdné pole ve
+// Studiu nesmí vyrobit prázdný nadpis. Musí být doslova to, co zakládá
+// scripts/seed/projects.mjs.
+const FALLBACK_COPY = {
+  headline: ["Práce,", "která"],
+  accent: "funguje",
+  lead: [
+    "Výběr značek, se kterými",
+    "jsem spolupracovala.",
+    "Každý projekt je příběh",
+    "strategie, designu a výsledku.",
+  ],
+};
+
+// Rozměry pro obrázek, o kterém CMS nic neví (holá adresa bez šířky a výšky).
+// Poměr na výšku jako u bannerů dnes; Next potřebuje čísla, aby rezervoval místo.
+const DEFAULT_COVER = { width: 1200, height: 1800 };
 
 function ArrowIcon() {
   return (
@@ -101,7 +63,27 @@ function pad(value: number) {
   return String(value).padStart(2, "0");
 }
 
-export default function HeroList() {
+// Neprázdné řádky z CMS, jinak záloha. Prázdný řetězec je „nic nenapsáno".
+const linesOr = (lines: string[] | undefined, fallback: string[]) => {
+  const kept = (lines ?? []).filter((line) => line.trim());
+  return kept.length ? kept : fallback;
+};
+
+type Props = {
+  copy?: ListCopy | null;
+  projects?: Project[] | null;
+};
+
+export default function HeroList({ copy = null, projects = null }: Props) {
+  const list = projectsOrFallback(projects);
+  // Dokument zadaný jednou, ne u každé anotace zvlášť. Mimo Studio je `docId`
+  // undefined a `edit(...)` vrací prázdný objekt, takže na web nejde nic.
+  const edit = editableIn(copy?.docId ?? null);
+
+  const headline = linesOr(copy?.headline, FALLBACK_COPY.headline);
+  const accent = copy?.accent?.[0]?.trim() || FALLBACK_COPY.accent;
+  const lead = linesOr(copy?.lead, FALLBACK_COPY.lead);
+
   return (
     <section className={styles.heroList}>
       {/* Světelný klín zleva a tmavá pravá půlka s odrazivou podlahou. */}
@@ -126,44 +108,57 @@ export default function HeroList() {
 
       {/* ---------- Nadpis ---------- */}
       <div className={styles.intro}>
-        <h1 className={styles.headline}>
-          <span className={styles.headlineTop}>Práce,</span>
+        {/* Řádky nadpisu jsou jeden text se zalomením; zvýrazněný konec je
+            vlastní pole, aby šel přepsat sám. Návrh má právě dva řádky —
+            případný třetí a další se přisadí k druhému. */}
+        <h1 className={styles.headline} {...edit("headline")}>
+          <span className={styles.headlineTop}>{headline[0]}</span>
           <span className={styles.headlineBottom}>
-            která <span className={styles.accent}>funguje</span>
+            {headline.slice(1).join(" ")}
+            {headline.length > 1 ? " " : ""}
+            <span className={styles.accent} {...edit("accent.0")}>
+              {accent}
+            </span>
           </span>
         </h1>
 
-        <p className={styles.lead}>
-          <span>Výběr značek, se kterými</span>
-          <span>jsem spolupracovala.</span>
-          <span>Každý projekt je příběh</span>
-          <span>strategie, designu a výsledku.</span>
+        {/* Čtyři řádky, kde počet řádků je obsah — proto se upravuje blok
+            jako celek, ne řádek po řádku. */}
+        <p className={styles.lead} {...edit.lines("items.*.label")}>
+          {lead.map((line, index) => (
+            <span key={index}>{line}</span>
+          ))}
         </p>
       </div>
 
       {/* ---------- Řada karet v perspektivě ---------- */}
       <div className={styles.deck}>
-        {PROJECTS.map((project, index) => (
+        {list.map((project, index) => (
+          // Karta JE projekt: kliknutí ve Studiu otevře celý záznam. `id` je jen
+          // při čtení konceptu; na veřejném webu anotace nevznikne.
           <article
             key={project.slug}
             className={`${styles.card} ${
               project.tone === "dark" ? styles.isDark : styles.isLight
             }`}
             style={{ "--i": index } as CSSProperties}
+            {...editableDoc(project.id ?? null, "project")}
           >
             <span className={styles.cardIndex}>{pad(index + 1)}</span>
-            <h2 className={styles.cardTitle}>{project.client}</h2>
-            <p className={styles.cardCategory}>{project.category}</p>
+            <h2 className={styles.cardTitle}>{project.title}</h2>
+            <p className={styles.cardCategory}>{project.tagline}</p>
 
-            <div className={styles.cardMedia}>
-              <Image
-                src={project.src}
-                alt={project.alt}
-                width={project.width}
-                height={project.height}
-                sizes="(max-width: 1100px) 60vw, 22vw"
-              />
-            </div>
+            {project.cover ? (
+              <div className={styles.cardMedia}>
+                <Image
+                  src={project.cover.url}
+                  alt={project.cover.alt}
+                  width={project.cover.width ?? DEFAULT_COVER.width}
+                  height={project.cover.height ?? DEFAULT_COVER.height}
+                  sizes="(max-width: 1100px) 60vw, 22vw"
+                />
+              </div>
+            ) : null}
 
             <Link
               className={styles.cardLink}
@@ -184,7 +179,7 @@ export default function HeroList() {
       {/* ---------- Pager ---------- */}
       <div className={styles.pager}>
         <span className={styles.pagerCount}>
-          {pad(1)} / {pad(PROJECTS.length)}
+          {pad(1)} / {pad(list.length)}
         </span>
         <button
           type="button"
