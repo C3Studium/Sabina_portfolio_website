@@ -1,210 +1,45 @@
 @use "../styles/system/_shortcuts.scss" as *;
 
-// Scéna opony. Průhledná — pod ní prosvítá shader webu.
-//
-// Rámeček uprostřed je budoucí okno; jeho obdélník si engine změří na konci
-// (i s měřítkem z poslední vteřiny), takže se tu smí zvětšovat.
+// Scéna opony — Default. Tmavá v tónu webu, nápis a tenký proužek.
 
-$accent: #bec948;
-$ease: cubic-bezier(0.22, 1, 0.36, 1);
-
-.scene {
+.overlay {
   position: absolute;
   inset: 0;
-  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: var(--preloader-bg, #2e2e2e);
+  color: var(--preloader-fg, #fff);
   font-family: var(--font-poppins), system-ui, sans-serif;
-  background: rgba(17, 18, 19, 0.66);
-  animation: sceneIn 0.6s $ease backwards;
-  transition: opacity 0.35s $ease;
+  transition: opacity 0.5s ease-out;
 
-  // Okno se otevírá: opona zhasne, aby bylo vidět, co odhaluje.
+  // Odchod: opona se prolne pryč, zatímco engine prolíná stránku dovnitř.
   &[data-phase="mask"] {
     opacity: 0;
   }
 }
 
-@keyframes sceneIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-// ── rámeček / okno ───────────────────────────────────────────────────────
-
-.frame {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 36vmin;
-  height: 36vmin;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(2, 14, 21, 0.26);
-  transform: translate(-50%, -50%);
-  animation: frameIn 0.9s $ease 0.1s backwards;
-  transition: transform 1.05s $ease, opacity 0.2s $ease;
-
-  // Poslední vteřina: rámeček naroste a ukáže, kudy se půjde dovnitř.
-  .scene[data-phase="final"] & {
-    transform: translate(-50%, -50%) scale(1.18);
-  }
-
-  // Okno se otevírá: rámeček pryč hned, aby nebyl vidět přes vlastní okno.
-  .scene[data-phase="mask"] & {
-    opacity: 0;
-    transition-duration: 0.12s;
-  }
-}
-
-@keyframes frameIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-// Rohové značky v barvě webu — nosí je jen rámeček.
-.mark {
-  position: absolute;
-  width: 0.5625rem;
-  height: 0.5625rem;
-  pointer-events: none;
-
-  &[data-corner="tl"] { top: 0.375rem; left: 0.375rem; border-top: 1px solid $accent; border-left: 1px solid $accent; }
-  &[data-corner="tr"] { top: 0.375rem; right: 0.375rem; border-top: 1px solid $accent; border-right: 1px solid $accent; }
-  &[data-corner="br"] { bottom: 0.375rem; right: 0.375rem; border-bottom: 1px solid $accent; border-right: 1px solid $accent; }
-  &[data-corner="bl"] { bottom: 0.375rem; left: 0.375rem; border-bottom: 1px solid $accent; border-left: 1px solid $accent; }
-}
-
-.frameName {
-  font-weight: 300;
-  font-size: clamp(0.8rem, 1.2vw, 1.1rem);
-  letter-spacing: 0.26em;
-  text-indent: 0.26em;
+.label {
+  font-size: 13px;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  white-space: nowrap;
   opacity: 0.7;
-  animation: frameIn 0.7s $ease 0.5s backwards;
 }
 
-// Rámeček, který engine kreslí kolem otevírajícího se okna.
-.revealFrame {
-  border: 1px solid rgba(190, 201, 72, 0.5);
-}
-
-// ── jméno vlevo dole ─────────────────────────────────────────────────────
-
-.word {
-  position: absolute;
-  left: 6vw;
-  bottom: 7vh;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  font-weight: 300;
-}
-
-.eyebrow {
-  display: block;
-  white-space: nowrap;
-  font-size: clamp(0.72rem, 1vw, 1.1rem);
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.name {
-  display: block;
-  white-space: nowrap;
-  font-size: clamp(2.2rem, 6vw, 6.5rem);
-  line-height: 0.95;
-  letter-spacing: 0.01em;
-  color: #fff;
-}
-
-.ch {
-  display: inline-block;
-  opacity: 0;
-  transform: translateY(0.45em);
-  animation: chIn 0.7s $ease forwards;
-  will-change: transform, opacity;
-}
-
-@keyframes chIn {
-  to { opacity: 1; transform: translateY(0); }
-}
-
-// ── procenta a proužek ───────────────────────────────────────────────────
-
-.pct {
-  position: absolute;
-  right: 6vw;
-  bottom: 7vh;
-  margin: 0;
-  font-weight: 300;
-  font-size: clamp(1.8rem, 3vw, 3.2rem);
-  letter-spacing: 0.06em;
-  font-variant-numeric: tabular-nums;
-  color: rgba(255, 255, 255, 0.75);
-  animation: frameIn 0.7s $ease 0.5s backwards;
+.track {
+  width: min(220px, 60vw);
+  height: 2px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 0.5rem;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.08);
-  animation: frameIn 0.7s $ease 0.4s backwards;
-}
-
-.fill {
-  position: absolute;
-  inset: 0;
-  background: $accent;
-  transform: scaleX(0);
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #bec948;
   // Roste zleva. Bez tohohle by se proužek roztahoval od středu na obě strany.
   transform-origin: left center;
-}
-
-// ── telefon ──────────────────────────────────────────────────────────────
-
-@media (max-width: 900px) {
-  .frame {
-    width: 48vw;
-    height: 48vw;
-  }
-
-  .word {
-    left: 5vw;
-    bottom: 6vh;
-    gap: 0.45rem;
-  }
-
-  .eyebrow {
-    font-size: 0.68rem;
-    letter-spacing: 0.22em;
-  }
-
-  .name {
-    font-size: clamp(1.5rem, 7vw, 3rem);
-  }
-
-  .pct {
-    right: 5vw;
-    bottom: 6.5vh;
-    font-size: clamp(1.2rem, 4.5vw, 2.2rem);
-  }
-
-  .frameName {
-    font-size: clamp(0.66rem, 2.8vw, 0.9rem);
-    letter-spacing: 0.18em;
-    text-indent: 0.18em;
-  }
-
-  .bar {
-    height: 6px;
-  }
 }
