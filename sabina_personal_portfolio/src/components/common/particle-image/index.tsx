@@ -176,6 +176,10 @@ uniform vec2 uPointer;
 uniform vec2 uPointerVelocity;
 uniform float uPointerStrength;
 uniform float uPointerFalloff;
+// Kolik referenčních snímků (60 Hz) uplynulo od minulého kroku. Sim je
+// psaný v „px za snímek", takže se tímhle škáluje věk, síly i posun —
+// jinak by na 144 Hz běžel 2,4× rychleji než na 60.
+uniform float uStep;
 
 in vec2 vUv;
 
@@ -191,7 +195,7 @@ void main() {
 
   vec2 pos = motion.xy;
   vec2 vel = motion.zw;
-  float age = life.x + 1.0;
+  float age = life.x + uStep;
   float span = life.y;
   vec2 seed = life.zw;
 
@@ -203,8 +207,9 @@ void main() {
   float proximity = uPointerFalloff / (dot(offset, offset) + uPointerFalloff);
   vec2 wake = uPointerVelocity * proximity * uPointerStrength;
 
-  vel = vel * uDamping + vec2(cos(angle), sin(angle)) * uNoiseStrength + wake;
-  pos += vel;
+  vel = vel * pow(uDamping, uStep)
+    + (vec2(cos(angle), sin(angle)) * uNoiseStrength + wake) * uStep;
+  pos += vel * uStep;
 
   bool spent = age >= span
     || pos.x < 0.0 || pos.x > uResolution.x
@@ -226,6 +231,32 @@ void main() {
 
 // Plátno má stejný poměr stran jako obrázek, takže uv sedí 1:1 a žádné
 // přepočítávání na "cover" tu není potřeba.
+// Přemapování živých částic po změně velikosti. Stav simulace je
+// v pixelech kreslicího bufferu, takže když se fotka zmenší nebo posune
+// (resize, otočení telefonu, jiný breakpoint), částice by zůstaly na
+// starých souřadnicích a pár vteřin, než se znovu zrodí, by visely vedle
+// fotky. Tenhle průchod je jednou přepočítá ze starého obdélníku fotky
+// do nového — poloha i rychlost se škálují stejně, věk zůstává.
+const REMAP_FRAG = `precision highp float;
+
+uniform sampler2D tMotion;
+uniform sampler2D tLife;
+uniform vec4 uFrom;
+uniform vec4 uTo;
+
+in vec2 vUv;
+
+layout(location = 0) out vec4 outMotion;
+layout(location = 1) out vec4 outLife;
+
+void main() {
+  vec4 motion = texture(tMotion, vUv);
+  vec2 k = uTo.zw / max(uFrom.zw, vec2(1.0));
+  outMotion = vec4(uTo.xy + (motion.xy - uFrom.xy) * k, motion.zw * k);
+  // life.zw je uv zrození ve fotce, ne pixel, takže platí dál beze změny.
+  outLife = texture(tLife, vUv);
+}`;
+
 const POINT_VERT = `precision highp float;
 
 in vec3 position;
@@ -396,12 +427,58 @@ interface Box {
   height: number;
 }
 
-// Změří SKUTEČNÝ box obrázku v DOMu a drží ho aktuální.
+// Kde v boxu <img> leží skutečně namalovaný obrázek. Při object-fit:
+// contain (nebo scale-down) může být box širší či vyšší než fotka a zbytek
+// je prázdný — vrstva musí sedět na obrázek, ne na prázdný okraj, jinak
+// se silueta na menších viewportech rozjede. object-position se čte jen
+// v klíčových slovech (left/right/top/bottom, jinak střed), víc tu není
+// potřeba.
+function paintedRect(element: HTMLElement): Box {
+  const box: Box = {
+    left: element.offsetLeft,
+    top: element.offsetTop,
+    width: element.offsetWidth,
+    height: element.offsetHeight,
+  };
+  if (!(element instanceof HTMLImageElement)) return box;
+  const { naturalWidth: nw, naturalHeight: nh } = element;
+  if (!nw || !nh || !box.width || !box.height) return box;
+
+  const style = getComputedStyle(element);
+  const fit = style.objectFit;
+  if (fit !== "contain" && fit !== "scale-down") return box;
+
+  let scale = Math.min(box.width / nw, box.height / nh);
+  if (fit === "scale-down") scale = Math.min(scale, 1);
+  const width = nw * scale;
+  const height = nh * scale;
+  const position = style.objectPosition;
+  const ax = position.includes("left") ? 0 : position.includes("right") ? 1 : 0.5;
+  const ay = position.includes("top") ? 0 : position.includes("bottom") ? 1 : 0.5;
+
+  return {
+    left: Math.round(box.left + (box.width - width) * ax),
+    top: Math.round(box.top + (box.height - height) * ay),
+    width: Math.round(width),
+    height: Math.round(height),
+  };
+}
+
+// Změří SKUTEČNÝ box obrázku v DOMu a drží ho aktuální — vrstva podle něj
+// mění pozici i velikost, takže na každém viewportu leží přesně na fotce.
 //
 // offsetLeft/Top jsou vůči offsetParent, což je tentýž pozicovaný rodič,
 // v němž leží i tahle vrstva — takže se dají použít přímo jako inline
 // left/top. Jsou to layoutové hodnoty, takže je transform na předkovi
 // (hero jede na motion.div tracku) neovlivní.
+//
+// Přeměřuje se při:
+//  - změně boxu obrázku i jeho rodiče (ResizeObserver),
+//  - resize okna a otočení zařízení (posun bez změny velikosti
+//    ResizeObserver nezachytí),
+//  - dočtení obrázku (až pak je známý přirozený rozměr pro contain),
+//  - načtení fontů (nadpis vedle může přeskládat layout).
+// Víc změn v jednom snímku se slije do jednoho měření přes rAF.
 function useTrackedBox(target: React.RefObject<HTMLElement | null>): Box | null {
   const [box, setBox] = useState<Box | null>(null);
 
@@ -409,13 +486,10 @@ function useTrackedBox(target: React.RefObject<HTMLElement | null>): Box | null 
     const element = target.current;
     if (!element) return;
 
+    let frame = 0;
     const measure = () => {
-      const next: Box = {
-        left: element.offsetLeft,
-        top: element.offsetTop,
-        width: element.offsetWidth,
-        height: element.offsetHeight,
-      };
+      frame = 0;
+      const next = paintedRect(element);
       // Porovnání proti minulé hodnotě — bez něj by setState v
       // ResizeObserveru točil nekonečnou smyčku překreslení.
       setBox((prev) =>
@@ -429,18 +503,32 @@ function useTrackedBox(target: React.RefObject<HTMLElement | null>): Box | null 
       );
     };
 
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(measure);
+    };
+
     measure();
 
-    const observer = new ResizeObserver(measure);
+    const observer = new ResizeObserver(schedule);
     observer.observe(element);
     // Rodič se může měnit, aniž by se změnil obrázek (výška v %), a jeho
     // změna posune i offsetLeft/Top. Proto se sleduje taky.
     if (element.parentElement) observer.observe(element.parentElement);
-    window.addEventListener("resize", measure);
+    window.addEventListener("resize", schedule);
+    window.addEventListener("orientationchange", schedule);
+    element.addEventListener("load", schedule);
+    let alive = true;
+    document.fonts?.ready.then(() => {
+      if (alive) schedule();
+    });
 
     return () => {
+      alive = false;
+      if (frame) cancelAnimationFrame(frame);
       observer.disconnect();
-      window.removeEventListener("resize", measure);
+      window.removeEventListener("resize", schedule);
+      window.removeEventListener("orientationchange", schedule);
+      element.removeEventListener("load", schedule);
     };
   }, [target]);
 
@@ -511,9 +599,12 @@ function ParticleField({
     quad: THREE.Mesh;
     seed: THREE.RawShaderMaterial;
     step: THREE.RawShaderMaterial;
+    remap: THREE.RawShaderMaterial;
     buffers: THREE.WebGLRenderTarget[];
     front: number;
     seeded: boolean;
+    /** Obdélník fotky, ve kterém stav simulace naposledy ležel. */
+    rect: THREE.Vector4;
     release: () => void;
   } | null>(null);
   const clock = useRef(0);
@@ -525,6 +616,11 @@ function ParticleField({
     vx: 0,
     vy: 0,
     engaged: false,
+    // Poslední klientské souřadnice z události; na pixely plátna se
+    // přepočítávají až v useFrame, jednou za snímek.
+    clientX: 0,
+    clientY: 0,
+    moved: false,
   });
   const frame = useRef(new THREE.Vector2(1, 1));
 
@@ -616,12 +712,27 @@ function ParticleField({
         uPointerVelocity: { value: new THREE.Vector2(0, 0) },
         uPointerStrength: { value: 0 },
         uPointerFalloff: { value: 10000 },
+        uStep: { value: 1 },
       },
       depthTest: false,
       depthWrite: false,
     });
 
     const plane = new THREE.PlaneGeometry(2, 2);
+    const remap = new THREE.RawShaderMaterial({
+      glslVersion: THREE.GLSL3,
+      vertexShader: QUAD_VERT,
+      fragmentShader: REMAP_FRAG,
+      uniforms: {
+        tMotion: { value: null },
+        tLife: { value: null },
+        uFrom: { value: new THREE.Vector4(0, 0, 1, 1) },
+        uTo: { value: new THREE.Vector4(0, 0, 1, 1) },
+      },
+      depthTest: false,
+      depthWrite: false,
+    });
+
     const quad = new THREE.Mesh(plane, step);
     quad.frustumCulled = false;
 
@@ -634,13 +745,16 @@ function ParticleField({
       quad,
       seed,
       step,
+      remap,
       buffers,
       front: 0,
       seeded: false,
+      rect: new THREE.Vector4(0, 0, 1, 1),
       release: () => {
         buffers.forEach((buffer) => buffer.dispose());
         seed.dispose();
         step.dispose();
+        remap.dispose();
         plane.dispose();
       },
     };
@@ -664,26 +778,22 @@ function ParticleField({
   useEffect(() => {
     if (!cursorInteraction) return;
 
-    const canvas = gl.domElement;
     const tracker = pointer.current;
 
+    // Jen si zapamatuj, kde kurzor je. getBoundingClientRect je vynucený
+    // layout a pointermove umí chodit i tisíckrát za sekundu (herní myši),
+    // navíc plátno leží v transformovaném tracku — přepočet se proto dělá
+    // až v useFrame, jednou za snímek a jen když se kurzor pohnul.
     const track = (event: PointerEvent) => {
-      const bounds = canvas.getBoundingClientRect();
-      const ratio = gl.getPixelRatio();
-      const x = (event.clientX - bounds.left) * ratio;
-      const y = (event.clientY - bounds.top) * ratio;
-      if (!tracker.engaged) {
-        tracker.lastX = x;
-        tracker.lastY = y;
-        tracker.engaged = true;
-      }
-      tracker.x = x;
-      tracker.y = y;
+      tracker.clientX = event.clientX;
+      tracker.clientY = event.clientY;
+      tracker.moved = true;
     };
 
     window.addEventListener("pointermove", track, { passive: true });
     return () => {
       window.removeEventListener("pointermove", track);
+      tracker.moved = false;
       tracker.engaged = false;
       tracker.x = -1e5;
       tracker.y = -1e5;
@@ -692,7 +802,7 @@ function ParticleField({
     };
   }, [gl, cursorInteraction]);
 
-  useFrame((state, delta) => {
+  useFrame((state, rawDelta) => {
     const active = sim.current;
     if (!active) return;
 
@@ -701,6 +811,10 @@ function ParticleField({
     const width = Math.max(size.x, 1);
     const height = Math.max(size.y, 1);
     const ratio = renderer.getPixelRatio();
+
+    // Strop 0,1 s kryje návrat z jiné karty, kde rAF stál.
+    const delta = Math.min(rawDelta, 0.1);
+    const stepFrames = paused ? 0 : delta * 60;
 
     const step = active.step.uniforms;
     step.uSpawn.value = source.spawn;
@@ -721,9 +835,24 @@ function ParticleField({
     );
 
     const cursor = pointer.current;
-    if (cursorInteraction) {
-      cursor.vx += (cursor.x - cursor.lastX - cursor.vx) * 0.15;
-      cursor.vy += (cursor.y - cursor.lastY - cursor.vy) * 0.15;
+    if (cursorInteraction && cursor.moved) {
+      cursor.moved = false;
+      const bounds = renderer.domElement.getBoundingClientRect();
+      const x = (cursor.clientX - bounds.left) * ratio;
+      const y = (cursor.clientY - bounds.top) * ratio;
+      if (!cursor.engaged) {
+        cursor.lastX = x;
+        cursor.lastY = y;
+        cursor.engaged = true;
+      }
+      cursor.x = x;
+      cursor.y = y;
+    }
+    if (cursorInteraction && stepFrames > 0) {
+      // Rychlost v px na REFERENČNÍ snímek, ať kurzor tlačí stejně
+      // na 60 i na 144 Hz.
+      cursor.vx += ((cursor.x - cursor.lastX) / stepFrames - cursor.vx) * 0.15;
+      cursor.vy += ((cursor.y - cursor.lastY) / stepFrames - cursor.vy) * 0.15;
     } else {
       cursor.vx = 0;
       cursor.vy = 0;
@@ -735,6 +864,7 @@ function ParticleField({
     step.uPointerVelocity.value.set(cursor.vx, cursor.vy);
     step.uPointerStrength.value = cursorInteraction ? cursorStrength : 0;
     step.uPointerFalloff.value = Math.max(cursorRadius * ratio, 1) ** 2;
+    step.uStep.value = stepFrames;
 
     if (!paused) clock.current += delta * 0.05 * speed;
     step.uTime.value = clock.current;
@@ -751,6 +881,35 @@ function ParticleField({
       });
       renderer.setRenderTarget(null);
       active.seeded = true;
+      active.rect.copy(step.uImageRect.value);
+    }
+
+    // Fotka změnila velikost nebo polohu v plátně (resize, otočení,
+    // breakpoint, jiné dpr). Živé částice se přenesou do nového obdélníku
+    // dřív, než se s nimi cokoli spočítá — jinak by visely vedle fotky.
+    // Porovnává se s tolerancí půl pixelu, ať zaokrouhlování nespouští
+    // přemapování každý snímek.
+    const target = step.uImageRect.value;
+    const last = active.rect;
+    if (
+      Math.abs(target.x - last.x) > 0.5 ||
+      Math.abs(target.y - last.y) > 0.5 ||
+      Math.abs(target.z - last.z) > 0.5 ||
+      Math.abs(target.w - last.w) > 0.5
+    ) {
+      const read = active.buffers[active.front];
+      const write = active.buffers[1 - active.front];
+      const map = active.remap.uniforms;
+      map.tMotion.value = read.textures[0];
+      map.tLife.value = read.textures[1];
+      map.uFrom.value.copy(last);
+      map.uTo.value.copy(target);
+      active.quad.material = active.remap;
+      renderer.setRenderTarget(write);
+      renderer.render(active.scene, active.camera);
+      renderer.setRenderTarget(null);
+      active.front = 1 - active.front;
+      last.copy(target);
     }
 
     if (!paused) {

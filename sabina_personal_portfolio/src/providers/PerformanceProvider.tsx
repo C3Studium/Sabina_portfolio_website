@@ -17,6 +17,8 @@ type Perf = {
     lowPower: boolean
     mobile: boolean
     touch: boolean
+    /** prefers-reduced-motion: reduce. Shader a částice se pak nepouští. */
+    reducedMotion: boolean
     heavy: boolean
 }
 
@@ -27,6 +29,10 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
     const [lowPower, setLowPower] = useState(false)
     const [mobile, setMobile] = useState(false)
     const [touch, setTouch] = useState(false)
+    // Začíná na false a mění se až po mountu, stejně jako ostatní. Framer
+    // Motion má useReducedMotion, ten ale na klientovi zná odpověď hned
+    // při prvním renderu — server ji nezná, a to je hydratační chyba.
+    const [reducedMotion, setReducedMotion] = useState(false)
 
     useEffect(() => {
         const connection = (navigator as any)?.connection
@@ -53,9 +59,18 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
         setMobile(window.matchMedia?.('(max-width: 900px)').matches ?? false)
     }, [])
 
+    useEffect(() => {
+        const media = window.matchMedia?.('(prefers-reduced-motion: reduce)')
+        if (!media) return undefined
+        const check = () => setReducedMotion(media.matches)
+        check()
+        media.addEventListener('change', check)
+        return () => media.removeEventListener('change', check)
+    }, [])
+
     const value = useMemo(
-        () => ({ slowNetwork, lowPower, mobile, touch, heavy: !slowNetwork && !lowPower }),
-        [slowNetwork, lowPower, mobile, touch],
+        () => ({ slowNetwork, lowPower, mobile, touch, reducedMotion, heavy: !slowNetwork && !lowPower }),
+        [slowNetwork, lowPower, mobile, touch, reducedMotion],
     )
 
     return <PerformanceContext.Provider value={value}>{children}</PerformanceContext.Provider>
@@ -69,6 +84,6 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
  */
 export function usePerformance(): Perf {
     return useContext(PerformanceContext) ?? {
-        slowNetwork: false, lowPower: false, mobile: false, touch: false, heavy: true,
+        slowNetwork: false, lowPower: false, mobile: false, touch: false, reducedMotion: false, heavy: true,
     }
 }

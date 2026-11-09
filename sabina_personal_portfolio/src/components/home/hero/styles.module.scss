@@ -4,8 +4,9 @@
 // Accent #BEC948 je vzorkovaný přímo z public/assets/rest/logo.png.
 
 $accent: #bec948;
-$ink: #2e2e2e;
-$ink-soft: #3a3a3a;
+// Sazba ve třech barvách: bílá, zelená a uhlově černá (žádné šedé).
+$ink: #141414;
+$ink-soft: $ink;
 $backdrop: #9c9c9c;
 
 $header-height: 5.75rem;
@@ -20,13 +21,16 @@ $track-width: 160vw;
 
 .container {
   position: relative;
-  height: 300vh;
+  // 872vh = 772vh přišpendleného scrollu (HERO_PINNED, hero/progress.ts) —
+  // klidné tempo, volné místo před umělou myší a pomalá myš.
+  height: 872vh;
 }
 
 .sticky {
   position: sticky;
-  top: 0;
-  height: 100svh;
+  // Rám obsahu (strop 2560 × 1440, globals.scss): na vyšším okně uprostřed.
+  top: var(--frame-y);
+  height: var(--frame-h);
   overflow: hidden;
   color: $ink;
   // Průhledné schválně — podklad celého webu dělá globální shader
@@ -96,6 +100,12 @@ $track-width: 160vw;
 
     .dot {
       color: white;
+      transition: opacity 0.5s ease 0.2s;
+    }
+
+    // Během úvodu, dokud zelená slova nejsou, tečka čeká.
+    .dotWait {
+      opacity: 0;
     }
 
   }
@@ -106,54 +116,54 @@ $track-width: 160vw;
 
 /* ---------- Scroll hint (panel 1) ---------- */
 
+// Jen umístění. Tečku, linku, popisek i jejich smyčku nese
+// common/scroll-placeholder.
+// V toku hned pod nadpisem (uvnitř .content) — zarovnaná s jeho levým
+// okrajem, pod zeleným textem. Jede s nadpisem (parallaxa, zhasnutí).
 .scrollHint {
-  position: absolute;
-  left: $gutter;
-  bottom: clamp(2rem, 7vh, 4.5rem);
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.85rem;
-  
-}
-
-.scrollDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: white;
-}
-
-.scrollLine {
-  width: 2.5px;
-  height: clamp(6rem, 20vh, 12rem);
-  background: linear-gradient(to bottom, white, rgba(255, 255, 255, 0.15));
-}
-
-.scrollLabel {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  font-size: 1.4rem;
-  font-weight: 400;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: white;
+  position: relative;
+  margin-top: clamp(1.5rem, 4vh, 3.5rem);
 }
 
 /* ---------- Portrét ---------- */
 
 .portrait {
+  // Fotka je plně krycí až dolů (bez rozplynutí spodku) — karty galerie
+  // za ní nesmí prosvítat.
   position: absolute;
   // Posunuto dál od pravého kraje, aby po přejetí uvolnilo místo
   // rozšířené řadě bannerů.
   right: clamp(2rem, 9vw, 11rem);
-  bottom: 0;
+  // 10vh pod spodní hranou okna: fotka končí rovným řezem v pase, který
+  // nesmí být vidět ani při kolébání (portraitY ±2,5vh) a přeletu do Info.
+  bottom: -10vh;
   z-index: 1;
   height: 94%;
   display: flex;
   align-items: flex-end;
   pointer-events: none;
+}
+
+// Obal fotky a částic ve SketchReveal — drží rozložení rámu (fotka na
+// celou výšku, dole). Není pozicovaný: částice i plátno stavby se měří
+// vůči .portrait.
+.portraitLayer {
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+// Bannery z úvodu (src/motion/intro/IntroBanners.tsx) přes celý panel,
+// pod nadpisem (.content má z-index 2).
+.introBanners {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  // Ztlumení dělá kreslení (banners.ts): obraz tlumeně, detaily plně.
 }
 
 .portraitImage {
@@ -167,6 +177,18 @@ $track-width: 160vw;
 // komponenta si je měří z DOMu podle samotného <img> a píše je inline.
 .portraitParticles {
   z-index: 2;
+  // Při přeletu do Info částice zhasnou (--particles nastavuje hero).
+  opacity: var(--particles, 1);
+}
+
+// Obal přeletu portrétu do Info. Vyplní rám a drží rozložení jako rám
+// (fotka u spodku); transformace jde od levého horního rohu.
+.portraitFlight {
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  transform-origin: 0 0;
+  will-change: transform;
 }
 
 /* ---------- Galerie bannerů (panel 2) ----------
@@ -265,13 +287,21 @@ $track-width: 160vw;
 
 /* ---------- Hint + tlačítka galerie ---------- */
 
+// Pravý dolní roh galerie: šipky nahoře, popisek aktivní karty pod nimi.
+// Nad scénou (z-index), protože scéna FlexCarousel panel přesahuje.
+// Celý roh je 1,4× větší: šipky i popisek (font-size popisku je v px,
+// proto zoom, který zvětší i jeho mezery a válec počítadla).
 .galleryHint {
   position: absolute;
   right: clamp(1rem, 2.5vw, 3rem);
-  bottom: clamp(2rem, 7vh, 4.5rem);
+  // Níž než dřív — ať šipky nezasahují do spodku vyšších karet.
+  bottom: 1.5vh;
+  z-index: 2;
   display: flex;
-  align-items: center;
-  gap: 1.3rem;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1.4rem;
+  zoom: 1.4;
 }
 
 .galleryHintLabel {
@@ -294,10 +324,10 @@ $track-width: 160vw;
   width: 2.55rem;
   height: 2.55rem;
   padding: 0;
-  border: 1px solid rgba(46, 46, 46, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 50%;
   background: transparent;
-  color: $ink;
+  color: #fff;
   cursor: pointer;
   transition: border-color 0.22s ease, color 0.22s ease;
 
@@ -318,7 +348,9 @@ $track-width: 160vw;
 
 /* ---------- Responsivita ---------- */
 
-@media (max-width: 820px) {
+// Úzké okno NA VÝŠKU (telefon, tablet). Na šířku zůstává kompozice
+// z notebooku — telefony a tablety na šířku řeší blok Responzivita dole.
+@media (max-width: 820px) and (orientation: portrait) {
   .panelHero {
     align-items: flex-start;
   }
@@ -335,7 +367,6 @@ $track-width: 160vw;
   .portrait {
     right: -8%;
     height: 62%;
-    opacity: 0.9;
   }
 
   .scrollHint {
@@ -380,4 +411,207 @@ $track-width: 160vw;
 .headlineRise {
   display: inline-block;
   will-change: transform, opacity;
+}
+
+// Kruh projektů (OrbitCards). Engine si plátno přizpůsobí boxu, takže
+// stačí mu dát rozměr — šířku panelu a výšku skoro celé obrazovky.
+.orbit {
+  position: relative;
+  width: 100%;
+  // Stejná výška jako portrét (.portrait má 94 % hera), aby cardHeight
+  // na OrbitCards znamenal podíl výšky fotky.
+  height: 94vh;
+}
+
+// Plátno je větší než panel, stejně na všechny strany, takže střed scény
+// zůstává na místě. Karty ve dvojnásobné velikosti by jinak ořízla hrana
+// panelu; takhle je ořízne až okraj obrazovky.
+.orbit > .orbitCanvas {
+  position: absolute;
+  top: -25vh;
+  bottom: -25vh;
+  right: -30vw;
+  // Vlevo končí plátno ZA portrétem, zhruba v půlce fotky: odsazení
+  // panelu + mezera portrétu od kraje hera + půl šířky portrétu (fotka
+  // má 94 % výšky a poměr 612/1019, tedy ~56vh na šířku, půlka ~28vh).
+  // Karty, které odjedou doleva, tak zmizí za fotkou a nevyjedou vedle ní.
+  left: calc(-1 * (clamp(1rem, 2vw, 2.5rem) + clamp(2rem, 9vw, 11rem) + 24vh));
+  // Měkká hrana: portrét je výřez s průhledným okolím, rovný řez plátna
+  // by v něm byl vidět. Karta proto přes tělo fotky postupně zprůhlední.
+  mask-image: linear-gradient(90deg, transparent 0, #000 22vh);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 22vh);
+  width: auto;
+  height: auto;
+  // Pod portrétem (.portrait má z-index 1): karty, které odjedou kolem
+  // přední pozice doleva, zajedou za fotku.
+  z-index: 0;
+}
+
+// Varianta galerie FlexCarousel. Scéna je ŠIRŠÍ než panel: zleva sahá
+// za portrét (začátek ohybu čočky je hned za zády fotky) a vpravo
+// přesahuje okraj obrazovky. Přesah ořízne .sticky (overflow: hidden).
+// Panel 60vw + 29vw doleva + 20vw doprava = 109vw; střed scény (a čočky)
+// leží 25,5vw od levého kraje panelu, po dojetí tracku tedy na 65,5vw okna.
+// Levý konec scény (11vw okna) končí za portrétem.
+.flex {
+  position: absolute;
+  top: 3vh;
+  left: -29vw;
+  width: 109vw;
+  height: 94vh;
+  // Levý okraj scény leží za portrétem, kde čočka karty ohýbá. Portrét má
+  // rozplývavý spodek, takže by ohnuté karty prosvítaly pod ním — proto
+  // levá část scény zprůhlední. Rovné bannery začínají až za zády fotky
+  // (~17vw scény), ty zůstávají celé.
+  mask-image: linear-gradient(90deg, transparent 0, transparent 6vw, #000 13vw);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, transparent 6vw, #000 13vw);
+}
+
+/* ---------- Tablet na výšku (lg-v, od 1000px) ---------- */
+// Základ pro zařízení na výšku. Titulek vlevo nahoře přes celou šířku,
+// portrét (a bannery za ním, měří se podle něj) menší vpravo dole —
+// přelet do Info pak jede jen kousek. Částice jsou na výšku vypnuté
+// (hero/index.tsx). Píše se před blok na šířku: ten generátor přepisuje od
+// své značky dál.
+@include lg-v {
+  .panelHero {
+    align-items: flex-start;
+  }
+
+  .content {
+    padding-block: calc(#{$header-height} + 6.5vh) 0;
+    padding-inline: 6vw;
+    margin-bottom: 0;
+
+    .headline {
+      font-size: 15vw;
+    }
+  }
+
+  .scrollHint {
+    margin-top: 4vh;
+  }
+
+  // Portrét na první obrazovce: menší, vpravo pod řádkem „výsledky", za
+  // titulkem (.content má z-index 2). Rovný řez v pase je těsně (1vh) pod
+  // spodní hranou. Se scrollem vyroste na 79,2 % a ujede doleva
+  // (TABLET_GROW / TABLET_SHIFT_VW v hero/index.tsx) — spodní hrana stojí.
+  .portrait {
+    right: 2vw;
+    bottom: -1vh;
+    height: 54%;
+  }
+
+  // Track jede jen o 52vw (hero/index.tsx), takže pravých 8vw galerie
+  // zůstává za oknem — roh se šipkami a popiskem o ně dovnitř. Šipky
+  // i popisek 0,9× proti monitoru (zoom 1,4 → 1,26).
+  .galleryHint {
+    right: 10.5vw;
+    zoom: 1.26;
+  }
+
+  // Scéna galerie přes celou výšku okna (ohnuté karty nenarazí na hranu
+  // boxu, spodní přesah ořízne okno): 100vw × 100vh posunutý o 6vh dolů
+  // a 31vw doleva — střed čočky na 67vw okna, ve volném pruhu vpravo od
+  // portrétu jedna velká karta ~50vh (cardHeight v hero/index.tsx). Levý
+  // okraj scény zprůhlední za portrétem (okno ~34–42vw), karty zajedou
+  // za něj.
+  .flex {
+    top: 6vh;
+    left: -31vw;
+    width: 100vw;
+    height: 100vh;
+    mask-image: linear-gradient(90deg, transparent 0, transparent 10vw, #000 18vw);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, transparent 10vw, #000 18vw);
+  }
+}
+
+/* ---------- Responzivita na šířku (telefon → notebook → monitor) ---------- */
+// Všechno na šířku od telefonu po monitor. Základ je malý notebook (md,
+// 1200px); k monitoru (2560) hodnoty rostou po přímce a dávají tam přesně
+// původní hodnotu, pod md (tablet, telefon) klesají v poměru šířky:
+//  - fluid()  pevné rem, písmo ne pod 11px,
+//  - fluid-ui() totéž pro panely nástroje (Vrstvy, Text, toast) — celé,
+//    jedním poměrem ($fluid ui-ratio),
+//  - fit-vh() drží písmo ve vh v poměru k vw sloupcům i na užší obrazovce.
+// (Vše v styles/system/_mixins.scss.) Zařízení s jinou výškou (tablet,
+// telefon na šířku) mají vlastní bloky pod tímhle.
+@include xxs-h {
+  .panelWork {
+    padding-left: clamp(ease-floor(1rem), 2vw, 2.5rem);
+    padding-right: clamp(ease-floor(1.5rem), 3vw, 3.5rem);
+  }
+
+  .scrollHint {
+    margin-top: clamp(ease-floor(1.5rem), 4vh, 3.5rem);
+  }
+
+  .portrait {
+    right: clamp(ease-floor(2rem), 9vw, 11rem);
+  }
+
+  .stage {
+    gap: clamp(ease-floor(1.2rem), 2.4vw, 3rem);
+  }
+
+  .cardCta {
+    inset: auto fluid(0.9rem) fluid(0.85rem);
+    gap: fluid(0.6rem);
+  }
+
+  .cardCtaLabel {
+    font-size: fluid(0.56rem, null, 11px);
+  }
+
+  .cardCtaArrow svg {
+    width: fluid(0.85rem);
+    height: fluid(0.85rem);
+  }
+
+  .galleryHint {
+    right: clamp(ease-floor(1rem), 2.5vw, 3rem);
+  }
+
+  .galleryHintLabel {
+    font-size: fluid(0.6rem, null, 11px);
+  }
+
+  // Odsazení pod hlavičkou, která se v md zmenšuje s ní (layout/header).
+  .content {
+    padding-block: fluid($header-height) 0;
+    // Titulek blíž k levému okraji: na 1280 kolem 120px místo 250. Odečet
+    // je nula od 2560 výš, takže tam zůstává původní vzorec.
+    // Pod md v poměru šířky (8,1vw = hodnota na 1200px), jinak by odečet
+    // na telefonu šel do záporu.
+    padding-inline: max(8.1vw, calc(#{$gutter} + clamp(2rem, 8vw, 9rem) + 7.5vw - max(0px, (2560px - 100vw) * 0.101)));
+    // Spodní okraj zvedá titulek nad střed panelu; na notebooku skoro žádný,
+    // takže titulek sedí níž.
+    margin-bottom: fluid(12rem, 0.15);
+
+    // Titulek je kompozice s portrétem, ne sazba. Portrét se měří na výšku,
+    // takže na užší obrazovce je relativně širší a začíná víc vlevo — titulek
+    // proto klesá rychleji než šířka: na 1280 kolem 93px.
+    .headline {
+      font-size: fluid(17rem, 0.3);
+    }
+  }
+
+  // Roh galerie: šipky menší, ať vedle zmenšeného textu karet nepřerůstají.
+  .galleryHint {
+    gap: fluid(1.4rem, 0.6);
+  }
+
+  .galleryNav {
+    gap: fluid(0.7rem, 0.6);
+  }
+
+  .galleryNavButton {
+    width: fluid(2.55rem, 0.6);
+    height: fluid(2.55rem, 0.6);
+
+    svg {
+      width: fluid(0.85rem, 0.6);
+      height: fluid(0.85rem, 0.6);
+    }
+  }
 }

@@ -125,3 +125,14 @@
         }
     }
 }
+
+// Fluid size for the landscape stops — see fluid() in _mixins.scss.
+@function fluid($max, $ratio: null, $floor: null) { @return sys.fluid($max, $ratio, $floor); }
+// vh that keeps the monitor's proportions on a narrower screen — see fit-vh() in _mixins.scss.
+@function fit-vh($vh) { @return sys.fit-vh($vh); }
+// fluid() for the design-tool panels — see fluid-ui() in _mixins.scss.
+@function fluid-ui($max, $floor: null) { @return sys.fluid-ui($max, $floor); }
+// Any size scaled from the monitor down to the laptop — see fluid-scale() in _mixins.scss.
+@function fluid-scale($value, $ratio, $ref: null) { @return sys.fluid-scale($value, $ratio, $ref); }
+// A clamp() minimum that gives way on a phone on its side — see ease-floor() in _mixins.scss.
+@function ease-floor($min, $abs: null) { @return sys.ease-floor($min, $abs); }

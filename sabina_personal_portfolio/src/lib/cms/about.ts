@@ -43,6 +43,8 @@ export const aboutPage = definePage({
             fields: {
                 eyebrow: f.text('title'),
                 heading: f.lines('headline'),
+                // Popisky svislé lišty: 0 jméno sekce, 1 nápověda posunu.
+                rail: f.rows({ from: 0, count: 2, pick: ['label'] }),
                 // `sizes` patří sem, ne k assetu: říká, jakou variantu má prohlížeč
                 // stáhnout pro TOHLE použití fotky.
                 image: f.image({ sizes: '(max-width: 1100px) 70vw, 56vw' }),

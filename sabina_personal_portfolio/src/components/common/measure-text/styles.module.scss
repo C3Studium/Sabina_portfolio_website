@@ -1,0 +1,22 @@
+@use "../../../styles/system/_shortcuts.scss" as *;
+
+// Obal nadpisu. Plátno leží přes něj s přesahem, který dopočítá engine
+// (left/top/width/height se píší inline podle velikosti písma).
+.root {
+  position: relative;
+  // Svislý scroll stránky jde přes nadpis dál, tažení písmen ne.
+  touch-action: pan-y;
+}
+
+// Měřitelná slova. Průhledná až ve chvíli, kdy plátno nakreslilo jejich
+// náhradu (engine nastaví `data-live`) — do té doby, a bez JS, jsou vidět.
+.root[data-live] [data-measure] {
+  color: transparent;
+  user-select: none;
+}
+
+.canvas {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}

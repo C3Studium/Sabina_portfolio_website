@@ -1,0 +1,190 @@
+@use "../../../styles/system/_shortcuts.scss" as *;
+
+// Nápověda posunu. Rozměry a písmo jsou převzaté z hera, kde dřív stály
+// tečka, linka a popisek natvrdo. Pohyb píše framer-motion (viz index.tsx).
+
+$gap: 0.85rem;
+$dot: 8px;
+// Kde stojí střed tečky v klidu: nad začátkem linky o mezeru a půl tečky,
+// přesně jako ve statické verzi (tečka, mezera, linka).
+$dot-rest: calc(#{$gap} + #{$dot} / 2);
+
+.hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $gap;
+}
+
+/* ---------- Linka s tečkou ---------- */
+
+.rail {
+  position: relative;
+  width: 2.5px;
+  height: clamp(6rem, 20vh, 12rem);
+  // Místo pro klidovou tečku nad linkou.
+  margin-top: calc(#{$gap} + #{$dot});
+}
+
+// Klidová linka — tatáž, která tu stála před animací.
+.track {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, white, rgba(255, 255, 255, 0.15));
+}
+
+// Ořez plnění na rozměr linky.
+.fillClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+// Plnění za tečkou. Sahá od klidové tečky ke konci linky, stejně jako
+// nosič; výška se nemění nikdy — jen scaleY z horní hrany.
+.fill {
+  position: absolute;
+  top: calc(-1 * #{$dot-rest});
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), white);
+  will-change: transform;
+}
+
+// Nosič sahá od klidové tečky ke konci linky; translateY v procentech ho
+// posouvá o násobky téhle výšky a tečka jede s ním.
+.carrier {
+  position: absolute;
+  top: calc(-1 * #{$dot-rest});
+  bottom: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.dot {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: $dot;
+  height: $dot;
+  border-radius: 50%;
+  background: white;
+  transform: translate(-50%, -50%);
+}
+
+/* ---------- Popisek ---------- */
+
+// Kořen kouře: plátno se do něj vkládá absolutně, proto `position: relative`.
+.label {
+  position: relative;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 1.4rem;
+  font-weight: 400;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: white;
+}
+
+// Ostrý text nad plátnem. Neumisťovaný schválně: poloha písmen se měří
+// přes offsetLeft/offsetTop vůči kořeni a umístěný obal by se stal jejich
+// offsetParentem.
+.face {
+  will-change: opacity;
+}
+
+/* ---------- Vodorovná varianta ---------- */
+
+// Tečka vlevo před linkou, jede doprava; popisek za linkou, vodorovně.
+// Tytéž prvky, jen osy prohozené (pohyb píše `x` / `scaleX`, viz index.tsx).
+// Větší než svislá — stojí pod nadpisem jako výrazný prvek.
+$h-gap: 1.4rem;
+$h-dot: 12px;
+$h-dot-rest: calc(#{$h-gap} + #{$h-dot} / 2);
+
+.horizontal {
+  flex-direction: row;
+  gap: $h-gap;
+
+  .rail {
+    width: clamp(6rem, 12vw, 14rem);
+    height: 3px;
+    margin-top: 0;
+    // Místo pro klidovou tečku před linkou.
+    margin-left: calc(#{$h-gap} + #{$h-dot});
+  }
+
+  .track {
+    background: linear-gradient(to right, white, rgba(255, 255, 255, 0.15));
+  }
+
+  .fill,
+  .carrier {
+    top: 0;
+    bottom: 0;
+    left: calc(-1 * #{$h-dot-rest});
+    right: 0;
+  }
+
+  .fill {
+    background: linear-gradient(to right, rgba(255, 255, 255, 0.3), white);
+  }
+
+  .dot {
+    top: 50%;
+    left: 0;
+    width: $h-dot;
+    height: $h-dot;
+  }
+
+  .label {
+    writing-mode: horizontal-tb;
+    transform: none;
+    font-size: clamp(1.5rem, 2.2vw, 2.6rem);
+    letter-spacing: 0.24em;
+  }
+}
+
+/* ---------- Responzivita na šířku (telefon → notebook → monitor) ---------- */
+// Všechno na šířku od telefonu po monitor. Základ je malý notebook (md,
+// 1200px); k monitoru (2560) hodnoty rostou po přímce a dávají tam přesně
+// původní hodnotu, pod md (tablet, telefon) klesají v poměru šířky:
+//  - fluid()  pevné rem, písmo ne pod 11px,
+//  - fluid-ui() totéž pro panely nástroje (Vrstvy, Text, toast) — celé,
+//    jedním poměrem ($fluid ui-ratio),
+//  - fit-vh() drží písmo ve vh v poměru k vw sloupcům i na užší obrazovce.
+// (Vše v styles/system/_mixins.scss.) Zařízení s jinou výškou (tablet,
+// telefon na šířku) mají vlastní bloky pod tímhle.
+@include xxs-h {
+  .rail {
+    height: clamp(ease-floor(6rem), 20vh, 12rem);
+  }
+
+  .label {
+    font-size: fluid(1.4rem, null, 11px);
+  }
+
+  // Vodorovná výzva pod titulkem hera klesá s titulkem (ten jde na 1280 skoro
+  // na polovinu) — písmo, linka i mezery spolu, jinak je vedle titulku
+  // přerostlá. Na monitoru přesně původní hodnoty.
+  .horizontal {
+    gap: fluid($h-gap, 0.45);
+
+    .rail {
+      width: fluid(14rem, 0.45);
+      margin-left: calc(#{fluid($h-gap, 0.45)} + #{$h-dot});
+    }
+
+    .fill,
+    .carrier {
+      left: calc(-1 * (#{fluid($h-gap, 0.45)} + #{$h-dot} / 2));
+    }
+
+    .label {
+      font-size: fluid(2.6rem, 0.4, 12px);
+    }
+  }
+}

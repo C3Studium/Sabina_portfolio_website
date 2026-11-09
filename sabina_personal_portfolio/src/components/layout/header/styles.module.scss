@@ -10,7 +10,8 @@
 // i velkém monitoru — na rozdíl od sekcí, které se viewportu přizpůsobují.
 
 $accent: #bec948;
-$ink: #2e2e2e;
+// Sazba ve třech barvách: bílá, zelená a uhlově černá (žádné šedé).
+$ink: #141414;
 
 // Stejné hodnoty jako v hero/styles.module.scss — hero si $header-height
 // nechává, aby o něj odsadil headline pod hlavičkou.
@@ -22,6 +23,10 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   // inset místo width: 100vw — 100vw počítá i šířku scrollbaru a
   // hlavička by o ni přetekla doprava.
   inset: 0 0 auto;
+  // V rámu obsahu (strop 2560 × 1440, globals.scss), na menších oknech 0.
+  top: var(--frame-y);
+  left: var(--frame-x);
+  right: var(--frame-x);
   z-index: 50;
   display: flex;
   align-items: center;
@@ -32,12 +37,35 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   color: $ink;
 }
 
+// Úvod při načtení (src/motion/intro/header.ts). Engine opony drží
+// `[data-motion-hold]` neviditelné až do konce — hlavička se ale ukazuje
+// po prvcích, jak je úvod postaví: prvek naskočí s `data-intro-in`. Mimo
+// oponu (přechod, `?nopl=1`, Studio) tahle pravidla neplatí.
+$intro-in: 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+
+:global(html[data-preload="1"]) .header[data-motion-hold] {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+:global(html[data-preload="1"]) .header [data-intro]:not([data-intro-in]) {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .brand {
   display: inline-flex;
   align-items: center;
   gap: 0.7rem;
   flex-shrink: 0;
   color: white;
+  transition: color 0.22s ease, opacity $intro-in;
+
+  // Hover jako u odkazů menu: rámeček kreslí MeasureText, jméno zezelená.
+  &:hover {
+    color: $accent;
+  }
 }
 
 .brandMark {
@@ -75,20 +103,25 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
 
 .navLink {
   position: relative;
+  // „Větší box": odsazení zvětší plochu hoveru i rámeček kurzoru, záporný
+  // okraj ho vrací, takže rozložení menu se nemění.
+  padding: 0.75rem 0.95rem;
+  margin: -0.75rem -0.95rem;
   font-size: 1rem;
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   white-space: nowrap;
-  transition: color 0.22s ease;
+  transition: color 0.22s ease, opacity $intro-in;
   color: white;
 
+  // Podtržení pro klávesnici — pod textem, ne pod odsazeným boxem.
   &::after {
     content: "";
     position: absolute;
-    left: 0;
-    bottom: -0.4rem;
-    width: 100%;
+    left: 0.95rem;
+    right: 0.95rem;
+    bottom: 0.35rem;
     height: 1px;
     background: $accent;
     transform: scaleX(0);
@@ -100,7 +133,9 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
     color: $accent;
   }
 
-  &:hover::after {
+  // Hlavní hover dělá kurzor (rozpadne se do rohů odkazu), podtržení by mu
+  // konkurovalo. Zůstává pro klávesnici — tam kurzor není.
+  &:focus-visible::after {
     transform: scaleX(1);
   }
 }
@@ -124,20 +159,27 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   border-radius: 5px;
   text-transform: uppercase;
   white-space: nowrap;
-  transition: background 0.24s ease;
+  transition: background 0.24s ease, opacity $intro-in;
 
   &:hover {
     background: rgba(52, 52, 48, 0.92);
   }
 }
 
+$roll: 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+
+// Kroužek se šipkou: při hoveru se vyplní akcentem a šipka proletí —
+// jedna odletí doprava, druhá přiletí zleva.
 .ctaArrow {
+  position: relative;
   display: grid;
   place-items: center;
   width: 3rem;
   height: 3rem;
   border: 1px solid currentColor;
   border-radius: 50%;
+  overflow: hidden;
+  transition: background $roll, color $roll;
 
   svg {
     width: 1.6rem;
@@ -145,11 +187,37 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   }
 }
 
+.ctaArrowIcon {
+  grid-area: 1 / 1;
+  display: grid;
+  place-items: center;
+  transition: transform $roll;
+}
+
+.ctaArrowNext {
+  transform: translateX(-160%);
+}
+
+.cta:hover .ctaArrow {
+  background: $accent;
+  color: $ink;
+}
+
+.cta:hover .ctaArrowIcon {
+  transform: translateX(160%);
+}
+
+.cta:hover .ctaArrowNext {
+  transform: translateX(0);
+}
+
 /* ---------- Responsivita ---------- */
 
 // Breakpointy i hodnoty přenesené 1:1 z hero/styles.module.scss, aby se
 // chování hlavičky přesunem nezměnilo.
-@media (max-width: 1180px) {
+// Menu se nevejde: úzké okno na výšku, a na šířku telefon pod 900px. Tablet
+// na šířku menu má — hlavička se tam zmenšuje s blokem Responzivita dole.
+@media (max-width: 1180px) and (orientation: portrait), (max-width: 899px) {
   .nav {
     display: none;
   }
@@ -168,7 +236,81 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
 @media (prefers-reduced-motion: reduce) {
   .navLink,
   .navLink::after,
-  .cta {
+  .cta,
+  .ctaArrow,
+  .ctaArrowIcon,
+  .brand {
     transition: none;
+  }
+}
+
+/* ---------- Responzivita na šířku (telefon → notebook → monitor) ---------- */
+// Všechno na šířku od telefonu po monitor. Základ je malý notebook (md,
+// 1200px); k monitoru (2560) hodnoty rostou po přímce a dávají tam přesně
+// původní hodnotu, pod md (tablet, telefon) klesají v poměru šířky:
+//  - fluid()  pevné rem, písmo ne pod 11px,
+//  - fluid-ui() totéž pro panely nástroje (Vrstvy, Text, toast) — celé,
+//    jedním poměrem ($fluid ui-ratio),
+//  - fit-vh() drží písmo ve vh v poměru k vw sloupcům i na užší obrazovce.
+// (Vše v styles/system/_mixins.scss.) Zařízení s jinou výškou (tablet,
+// telefon na šířku) mají vlastní bloky pod tímhle.
+@include xxs-h {
+  .header {
+    gap: fluid(2rem);
+  }
+
+  .brand {
+    gap: fluid(0.7rem);
+  }
+
+  .brandMark {
+    height: fluid(4rem);
+  }
+
+  .brandName {
+    font-size: fluid(1.8rem, null, 11px);
+  }
+
+  .brandSurname {
+    margin-top: fluid(0.24rem);
+    font-size: fluid(1rem, null, 11px);
+  }
+
+  .nav {
+    gap: clamp(ease-floor(1.1rem), 2.6vw, 2.5rem);
+  }
+
+  .navLink {
+    padding: fluid(0.75rem) fluid(0.95rem);
+    margin: fluid(-0.75rem) fluid(-0.95rem);
+    font-size: fluid(1rem, null, 11px);
+
+    &::after {
+      left: fluid(0.95rem);
+      right: fluid(0.95rem);
+      bottom: fluid(0.35rem);
+    }
+  }
+
+  .cta {
+    gap: fluid(0.85rem);
+    padding: fluid(1rem) fluid(1.35rem);
+    font-size: fluid(1rem, null, 11px);
+  }
+
+  .ctaArrow {
+    width: fluid(3rem);
+    height: fluid(3rem);
+
+    svg {
+      width: fluid(1.6rem);
+      height: fluid(1.6rem);
+    }
+  }
+
+  // Chrome se tu výjimečně zmenšuje taky: v pevných rem se na 1200–1400px
+  // menu srazí se značkou.
+  .header {
+    height: fluid($header-height);
   }
 }

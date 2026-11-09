@@ -6,8 +6,9 @@
 // globální shader v _app.tsx.
 
 $accent: #bec948;
-$ink: #2e2e2e;
-$ink-soft: #4f4f4f;
+// Sazba ve třech barvách: bílá, zelená a uhlově černá (žádné šedé).
+$ink: #141414;
+$ink-soft: $ink;
 
 .caseStudy {
   position: relative;
@@ -110,6 +111,48 @@ $ink-soft: #4f4f4f;
 }
 
 /* ---------- Galerie ---------- */
+
+/* ---------- Cíle ---------- */
+
+.goals {
+  margin-top: 8vh;
+  max-width: 60rem;
+}
+
+.goalsTitle {
+  margin: 0 0 3vh;
+  font-size: clamp(0.7rem, 1.5vh, 1.8rem);
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: $accent;
+}
+
+.goalsList {
+  display: grid;
+  gap: 2vh;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.goal {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 1.6vw;
+  padding-bottom: 2vh;
+  border-bottom: 1px solid rgba(20, 20, 20, 0.2);
+  font-size: clamp(0.95rem, 2.1vh, 2.4rem);
+  font-weight: 300;
+  line-height: 1.45;
+}
+
+.goalNumber {
+  font-size: 0.75em;
+  font-weight: 500;
+  color: $accent;
+}
 
 .gallery {
   display: grid;

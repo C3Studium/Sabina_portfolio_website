@@ -1,23 +1,21 @@
 @use "../../../styles/system/_shortcuts.scss" as *;
 
-// Process — horizontální scroll sekce pod Info.
+// Process — sekce pod Info: úvod a kroky 01–05 jako dolly galerie do hloubky.
 //
 // JEDNOTKY: stejně jako Info je návrh (1551x866) proporcionální k viewportu,
 // takže rozměry i písma jedou na vh/vw. Stropy v clamp() jsou velkorysé,
 // aby na velkém monitoru neuřízly škálování.
 // Přepočet: px_navrh / 866 * 100 = vh
 //
-// GEOMETRIE TRACKU: 455vw = screen1 150vw + screen2 135vw + screen3 170vw.
-// Uzly křivky (přeměřené z Figmy, v % celého tracku) padnou do svých kroků:
-//   01 = 21 % = 97vw   -> screen 1, krok 01
-//   02 = 37 % = 169vw  -> screen 2, levá půle
-//   03 = 51 % = 231vw  -> screen 2, pravá půle
-//   04 = 68 % = 311vw  -> screen 3, levá půle
-//   05 = 85 % = 385vw  -> screen 3, pravá půle
+// DOLLY: úvod a pět kroků jsou dlaždice DollyGallery (components/3D),
+// každá 66vw × výška okna, střídavě vlevo a vpravo. Kamera jimi projíždí
+// podle scrollu (DOLLY v index.tsx). Obsah kroků je navržený ve vw/vh
+// jako dřív — dlaždice u kamery má skutečnou velikost.
 
 $accent: #bec948;
-$ink: #2e2e2e;
-$ink-soft: #4f4f4f;
+// Sazba ve třech barvách: bílá, zelená a uhlově černá (žádné šedé).
+$ink: #141414;
+$ink-soft: $ink;
 $backdrop: #9c9c9c;
 $ink-note: #6c5ce7;
 
@@ -26,21 +24,22 @@ $surface-soft: rgba(255, 255, 255, 0.9);
 $surface-border: rgba(255, 255, 255, 0.7);
 $line: rgba(46, 46, 46, 0.16);
 
-$track: 455vw;
-
 /* ---------- Scroll rámec ---------- */
 
 .container {
   position: relative;
-  // 670vh dává 570vh scrollu na 355vw posunu (1,6vh na vw) — dost času,
-  // aby se každý krok stihl přečíst.
-  height: 670vh;
+  // 3538vh = 3438vh přišpendleného scrollu (PROCESS_PINNED v
+  // designer-timeline.ts): prvních ~154vh umělá myš dokončí přenos portrétu
+  // a napíše texty, pak jízda kamery přes kroky 01–06, výzvu a CTA (~313vh
+  // na jednotku váhy úseku, process/steps.ts), na konci ~60vh u CTA.
+  height: 3538vh;
 }
 
 .sticky {
   position: sticky;
-  top: 0;
-  height: 100svh;
+  // Rám obsahu (strop 2560 × 1440, globals.scss): na vyšším okně uprostřed.
+  top: var(--frame-y);
+  height: var(--frame-h);
   overflow: hidden;
   color: $ink;
   // Stejný podklad jako hero a info.
@@ -49,30 +48,34 @@ $track: 455vw;
   background: transparent;
 }
 
-.track {
-  position: relative;
-  display: flex;
-  width: $track;
-  height: 100%;
-  will-change: transform;
-}
+/* ---------- Dolly ---------- */
 
-/* ---------- Vlna a uzly ---------- */
-
-.wave {
+.dolly {
   position: absolute;
   inset: 0;
-  z-index: 0;
-  width: $track;
-  height: 100%;
+}
+
+// Dlaždice nese celý krok — bez ořezu (stíny a anotace přesahují). Text ve
+// scéně se nevybírá (tažení myší by ho jinak označovalo).
+.dollyTile {
+  overflow: visible;
+  user-select: none;
+}
+
+// Kotva #spoluprace (menu) — ve scrollu tam, kde kamera dorazí k CTA.
+.ctaAnchor {
+  position: absolute;
+  left: 0;
+  width: 1px;
+  height: 1px;
   pointer-events: none;
 }
 
-.node {
-  position: absolute;
-  left: var(--node-x);
-  top: var(--node-y);
-  z-index: 1;
+/* ---------- Linka v prostoru (DollyLine) ---------- */
+
+// Polohu, měřítko a průhlednost uzlů píše DollyLine; tady jen vzhled
+// (stejný jako uzly původní vlny).
+.curveNode {
   display: grid;
   place-items: center;
   width: clamp(0.88rem, 2.3vh, 3.1rem);
@@ -80,12 +83,10 @@ $track: 455vw;
   border: clamp(2px, 0.35vh, 5px) solid $accent;
   border-radius: 50%;
   background: #4a4a6a;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
 }
 
-// Poslední uzel je zaškrtnutí — větší a vyplněný.
-.nodeFinal {
+// Poslední uzel je zaškrtnutí — větší a průhledný.
+.curveFinal {
   width: clamp(2rem, 5.2vh, 7rem);
   height: clamp(2rem, 5.2vh, 7rem);
   border-width: clamp(2px, 0.28vh, 4px);
@@ -98,43 +99,16 @@ $track: 455vw;
   }
 }
 
-/* ---------- Screeny ---------- */
+/* ---------- Úvod (první dlaždice) ---------- */
 
-.screen {
-  position: relative;
-  z-index: 2;
-  flex: 0 0 auto;
+// Text vlevo, portrét vedle — dřív začátek prvního screenu tracku.
+.intro {
+  display: grid;
+  grid-template-columns: 35vw 22vw;
+  align-items: center;
   height: 100%;
+  padding-left: 4vw;
 }
-
-.screenOne {
-  width: 150vw;
-  display: grid;
-  grid-template-columns: 35vw 22vw 1fr;
-  align-items: center;
-  padding-inline: 4vw 3vw;
-}
-
-.screenTwo,
-.screenThree {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: center;
-  padding-inline: 3vw;
-}
-
-.screenTwo {
-  width: 135vw;
-}
-
-// Poslední screen je nejširší. Kroky 04 a 05 mají nejbohatší kompozice
-// (chatové bubliny přes banner, tři formáty s crop marks a popisky),
-// takže dostávají 82vw na krok proti 64.5vw ve screenech 1 a 2.
-.screenThree {
-  width: 170vw;
-}
-
-/* ---------- Úvodní blok (screen 1) ---------- */
 
 .lead {
   position: relative;
@@ -182,58 +156,11 @@ $track: 455vw;
   font-size: clamp(0.88rem, 2.15vh, 2.95rem);
   font-weight: 300;
   line-height: 1.55;
-  color: $ink-soft;
+  // Světlý — tmavý $ink-soft na šedém podkladu shaderu nebyl vidět.
+  color: #fff;
 }
 
-.scrollHint {
-  position: absolute;
-  left: 0;
-  bottom: 4vh;
-  display: flex;
-  flex-direction: column;
-  gap: 1.2vh;
-}
-
-.scrollDot {
-  width: clamp(3px, 0.5vh, 7px);
-  height: clamp(3px, 0.5vh, 7px);
-  border-radius: 50%;
-  background: $accent;
-}
-
-.scrollLine {
-  width: 1px;
-  height: 24vh;
-  background: linear-gradient(to bottom, rgba(46, 46, 46, 0.5), rgba(46, 46, 46, 0.12));
-}
-
-.scrollFoot {
-  display: flex;
-  align-items: center;
-  gap: 1vw;
-  font-size: clamp(0.76rem, 1.9vh, 2.55rem);
-  font-weight: 400;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.scrollCircle {
-  display: grid;
-  place-items: center;
-  width: clamp(1.4rem, 3.6vh, 4.8rem);
-  height: clamp(1.4rem, 3.6vh, 4.8rem);
-  flex-shrink: 0;
-  border: 1px solid rgba(46, 46, 46, 0.45);
-  border-radius: 50%;
-
-  svg {
-    width: 45%;
-    height: 45%;
-  }
-}
-
-/* ---------- Portrét (screen 1) ---------- */
+/* ---------- Portrét (úvod) ---------- */
 
 .portrait {
   position: relative;
@@ -244,9 +171,6 @@ $track: 455vw;
   align-items: flex-end;
   justify-content: center;
   pointer-events: none;
-  // Spodek se rozpouští do pozadí. mask, ne překryv gradientem —
-  // podklad je sám gradient, takže plochý overlay by na něm byl vidět.
-  mask-image: linear-gradient(to bottom, #000 58%, rgba(0, 0, 0, 0.35) 78%, transparent 96%);
 }
 
 .portraitImage {
@@ -255,6 +179,11 @@ $track: 455vw;
   max-width: none;
   object-fit: contain;
   object-position: bottom center;
+  // Spodek se rozpouští do pozadí. mask, ne překryv gradientem —
+  // podklad je sám gradient, takže plochý overlay by na něm byl vidět.
+  // Maska je na obrázku, ne na sloupci: mask ořízne vše mimo svůj box
+  // a fotka je širší než sloupec 22vw (na 4 : 3 tabletu o hodně).
+  mask-image: linear-gradient(to bottom, #000 58%, rgba(0, 0, 0, 0.35) 78%, transparent 96%);
 }
 
 /* ---------- Společná anatomie kroku ---------- */
@@ -312,6 +241,19 @@ $track: 455vw;
   }
 }
 
+// Tučná fráze v textu, který píše umělá myš (TypeText).
+.stepStrong {
+  font-weight: 600;
+  color: $ink;
+}
+
+// Kontura stavby (SketchText z Info) je text jen obtažený — tučné fráze
+// a barvy uvnitř nesmí přebít průhlednou výplň.
+.stepHead [class*="sketchOutline"] *,
+.annotation [class*="sketchOutline"] * {
+  color: transparent !important;
+}
+
 /* ---------- Anotace ---------- */
 
 .annotation {
@@ -360,6 +302,10 @@ $track: 455vw;
   white-space: nowrap;
 }
 
+.annotationLine {
+  display: block;
+}
+
 /* ---------- Krok 01: zadání ---------- */
 
 .stepOne {
@@ -375,11 +321,16 @@ $track: 455vw;
   align-items: flex-end;
 }
 
-.briefCard {
+// Místo karty (rámeček ji nakreslí myší); vzhled má karta uvnitř.
+.briefSlot {
   position: absolute;
   left: 0;
   top: 8vh;
   width: 23.46vw;
+}
+
+.briefCard {
+  position: relative;
   padding: 2.2vh 1.1vw;
   border-radius: 0.5vw;
   background: rgba(232, 229, 222, 0.94);
@@ -402,11 +353,11 @@ $track: 455vw;
 }
 
 .briefRow {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.4vh;
   padding-top: 1.4vh;
-  border-top: 1px solid rgba(46, 46, 46, 0.14);
 
   dt {
     font-size: clamp(0.76rem, 1.9vh, 2.55rem);
@@ -422,7 +373,18 @@ $track: 455vw;
   }
 }
 
-// Fotka páru s čokoládou v public není — držím pro ni tvar a poměr.
+// Linka nad řádkem karty — natáhne se zleva, než myš řádek napíše.
+.briefRule {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(46, 46, 46, 0.14);
+  transform-origin: 0 50%;
+}
+
+// Místo fotky v kartě zadání (podklad od klienta).
 .briefPhotoSlot {
   position: absolute;
   left: 21.85vw;
@@ -431,11 +393,25 @@ $track: 455vw;
   aspect-ratio: 4 / 5;
   width: auto;
   height: 46vh;
-  border-radius: 0.4vw;
-  background: rgba(46, 46, 46, 0.14);
-  box-shadow: 0 2.4vh 4.4vh rgba(30, 30, 30, 0.2);
   transform: rotate(1.5deg);
 }
+
+// Obrázek, který se staví jako banner (LayeredReveal): stín a zaoblení až
+// když stavba začne — prázdné místo nesmí být vidět.
+.revealBody {
+  position: absolute;
+  inset: 0;
+
+  > [data-state] {
+    border-radius: 0.3vw;
+  }
+
+  > [data-state="building"],
+  > [data-state="done"] {
+    box-shadow: 0 2.4vh 4.6vh rgba(30, 30, 30, 0.24);
+  }
+}
+
 
 .briefNote {
   position: absolute;
@@ -485,11 +461,15 @@ $track: 455vw;
   align-items: flex-end;
 }
 
-.typeCard {
+.typeCardSlot {
   position: absolute;
   left: 1.38vw;
   top: 12vh;
   width: 19.32vw;
+}
+
+.typeCard {
+  position: relative;
   padding: 2.4vh 1.2vw 3vh;
   background: $surface;
   box-shadow: 0 2vh 4vh rgba(30, 30, 30, 0.16);
@@ -527,11 +507,19 @@ $track: 455vw;
   top: 36vh;
   display: flex;
   list-style: none;
+}
 
-  li {
-    width: 6.21vw;
-    height: 7.5vh;
-  }
+// Barva: výplň je vlastní vrstva (maska stavby, kopie předchozí barvy
+// přes ni při duplikování).
+.swatch {
+  position: relative;
+  width: 6.21vw;
+  height: 7.5vh;
+}
+
+.swatchFill {
+  position: absolute;
+  inset: 0;
 }
 
 .annotationTwo {
@@ -554,8 +542,14 @@ $track: 455vw;
   align-items: flex-end;
 }
 
+// Místo vizuálu (poloha, rozměr, natočení); vzhled a obrázek má .shotBody.
 .shot {
   position: absolute;
+}
+
+.shotBody {
+  position: absolute;
+  inset: 0;
   border-radius: 0.3vw;
   overflow: hidden;
   box-shadow: 0 2.4vh 4.6vh rgba(30, 30, 30, 0.24);
@@ -579,26 +573,9 @@ $track: 455vw;
   z-index: 2;
 }
 
-.shotTop {
-  left: 31.05vw;
-  top: 9vh;
-  // 1080 x 1080
-  aspect-ratio: 1 / 1;
-  width: auto;
-  height: 26vh;
-  transform: rotate(1.5deg);
-  z-index: 1;
-}
-
-.shotBottom {
-  left: 27.60vw;
-  top: 37vh;
-  // 1080 x 1920 — story. Výška zvednutá z 26vh, protože na výšku je
-  // panel mnohem užší než bývalý 16:9 a v kompozici by zůstala díra.
-  aspect-ratio: 9 / 16;
-  width: auto;
-  height: 36vh;
-  transform: rotate(-1deg);
+// Duplikát hlavního vizuálu (DupImage): polohu, rozměr a natočení píše
+// komponenta (inline), tady jen vrstva nad hlavním vizuálem.
+.shotDup {
   z-index: 3;
 }
 
@@ -626,6 +603,10 @@ $track: 455vw;
   position: absolute;
   z-index: 3;
   width: 22.08vw;
+}
+
+.bubbleBody {
+  position: relative;
   padding: 1.6vh 1vw 2vh;
   background: $surface;
   box-shadow: 0 1.8vh 3.4vh rgba(30, 30, 30, 0.18);
@@ -669,7 +650,8 @@ $track: 455vw;
 }
 
 .shotTune {
-  left: 20.70vw;
+  // Víc vpravo — změna velikosti nadpisu musí být dobře vidět.
+  left: 30vw;
   top: 8vh;
   // 1080 x 1350
   aspect-ratio: 4 / 5;
@@ -677,6 +659,24 @@ $track: 455vw;
   height: 49vh;
   transform: rotate(-2.5deg);
   z-index: 1;
+}
+
+// Nadpis vizuálu zvlášť přes podklad (zvětšuje se), box pro výběr myší.
+.titleLayer {
+  position: absolute;
+  inset: 0;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.titleBox {
+  position: absolute;
+  pointer-events: none;
 }
 
 .annotationFour {
@@ -703,7 +703,8 @@ $track: 455vw;
   position: absolute;
   margin: 0;
 
-  figcaption {
+  .deliverCaption {
+    margin: 0;
     position: absolute;
     // Stejné ruční písmo jako anotace.
     font-family: var(--font-caveat), "Segoe Script", cursive;
@@ -715,11 +716,10 @@ $track: 455vw;
   }
 }
 
-// Rohové značky kolem vizuálu — čtyři rohy přes dva pseudoprvky.
+// Okraj kolem obrázku formátu (místo pro rámeček ořezu).
 .cropMarks {
   position: relative;
   padding: 0.9vh 0.5vw;
-  border: 1px dashed rgba(108, 92, 231, 0.55);
 
   img {
     display: block;
@@ -727,6 +727,15 @@ $track: 455vw;
     height: 100%;
     object-fit: cover;
   }
+}
+
+// Fialový rámeček ořezu s rohovými značkami — naskočí, až na formát myš
+// klikne (krok 05, před exportem).
+.cropFrame {
+  position: absolute;
+  inset: 0;
+  border: 1px dashed rgba(108, 92, 231, 0.75);
+  pointer-events: none;
 
   &::before,
   &::after {
@@ -734,8 +743,7 @@ $track: 455vw;
     position: absolute;
     width: 0.97vw;
     height: 1.6vh;
-    border: 2px solid $ink;
-    pointer-events: none;
+    border: 2px solid $ink-note;
   }
 
   &::before {
@@ -753,62 +761,173 @@ $track: 455vw;
   }
 }
 
+// Obal obrázku formátu — poměr stran (story a čtverec ho mění, když je myš
+// natáhne / stáhne).
+.formatStory,
+.formatPortrait,
+.formatSquare {
+  position: relative;
+  width: 100%;
+}
+
+.formatStory,
+.formatPortrait {
+  aspect-ratio: 4 / 5;
+}
+
+.formatSquare {
+  aspect-ratio: 1 / 1;
+}
+
+// Vlastní obrázek čtverce přes kopii formátu na výšku.
+.formatOwn {
+  position: absolute;
+  inset: 0;
+}
+
+// Rozvržení: Exportovat vlevo, story, vpravo formát na výšku a pod ním
+// čtverec; popisky vpravo od obrázků.
 .deliverStory {
-  left: 1.38vw;
-  top: 6vh;
-  // Šířka snížená z 24vw: story je o dost vyšší než bývalý 3:4, takže
-  // při stejné šířce by panel přerostl krok.
-  width: 18vw;
+  left: 9vw;
+  top: 4vh;
+  width: 15vw;
 
-  .cropMarks img {
-    // Formát 1080 x 1920 — story. Výšku dopočítá poměr ze šířky.
-    aspect-ratio: 9 / 16;
-    height: auto;
-  }
-
-  figcaption {
-    // Vpravo za obrázkem; níž, aby minul deliverPortrait.
-    left: 18.5vw;
-    top: 46vh;
+  .deliverCaption {
+    left: 16.5vw;
+    top: 36vh;
   }
 }
 
 .deliverPortrait {
-  left: 33vw;
-  top: 5vh;
-  width: 18vw;
+  left: 30vw;
+  top: 0;
+  width: 15vw;
 
-  .cropMarks img {
-    // Formát 1080 x 1350.
-    aspect-ratio: 4 / 5;
-    height: auto;
-  }
-
-  figcaption {
-    // Vpravo za obrázkem, do volného pásma u kraje kroku.
-    left: 18.5vw;
+  .deliverCaption {
+    left: 16.5vw;
     top: 2vh;
   }
 }
 
 .deliverSquare {
-  left: 29vw;
+  left: 30vw;
   top: 36vh;
-  width: 18vw;
+  width: 15vw;
 
-  .cropMarks img {
-    // Formát 1080 x 1080.
-    aspect-ratio: 1 / 1;
-    height: auto;
+  .deliverCaption {
+    left: 16.5vw;
+    top: 16vh;
   }
+}
 
-  figcaption {
-    // Vpravo za obrázkem u jeho spodní hrany. Dřív byl popisek na 14vw,
-    // což sedělo bývalému 16:9 (nízkému a širokému) — čtverec je ale
-    // vysoký a popisek se mu tím dostal doprostřed plochy.
-    left: 18.5vw;
-    top: 30vh;
+// Tlačítko Exportovat (jako v editoru) vlevo od story.
+// Místo tlačítka (rámeček stavby stojí vedle masky tlačítka).
+.exportSlot {
+  position: absolute;
+  left: 0;
+  top: 20vh;
+  z-index: 4;
+}
+
+.exportButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.45vw;
+  padding: 1vh 0.8vw;
+  border-radius: 6px;
+  background: rgba(28, 28, 28, 0.85);
+  color: #fff;
+  font-size: clamp(0.66rem, 1.5vh, 2rem);
+  font-weight: 500;
+  box-shadow: 0 1vh 2.4vh rgba(0, 0, 0, 0.25);
+
+  svg {
+    position: relative;
+    width: 1.1em;
+    height: 1.1em;
+    color: $accent;
   }
+}
+
+// Stisknuté tlačítko (od kliknutí do odeslání).
+.exportPressed {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(190, 201, 72, 0.22);
+  box-shadow: inset 0 0 0 1px $accent;
+}
+
+// Dva popisky přes sebe: Exportovat → Odesláno.
+.exportLabels {
+  position: relative;
+  display: grid;
+
+  > span {
+    grid-area: 1 / 1;
+    white-space: nowrap;
+  }
+}
+
+// E-mail s podklady — otevře se po exportu a po odeslání odletí.
+.mailCard {
+  position: absolute;
+  left: 0;
+  top: 27vh;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7vh;
+  width: 17vw;
+  padding: 1.4vh 0.9vw;
+  border-radius: 8px;
+  background: #f4f3ef;
+  color: $ink;
+  font-size: clamp(0.6rem, 1.35vh, 1.8rem);
+  box-shadow: 0 2.4vh 5vh rgba(0, 0, 0, 0.32);
+  transform-origin: 0 0;
+}
+
+.mailTitle {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.9em;
+}
+
+.mailRow {
+  padding-bottom: 0.6vh;
+  border-bottom: 1px solid $line;
+
+  span {
+    margin-right: 0.4vw;
+    color: $ink-soft;
+  }
+}
+
+.mailFiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4vh 0.3vw;
+  list-style: none;
+
+  li {
+    padding: 0.3vh 0.4vw;
+    border-radius: 4px;
+    background: rgba(108, 92, 231, 0.12);
+    color: $ink-note;
+    font-size: 0.85em;
+  }
+}
+
+.mailSend {
+  align-self: flex-end;
+  padding: 0.6vh 0.9vw;
+  border-radius: 999px;
+  background: $accent;
+  color: $ink;
+  font-weight: 600;
 }
 
 .annotationFive {
@@ -818,9 +937,11 @@ $track: 455vw;
 
 /* ---------- Responsivita ---------- */
 
-@media (max-width: 1100px) {
-  .screenOne {
-    grid-template-columns: 44vw 1fr;
+// Úzké okno NA VÝŠKU (telefon, tablet). Na šířku zůstává kompozice
+// z notebooku — telefony a tablety na šířku řeší blok Responzivita dole.
+@media (max-width: 1100px) and (orientation: portrait) {
+  .intro {
+    grid-template-columns: 44vw;
   }
 
   .portrait {
@@ -833,8 +954,11 @@ $track: 455vw;
   }
 }
 
-@media (max-width: 820px) {
-  // Na mobilu horizontální scroll nedává smysl — sekce se rozbalí pod sebe.
+// Úzké okno NA VÝŠKU (telefon, tablet). Na šířku zůstává kompozice
+// z notebooku — telefony a tablety na šířku řeší blok Responzivita dole.
+@media (max-width: 820px) and (orientation: portrait) {
+  // Na mobilu jízda do hloubky nedává smysl — dlaždice se rozbalí pod
+  // sebe. Engine píše polohy inline, proto !important.
   .container {
     height: auto;
   }
@@ -845,30 +969,37 @@ $track: 455vw;
     overflow: visible;
   }
 
-  .track {
-    flex-direction: column;
-    width: 100%;
-    transform: none !important;
-  }
-
-  .wave,
-  .node {
+  .curve,
+  .ctaAnchor {
     display: none;
   }
 
-  .screen {
-    width: 100%;
+  .dolly {
+    position: static;
     height: auto;
-    grid-template-columns: 1fr;
-    padding-inline: 6vw;
-    padding-block: 8vh;
+    overflow: visible;
+
+    > * {
+      position: static !important;
+    }
   }
 
-  .screenOne,
-  .screenTwo,
-  .screenThree {
-    width: 100%;
+  .dollyTile {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding-inline: 6vw;
+    transform: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+
+  .intro {
+    height: auto;
     grid-template-columns: 1fr;
+    padding: 8vh 0 0;
   }
 
   .step {
@@ -882,10 +1013,6 @@ $track: 455vw;
     padding-block: 4vh;
   }
 
-  .scrollHint {
-    display: none;
-  }
-
   .briefComposition,
   .conceptComposition,
   .makeComposition,
@@ -896,5 +1023,568 @@ $track: 455vw;
 
   .annotation {
     display: none;
+  }
+}
+
+// Nápověda posunu pod textem (ScrollPlaceholder, vodorovná) — menší než
+// v heru. Přidá ji umělá myš (info/choreography.ts).
+.hint {
+  margin-top: 4vh;
+  transform: scale(0.62);
+  transform-origin: 0 50%;
+  width: fit-content;
+}
+
+
+/* ---------- Panel Text (krok 04, text-panel.tsx) ---------- */
+
+// U obrázku kroku 04 (poloha z designer.ts), vzhled jako panel Vrstvy.
+.textPanel {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 58;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: clamp(14rem, 15vw, 22rem);
+  padding: 0.65rem 0.6rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: rgba(28, 28, 28, 0.78);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  box-shadow: 0 1.4vh 3vh rgba(0, 0, 0, 0.22);
+  font-size: 13px;
+  transform-origin: 0 100%;
+  pointer-events: none;
+}
+
+.textPanelTitle {
+  margin: 0 0.45rem 0.15rem;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.textPanelRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+
+.textPanelField {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.38rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  white-space: nowrap;
+
+  // Pole, do kterého myš klikla (velikost písma).
+  &[data-active] {
+    border-color: $accent;
+    box-shadow: 0 0 0 1px $accent;
+  }
+}
+
+.textPanelLabel {
+  margin-right: 0.3rem;
+  color: #fff;
+}
+
+.textPanelCaret {
+  font-size: 9px;
+  color: #fff;
+}
+
+/* ---------- 06: další projekty ---------- */
+
+.stepSix {
+  padding-left: 4vw;
+}
+
+.moreComposition {
+  position: relative;
+  width: 100%;
+  height: 68vh;
+}
+
+// Banner na výšku (9:16) vlevo — postaví se vrstvami.
+.moreBanner {
+  position: absolute;
+  left: 0;
+  top: 4vh;
+  width: 12vw;
+  aspect-ratio: 9 / 16;
+}
+
+// Snímek prezentace 16:9 — rámeček nakreslí myš.
+.moreSlideSlot {
+  position: absolute;
+  left: 15vw;
+  top: 4vh;
+  width: 26vw;
+}
+
+.moreSlide {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: 16 / 9;
+  padding: 2.2vh 1.4vw;
+  border-radius: 0.3vw;
+  background: #232323;
+  color: #fff;
+  box-shadow: 0 2.4vh 4.6vh rgba(30, 30, 30, 0.24);
+}
+
+.slideEyebrow {
+  font-size: clamp(0.55rem, 1.2vh, 1.6rem);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: $accent;
+}
+
+.slideTitle {
+  margin: 1.2vh 0 0;
+  max-width: 55%;
+  font-size: clamp(1rem, 3vh, 4rem);
+  font-weight: 300;
+  line-height: 1.15;
+}
+
+// Sloupcový graf vpravo dole — sloupce se postaví zdola.
+// Fotka kampaně vpravo na snímku.
+.slideImageSlot {
+  position: absolute;
+  top: 2.2vh;
+  right: 1.4vw;
+  bottom: 2.2vh;
+  width: 34%;
+}
+
+.slideImage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 0.2vw;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.slideChart {
+  position: absolute;
+  left: 1.4vw;
+  bottom: 2.2vh;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6vw;
+  height: 55%;
+}
+
+.slideBar {
+  display: block;
+  width: 2.2vw;
+  border-radius: 2px 2px 0 0;
+  background: $accent;
+
+  &:nth-child(2) {
+    opacity: 0.75;
+  }
+
+  &:nth-child(1) {
+    opacity: 0.5;
+  }
+}
+
+// Karta identity značky — postaví se sama, myš klikne na logo.
+.moreBrandSlot {
+  position: absolute;
+  left: 15vw;
+  top: 33vh;
+  width: 26vw;
+}
+
+.moreBrand {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto 1fr;
+  column-gap: 1.2vw;
+  padding: 2.4vh 1.4vw;
+  border-radius: 0.3vw;
+  background: #e8e5de;
+  color: $ink;
+  box-shadow: 0 2.4vh 4.6vh rgba(30, 30, 30, 0.2);
+}
+
+.brandMark {
+  grid-row: 1 / span 3;
+  display: grid;
+  place-items: center;
+  width: clamp(3rem, 11vh, 14rem);
+  height: clamp(3rem, 11vh, 14rem);
+  border-radius: 50%;
+  background: #2e2e2e;
+  color: $accent;
+  font-size: clamp(1.6rem, 6vh, 8rem);
+  font-weight: 200;
+  line-height: 1;
+}
+
+.brandName {
+  align-self: end;
+  font-size: clamp(1.1rem, 3.4vh, 4.6rem);
+  font-weight: 300;
+  letter-spacing: 0.32em;
+}
+
+.brandTagline {
+  font-size: clamp(0.62rem, 1.4vh, 1.9rem);
+  letter-spacing: 0.12em;
+  color: $ink-soft;
+}
+
+.brandColors {
+  display: flex;
+  align-self: end;
+  gap: 0.4vw;
+  margin-top: 1.4vh;
+  list-style: none;
+}
+
+// Barva identity (Swatch): výplň je vlastní vrstva kvůli stavbě a duplikátům.
+.brandChip {
+  position: relative;
+  width: 1.8vw;
+  height: 1.8vw;
+}
+
+.brandChipFill {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+// Ručně psané popisky pod kartami (jako popisky formátů v kroku 05).
+.moreCaption {
+  position: absolute;
+  margin: 0;
+  font-family: var(--font-caveat), "Segoe Script", cursive;
+  font-size: clamp(0.92rem, 2.3vh, 3.1rem);
+  font-weight: 500;
+  line-height: 1.2;
+  color: $ink-note;
+  white-space: nowrap;
+}
+
+.moreCaptionBanner {
+  left: 0.5vw;
+  top: 47vh;
+}
+
+.moreCaptionSlide {
+  left: 42.5vw;
+  top: 10vh;
+}
+
+.moreCaptionBrand {
+  left: 42.5vw;
+  top: 42vh;
+}
+
+/* ---------- 07: výzva ---------- */
+
+// Velký bílo-zelený text před CTA (jako nadpis úvodu Procesu).
+.callout {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  padding-inline: 8vw;
+}
+
+.calloutEyebrow {
+  margin-bottom: 2.4vh;
+  font-size: clamp(0.85rem, 2.15vh, 2.95rem);
+  font-weight: 400;
+  color: $accent;
+}
+
+.calloutHeadline {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 4vh;
+  font-size: clamp(2.6rem, 11vh, 15rem);
+  font-weight: 200;
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.calloutLead {
+  max-width: 36vw;
+  margin: 0;
+  font-size: clamp(0.9rem, 2.3vh, 3.1rem);
+  font-weight: 300;
+  line-height: 1.55;
+  color: #fff;
+}
+
+/* ---------- Responzivita na šířku (telefon → notebook → monitor) ---------- */
+// Všechno na šířku od telefonu po monitor. Základ je malý notebook (md,
+// 1200px); k monitoru (2560) hodnoty rostou po přímce a dávají tam přesně
+// původní hodnotu, pod md (tablet, telefon) klesají v poměru šířky:
+//  - fluid()  pevné rem, písmo ne pod 11px,
+//  - fluid-ui() totéž pro panely nástroje (Vrstvy, Text, toast) — celé,
+//    jedním poměrem ($fluid ui-ratio),
+//  - fit-vh() drží písmo ve vh v poměru k vw sloupcům i na užší obrazovce.
+// (Vše v styles/system/_mixins.scss.) Zařízení s jinou výškou (tablet,
+// telefon na šířku) mají vlastní bloky pod tímhle.
+@include xxs-h {
+  .curveNode {
+    width: clamp(ease-floor(0.88rem), 2.3vh, 3.1rem);
+    height: clamp(ease-floor(0.88rem), 2.3vh, 3.1rem);
+  }
+
+  .curveFinal {
+    width: clamp(ease-floor(2rem), 5.2vh, 7rem);
+    height: clamp(ease-floor(2rem), 5.2vh, 7rem);
+  }
+
+  .eyebrow {
+    font-size: clamp(ease-floor(0.85rem, 9px), fit-vh(2.15vh), 2.95rem);
+  }
+
+  .headline {
+    font-size: clamp(ease-floor(2.2rem, 9px), fit-vh(7.9vh), 10.7rem);
+  }
+
+  .leadText {
+    font-size: clamp(ease-floor(0.88rem, 9px), fit-vh(2.15vh), 2.95rem);
+  }
+
+  .stepNumber {
+    font-size: clamp(ease-floor(2rem, 9px), fit-vh(6.9vh), 9.35rem);
+  }
+
+  .stepLabel {
+    font-size: clamp(ease-floor(0.76rem, 9px), fit-vh(1.9vh), 2.55rem);
+  }
+
+  .stepText {
+    font-size: clamp(ease-floor(0.72rem, 9px), fit-vh(1.75vh), 2.4rem);
+  }
+
+  .annotationArrow {
+    width: clamp(ease-floor(3.1rem), 7.9vh, 10.4rem);
+    height: clamp(ease-floor(2.2rem), 5.6vh, 7.4rem);
+  }
+
+  .annotationText {
+    font-size: clamp(ease-floor(1.05rem, 9px), fit-vh(2.6vh), 3.55rem);
+  }
+
+  .briefTitle {
+    font-size: clamp(ease-floor(0.74rem, 9px), fit-vh(1.9vh), 2.55rem);
+  }
+
+  .briefRow {
+    dt {
+      font-size: clamp(ease-floor(0.76rem, 9px), fit-vh(1.9vh), 2.55rem);
+    }
+
+    dd {
+      font-size: clamp(ease-floor(0.72rem, 9px), fit-vh(1.72vh), 2.35rem);
+    }
+  }
+
+  .briefNote {
+    li {
+      font-size: clamp(ease-floor(0.68rem, 9px), fit-vh(1.65vh), 2.25rem);
+    }
+  }
+
+  .briefNoteTitle {
+    font-size: clamp(ease-floor(0.68rem, 9px), fit-vh(1.65vh), 2.25rem);
+  }
+
+  .typeCardLabel {
+    font-size: clamp(ease-floor(0.72rem, 9px), fit-vh(1.72vh), 2.35rem);
+  }
+
+  .typeCardSample {
+    font-size: clamp(ease-floor(2rem, 9px), fit-vh(6.5vh), 8.8rem);
+  }
+
+  .typeCardName {
+    font-size: clamp(ease-floor(0.76rem, 9px), fit-vh(1.9vh), 2.55rem);
+  }
+
+  .bubbleBody {
+    p {
+      font-size: clamp(ease-floor(0.84rem, 9px), fit-vh(2vh), 2.7rem);
+    }
+  }
+
+  .bubbleTag {
+    font-size: clamp(ease-floor(0.62rem, 9px), fit-vh(1.5vh), 2rem);
+  }
+
+  .deliver {
+    .deliverCaption {
+      font-size: clamp(ease-floor(0.92rem, 9px), fit-vh(2.3vh), 3.1rem);
+    }
+  }
+
+  .exportButton {
+    font-size: clamp(ease-floor(0.66rem, 9px), fit-vh(1.5vh), 2rem);
+  }
+
+  .mailCard {
+    font-size: clamp(ease-floor(0.6rem, 9px), fit-vh(1.35vh), 1.8rem);
+  }
+
+  .textPanel {
+    gap: fluid-ui(0.45rem);
+    padding: fluid-ui(0.65rem) fluid-ui(0.6rem) fluid-ui(0.7rem);
+    border-radius: fluid-ui(10px);
+    font-size: fluid-ui(13px, 9px);
+  }
+
+  .textPanelTitle {
+    margin: 0 fluid-ui(0.45rem) fluid-ui(0.15rem);
+    font-size: fluid-ui(11px, 9px);
+  }
+
+  .textPanelRow {
+    gap: fluid-ui(0.45rem);
+  }
+
+  .textPanelField {
+    gap: fluid-ui(0.4rem);
+    padding: fluid-ui(0.38rem) fluid-ui(0.5rem);
+    border-radius: fluid-ui(5px);
+  }
+
+  .textPanelLabel {
+    margin-right: fluid-ui(0.3rem);
+  }
+
+  .textPanelCaret {
+    font-size: fluid-ui(9px, 9px);
+  }
+
+  .slideEyebrow {
+    font-size: clamp(ease-floor(0.55rem, 9px), fit-vh(1.2vh), 1.6rem);
+  }
+
+  .slideTitle {
+    font-size: clamp(ease-floor(1rem, 9px), fit-vh(3vh), 4rem);
+  }
+
+  .brandMark {
+    width: clamp(ease-floor(3rem), 11vh, 14rem);
+    height: clamp(ease-floor(3rem), 11vh, 14rem);
+    font-size: clamp(ease-floor(1.6rem, 9px), fit-vh(6vh), 8rem);
+  }
+
+  .brandName {
+    font-size: clamp(ease-floor(1.1rem, 9px), fit-vh(3.4vh), 4.6rem);
+  }
+
+  .brandTagline {
+    font-size: clamp(ease-floor(0.62rem, 9px), fit-vh(1.4vh), 1.9rem);
+  }
+
+  .moreCaption {
+    font-size: clamp(ease-floor(0.92rem, 9px), fit-vh(2.3vh), 3.1rem);
+  }
+
+  .calloutEyebrow {
+    font-size: clamp(ease-floor(0.85rem, 9px), fit-vh(2.15vh), 2.95rem);
+  }
+
+  .calloutHeadline {
+    font-size: clamp(ease-floor(2.6rem, 9px), fit-vh(11vh), 15rem);
+  }
+
+  .calloutLead {
+    font-size: clamp(ease-floor(0.9rem, 9px), fit-vh(2.3vh), 3.1rem);
+  }
+
+  // Panel Text: na monitoru 22rem, na notebooku tak široký, jak potřebuje
+  // obsah — pevná šířka nechávala „Prostrkání“ přetékat přes okraj.
+  .textPanel {
+    width: fit-content;
+    min-width: fluid(22rem, 0.42);
+  }
+
+  // Fotky v krocích na notebooku 0,85× — kolem nich je pak vidět, co s nimi
+  // myš dělá. Polohy zůstávají, popisky u formátů jedou s obrázky.
+  .briefPhotoSlot {
+    height: fluid-scale(46vh, 0.85);
+  }
+
+  .shotMain {
+    height: fluid-scale(50vh, 0.85);
+  }
+
+  .shotTune {
+    height: fluid-scale(49vh, 0.85);
+  }
+
+  .deliverStory,
+  .deliverPortrait,
+  .deliverSquare {
+    width: fluid-scale(15vw, 0.85);
+
+    .deliverCaption {
+      left: fluid-scale(16.5vw, 0.85);
+    }
+  }
+
+  .deliverStory .deliverCaption {
+    top: fluid-scale(36vh, 0.85);
+  }
+
+  .deliverSquare {
+    top: fluid-scale(36vh, 0.85);
+
+    .deliverCaption {
+      top: fluid-scale(16vh, 0.85);
+    }
+  }
+
+  .moreBanner {
+    width: fluid-scale(12vw, 0.85);
+  }
+
+  .moreSlideSlot {
+    width: fluid-scale(26vw, 0.85);
+  }
+
+  // Nejmenší telefon na šířku (568 × 320): text kroku 01 má tři řádky,
+  // karta zadání a fotka proto začínají níž.
+  @include phs-h {
+    @media (max-width: 699.98px) {
+      .briefSlot,
+      .briefPhotoSlot {
+        top: 13vh;
+      }
+    }
   }
 }

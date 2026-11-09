@@ -1,0 +1,16 @@
+{
+  "name": "banner-layers",
+  "private": true,
+  "type": "module",
+  "description": "Offline rozklad bannerů na vrstvy pro úvod webu (text, objekty, tvary, pozadí → mapa vrstev + JSON).",
+  "scripts": {
+    "analyze": "node analyze.mjs",
+    "viz": "node viz.mjs"
+  },
+  "dependencies": {
+    "@gutenye/ocr-node": "^1.4.9",
+    "@huggingface/transformers": "^3.7.0",
+    "sharp": "^0.34.0",
+    "tesseract.js": "^6.0.0"
+  }
+}

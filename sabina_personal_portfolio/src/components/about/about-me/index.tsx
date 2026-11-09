@@ -33,7 +33,7 @@ type PanelBlock = Block & {
 
 /** Bloky stránky /about, jak je skládá `getPageContent` podle src/lib/cms/about.ts. */
 export type AboutContent = {
-  me?: Block & { eyebrow?: string; heading?: Heading; image?: Picture | null };
+  me?: Block & { eyebrow?: string; heading?: Heading; image?: Picture | null; rail?: { label?: string }[] };
   lead?: Block & { heading?: Heading };
   highlights?: Block & { cards?: CardRow[]; titleMark?: string };
   courses?: PanelBlock;
@@ -320,16 +320,20 @@ export default function AboutMe({ content = null }: { content?: AboutContent | n
       <div className={styles.stage} aria-hidden="true" />
 
       {/* ---------- Levá lišta ---------- */}
-      {/* Bez anotací schválně: index sekce a pokyn k posunu jsou navigace
-          stránky, ne text o Sabině. */}
+      {/* Popisky lišty jsou položky bloku about.me. Index „02" je pořadí
+          sekce, ne text — zůstává v kódu. */}
       <div className={styles.rail}>
         <span className={styles.railRing} aria-hidden="true" />
         <span className={styles.railLine} aria-hidden="true" />
         <span className={styles.railIndex}>02</span>
         <span className={styles.railLine} aria-hidden="true" />
-        <span className={styles.railLabel}>O mně</span>
+        <span className={styles.railLabel} {...editMe("items.0.label")}>
+          {pick(me?.rail?.[0]?.label, "O mně")}
+        </span>
         <span className={styles.railLine} aria-hidden="true" />
-        <span className={styles.railLabel}>Objevujte posunutím</span>
+        <span className={styles.railLabel} {...editMe("items.1.label")}>
+          {pick(me?.rail?.[1]?.label, "Objevujte posunutím")}
+        </span>
         <span className={styles.railLine} aria-hidden="true" />
         <span className={styles.railDot} aria-hidden="true" />
       </div>

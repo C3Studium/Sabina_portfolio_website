@@ -1,0 +1,28 @@
+@use "../../../styles/system/_shortcuts.scss" as *;
+
+// Všechna slova v jedné buňce mřížky přes sebe: šířka = nejdelší slovo,
+// takže se řádek při přechodu nehýbe. Plátno engine vkládá absolutně.
+.root {
+  position: relative;
+  display: inline-grid;
+  vertical-align: baseline;
+}
+
+.current,
+.ghost {
+  grid-area: 1 / 1;
+  justify-self: start;
+  white-space: pre;
+}
+
+// Ostatní slova drží jen místo — neviditelná, čtečky je přeskočí (aria-hidden).
+.ghost {
+  visibility: hidden;
+}
+
+// Schované slovo, běžící přechod i chvíle předávky: DOM text se nekreslí,
+// slovo má na starost WebGL (nebo zatím nikdo). Bez tohohle by pod
+// přechodem prosvítalo staré slovo, když není MeasureText, který ho schová.
+.root[data-morphing] > .current {
+  opacity: 0;
+}

@@ -72,3 +72,23 @@ $v: (
   md: 600px,
   lg: 1000px
 );
+
+// Fluid range for fluid() in _mixins.scss. The homepage was composed on the main monitor
+// (2560 wide); `to` is that width, where every fluid value lands exactly on the size written
+// in the component and stays there above it. `from` is the narrowest landscape laptop the
+// `md` stop covers. `ratio` is how much of the monitor size is left at `from` — the default
+// shrink, overridable per value.
+//
+// `ui-ratio` is the same share for the design-tool panels the fake cursor works in (Vrstvy,
+// Text, the shortcut toast) — see fluid-ui(). One number for all of them, so they shrink together.
+//
+// `viewport` is the main monitor's browser viewport. fit-vh() takes its aspect from it: the
+// section layouts are sized in vh, and on a screen less wide than this one a vh size grows
+// against the vw columns it sits in.
+$fluid: (
+  from: 1200px,
+  to: 2560px,
+  ratio: 0.7,
+  ui-ratio: 0.75,
+  viewport: (2560px, 1305px)
+);

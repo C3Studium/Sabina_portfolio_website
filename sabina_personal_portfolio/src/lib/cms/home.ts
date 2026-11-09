@@ -1,5 +1,13 @@
-// Úvodní stránka — hero, info, proces, výzva. Rozepisuje agent „home".
-import { defineBlock, definePage, f } from '@c3studium/valecms/site'
+// Úvodní stránka — hero, info, proces, výzva.
+//
+// Dvě vrstvy obsahu:
+//
+//   bloky textů (siteCopy, page 'index')  hlas sekcí — nadpisy, úvody,
+//       popisky, tlačítka. Jeden blok na sekci, položky adresované pořadím.
+//   dokumenty (sources)  věci, kterých je víc a přidávají se: projekty v galerii
+//       hera, nástroje a statistiky (modul Nabídka), služby, kroky procesu,
+//       recenze. Čtečky jsou v src/lib/site/home.ts a site/projects.ts.
+import { defineBlock, defineList, definePage, f } from '@c3studium/valecms/site'
 import type { Reader } from '@c3studium/valecms/site'
 
 // Klíče bloků téhle stránky. Tvar `<stránka>.<sekce>` = `page` v getSiteCopy.
@@ -11,45 +19,51 @@ export const HOME = {
     cta: 'index.cta',
 } as const
 
-// Deklarace balíčku (types/index.d.ts) popisují `f.label`, `f.labels` a `f.plain`
+// Deklarace balíčku (types/index.d.ts) popisují `f.label` a `f.plain`
 // s parametrem `path`, který implementace (src/site/fields.js) nemá: čtou index
-// položky, resp. volby. Než se deklarace srovnají, mluví se tu s implementací
-// napřímo — pouhé přetypování, za běhu se nic nemění.
-const { label, labels, plain } = f as unknown as {
+// položky. Než se deklarace srovnají, mluví se tu s implementací napřímo —
+// pouhé přetypování, za běhu se nic nemění.
+const { label, plain } = f as unknown as {
     label: (index: number) => Reader
-    labels: (options?: { from?: number; count?: number; pad?: boolean }) => Reader
     plain: () => Reader
 }
 
 // `siteCopy` má pole `gallery`, ale žádnou čtečku `f.gallery`. `f.text` je holé
-// `block[path] || ''`, takže pole obrázků projde beze změny a adresa pro
-// kontrolu anotací (`reads`) zůstává správná — což `f.from` neumí.
+// `block[path] || ''`, takže pole obrázků projde beze změny.
 const gallery = () => f.text('gallery')
 
-// Jedna sekce = jeden blok. Texty se zvýrazněním sedí v `items[].label` (jediné
-// pole položky s deklarovaným zvýrazněním) a čtou se dekódované přes
-// `markedLabels`; komponenta si z pole bere indexy. Pořadí položek je smlouva
-// mezi seedem, tímhle souborem a komponentou — kdo přehazuje, přehazuje trojí.
+// Zdroje dokumentů. Jméno vlevo je klíč v `content`, typ vpravo říká, kterou
+// čtečku `registerSources` zavolat.
+const sources = {
+    projects: { type: 'project' },
+    heroWords: { type: 'heroWord' },
+    stack: { type: 'stackItem' },
+    stats: { type: 'statItem' },
+    services: { type: 'service' },
+    process: { type: 'processStep' },
+    references: { type: 'reference' },
+}
+
+// Pořadí položek v blocích je smlouva mezi seedem (scripts/seed/home.mjs),
+// tímhle souborem a komponentou — kdo přehazuje, přehazuje trojí.
 export const homepage = definePage({
     route: '/',
     title: 'Domů',
     copy: 'index',
-    sources: {},
+    sources,
     blocks: [
         defineBlock({
             at: 'hero',
             key: HOME.hero,
             title: 'Úvod',
             fields: {
-                // Řádky nadpisu jsou položky 0–2: <h1> je sloupec spanů bez <br>,
-                // což je přesně tvar pro anotaci `lines` (items.*.label).
+                // 0–2 řádky nadpisu (anotace `lines` na <h1>), 3 nápověda posunu.
                 labels: f.markedLabels(),
                 labelMark: f.markName('items.*.label'),
                 scrollHint: label(3),
-                // Čtyři karty ukázek: lead = klient, label = obor, value = tlačítko.
-                cards: f.rows({ from: 4, count: 4, pick: ['lead', 'label', 'value'] }),
+                // Zelená slova (obě podoby) jsou dokumenty `heroWord` — položky
+                // 4+ bloku se už nečtou.
                 portrait: f.image(),
-                gallery: gallery(),
                 docId: f.docId(),
             },
         }),
@@ -60,16 +74,12 @@ export const homepage = definePage({
             fields: {
                 heading: f.lines('headline'),
                 lead: plain(),
+                // 0 popisek nad nástroji, 1 tlačítko pod nadpisem, 2 štítek
+                // karet služeb, 3 odkaz „Zobrazit příklady".
                 toolsLabel: label(0),
-                tools: labels({ from: 1, count: 4 }),
-                cta: label(5),
-                cardLabel: label(6),
-                cardTitle: label(7),
-                cardLead: label(8),
-                tags: labels({ from: 9, count: 4 }),
-                cardCta: label(13),
-                stacked: f.rows({ from: 14, count: 3, pick: ['lead', 'label'] }),
-                stats: f.rows({ from: 17, count: 5, pick: ['value', 'label'] }),
+                cta: label(1),
+                cardLabel: label(2),
+                cardCta: label(3),
                 // Portrét je tu dekorace (alt=""), nesmí zdědit titulek bloku.
                 portrait: f.image({ alt: 'none' }),
                 docId: f.docId(),
@@ -81,18 +91,11 @@ export const homepage = definePage({
             title: 'Jak probíhá spolupráce',
             fields: {
                 eyebrow: f.text('title'),
-                // Položky 0–1 jsou řádky nadpisu (viz hero), 3–7 texty kroků —
-                // ty nesou tučné fráze jako zvýraznění, proto sedí v `label`.
+                // 0–1 řádky nadpisu, 2 nápověda posunu. Kroky jsou dokumenty.
                 labels: f.markedLabels(),
                 labelMark: f.markName('items.*.label'),
                 lead: plain(),
                 scrollHint: label(2),
-                // Číslo a název kroku; text kroku je `labels[3 + i]`.
-                steps: f.rows({ from: 3, count: 5, pick: ['lead', 'note'] }),
-                portrait: f.image({ alt: 'none' }),
-                // Sedm ukázek v pořadí, v jakém je track vykresluje (tvorba 3,
-                // doladění 1, předání 3). Jeden soubor smí být v sadě dvakrát.
-                gallery: gallery(),
                 docId: f.docId(),
             },
         }),
@@ -103,17 +106,25 @@ export const homepage = definePage({
             fields: {
                 eyebrow: f.text('title'),
                 heading: f.lines('headline'),
-                // 0 podtitul, 2 stav „odpovím do", 3 text recenze, 6–7 claim v patě.
+                // 0 podtitul, 2 stav „odpovím do", 5–6 claim v patě.
                 labels: f.markedLabels(),
                 labelMark: f.markName('items.*.label'),
                 action: label(1),
-                // Jméno a role autora recenze; její text je `labels[3]`.
-                review: f.rows({ from: 3, count: 1, pick: ['value', 'note'] }),
-                stats: f.rows({ from: 4, count: 2, pick: ['value', 'label'] }),
+                // Čísla pod recenzí — ručně psaná, ne počítaná.
+                stats: f.rows({ from: 3, count: 2, pick: ['value', 'label'] }),
                 portrait: f.image({ alt: 'none' }),
+                // Bannery vpravo, v pořadí zobrazení.
                 gallery: gallery(),
                 docId: f.docId(),
             },
         }),
+        defineList({ at: 'projects', source: 'projects', title: 'Projekty' }),
+        defineList({ at: 'heroWords', source: 'heroWords', title: 'Zelená slova' }),
+        defineList({ at: 'stack', source: 'stack', title: 'Stack' }),
+        defineList({ at: 'stats', source: 'stats', title: 'Stats' }),
+        defineList({ at: 'services', source: 'services', title: 'Služby' }),
+        // `steps`, ne `process`: `at` je klíč v `content` a `process` už je blok.
+        defineList({ at: 'steps', source: 'process', title: 'Proces' }),
+        defineList({ at: 'references', source: 'references', title: 'Recenze' }),
     ],
 })

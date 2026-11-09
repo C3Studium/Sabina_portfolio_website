@@ -2,6 +2,7 @@ import type { GetStaticPaths, GetStaticProps } from "next";
 import Head from "next/head";
 import { getPageContent, readerFor } from "@c3studium/valecms/server/site";
 import CaseStudy from "@/components/case-study";
+import type { LabelsCopy } from "@/components/projects/hero-list";
 import { projectsOrFallback } from "@/components/projects/fallback";
 import { getGlobalCopy, type GlobalCopy } from "@/lib/site/globals";
 import { getProjects, viewFrom, type Project, type Reader } from "@/lib/site/projects";
@@ -57,7 +58,7 @@ export const getStaticProps: GetStaticProps<Props> = async ({ params, ...context
   };
 };
 
-export default function CaseStudyPage({ project, next }: Props) {
+export default function CaseStudyPage({ content, project, next }: Props) {
   const title = `${project.title} — case study | Sabina Hudrmentová`;
   const description =
     project.perex ||
@@ -73,7 +74,11 @@ export default function CaseStudyPage({ project, next }: Props) {
       {/* `key` podle slugu: přechod mezi dvěma detaily je nová stránka, ne
           přepsání té staré — animace a scroll začínají znovu. */}
       <main key={`project-${project.slug}`}>
-        <CaseStudy project={project} next={next} />
+        <CaseStudy
+          project={project}
+          next={next}
+          labels={(content?.labels as LabelsCopy | undefined) ?? null}
+        />
       </main>
     </>
   );

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import type { FrameGate } from "./index";
 
 // GPGPU pole částic. Stav (pozice, rychlost, věk) žije ve dvou float
 // texturách, které se každý snímek prohazují — díky tomu unese stovky
@@ -164,6 +165,10 @@ uniform float uTerrElevation;
 uniform float uTerrDetail;
 uniform float uWaveSpeed;
 uniform float uRidgeFlow;
+// Kolik referenčních snímků (60 Hz) uplynulo od minulého kroku. Sim je
+// psaný v „px za snímek", takže se tímhle škáluje věk, síly i posun —
+// jinak by na 144 Hz běžel 2,4× rychleji a při stropu 30 fps na polovinu.
+uniform float uStep;
 
 in vec2 vUv;
 
@@ -180,7 +185,7 @@ void main() {
 
   vec2 pos = motion.xy;
   vec2 vel = motion.zw;
-  float age = life.x + 1.0;
+  float age = life.x + uStep;
   float span = life.y;
   vec2 seed = life.zw;
 
@@ -227,8 +232,8 @@ void main() {
     ridgeForce = (along * 0.8 + uphill * 0.2) * steep * uRidgeFlow;
   }
 
-  vel = vel * uDamping + flow + wake + ringForce + ridgeForce;
-  pos += vel;
+  vel = vel * pow(uDamping, uStep) + (flow + wake + ringForce + ridgeForce) * uStep;
+  pos += vel * uStep;
 
   bool spent = age >= span
     || pos.x < 0.0 || pos.x > uResolution.x
@@ -331,6 +336,8 @@ export interface ParticleFieldProps {
   terrainDetail: number;
   waveSpeed: number;
   paused: boolean;
+  /** Takt plátna, viz FrameGate v index.tsx. */
+  gate: RefObject<FrameGate>;
 }
 
 export default function ParticleField({
@@ -360,6 +367,7 @@ export default function ParticleField({
   terrainDetail,
   waveSpeed,
   paused,
+  gate,
 }: ParticleFieldProps) {
   const { gl } = useThree();
   const grid = useMemo(() => gridFor(count), [count]);
@@ -487,6 +495,7 @@ export default function ParticleField({
         uTerrDetail: { value: 2 },
         uWaveSpeed: { value: 0 },
         uRidgeFlow: { value: 0 },
+        uStep: { value: 1 },
       },
       depthTest: false,
       depthWrite: false,
@@ -559,9 +568,16 @@ export default function ParticleField({
     };
   }, [gl]);
 
-  useFrame((state, delta) => {
+  useFrame((state) => {
     const sim = simulation.current;
     if (!sim) return;
+
+    // Snímky přeskočené stropem fps se nepočítají vůbec; delta pak nese
+    // čas od posledního vykresleného. Strop 0,1 s kryje návrat z jiné karty.
+    const tick = gate.current;
+    if (!tick.render) return;
+    const delta = Math.min(tick.delta, 0.1);
+    const stepFrames = paused ? 0 : delta * 60;
 
     const renderer = state.gl;
     const buffer = renderer.getDrawingBufferSize(frame.current);
@@ -570,9 +586,11 @@ export default function ParticleField({
     const ratio = renderer.getPixelRatio();
 
     const p = pointer.current;
-    if (cursorStrength > 0) {
-      p.vx += (p.x - p.lastX - p.vx) * 0.15;
-      p.vy += (p.y - p.lastY - p.vy) * 0.15;
+    if (cursorStrength > 0 && stepFrames > 0) {
+      // Rychlost v px na REFERENČNÍ snímek, ne na skutečný — jinak by
+      // kurzor při 30 fps tlačil dvakrát silněji než při 60.
+      p.vx += ((p.x - p.lastX) / stepFrames - p.vx) * 0.15;
+      p.vy += ((p.y - p.lastY) / stepFrames - p.vy) * 0.15;
     } else {
       p.vx = 0;
       p.vy = 0;
@@ -611,6 +629,7 @@ export default function ParticleField({
     step.uTerrDetail.value = terrainDetail;
     step.uWaveSpeed.value = waveSpeed;
     step.uRidgeFlow.value = ridgeFlow;
+    step.uStep.value = stepFrames;
 
     // První snímek: obě textury se naplní výchozím stavem.
     if (!sim.seeded) {

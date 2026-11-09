@@ -1,4 +1,6 @@
 @use "sass:map";
+@use "sass:math";
+@use "sass:list";
 @use "./breakpoints" as bp;
 
 $layer-h: (
@@ -266,4 +268,129 @@ $layer-v: (
       @content;
     }
   }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Fluid sizes for the landscape stops.
+//
+// fluid(1.2rem) is 1.2rem on the main monitor ($fluid `to`) and above, `ratio` × 1.2rem at the
+// narrowest laptop ($fluid `from`), and a straight line between — one declaration covers the
+// whole md…huge ladder, and a middle stop only has to step in where the line is wrong. Below
+// `from` (landscape tablets and phones) it scales with the width from the laptop value.
+//
+//   $ratio  share of the monitor size left at `from` (default from $fluid).
+//   $floor  never smaller than this — the readability line for type. Capped at $max, so a
+//           label already under the floor on the monitor keeps its monitor size everywhere.
+//
+// Takes rem or px, returns rem. A negative size scales the same way and keeps its sign.
+@function fluid-px($v) {
+  @if math.unit($v) == "rem" { @return math.div($v, 1rem) * 16px; }
+  @if math.unit($v) == "px" { @return $v; }
+  @error "fluid() takes rem or px, got #{$v}";
+}
+
+@function fluid-rem($px) {
+  @return math.div(math.round(math.div($px, 1px) * 1000), 16000) * 1rem;
+}
+
+@function fluid($max, $ratio: null, $floor: null) {
+  @if math.unit($max) == "" and $max == 0 { @return 0; }
+  $sign: 1;
+  @if $max < 0 { $sign: -1; $max: -$max; }
+
+  $from: map.get(bp.$fluid, from);
+  $to: map.get(bp.$fluid, to);
+  @if $ratio == null { $ratio: map.get(bp.$fluid, ratio); }
+
+  $hi: fluid-px($max);
+  $lo: $hi * $ratio;
+  @if $floor != null { $lo: math.max($lo, math.min(fluid-px($floor), $hi)); }
+
+  // value = $lo at $from, $hi at $to. The base is taken from the rounded slope so the line
+  // lands on $hi exactly at $to — the monitor rendering must not move by a fraction.
+  @if $lo == $hi { @return $sign * fluid-rem($hi); }
+  $slope: math.div($hi - $lo, $to - $from);
+  $vw-num: math.div(math.round($slope * 100000), 1000);
+  $vw: $vw-num * 1vw;
+  $base: $hi - math.div($vw-num * $to, 100);
+
+  $line: calc(#{fluid-rem($base)} + #{$vw});
+
+  // Below `from` (tablets and phones in landscape) the md size keeps shrinking in proportion
+  // to the width — the laptop design scaled by the same % the screen is smaller. The two lines
+  // meet at `from`; whichever rises faster is the right one above it, so min() or max() picks.
+  $prop-num: math.div(math.round(math.div($lo, $from) * 100 * 1000), 1000);
+  $prop: $prop-num * 1vw;
+  $line-slope: math.div($hi - $lo, $to - $from);
+  $prop-slope: math.div($lo, $from);
+  $inner: if(sass($prop-slope >= $line-slope): min(#{$line}, #{$prop}); else: max(#{$line}, #{$prop}));
+  // The floor gives way on a phone on its side (ease-floor below), never under 9px.
+  @if $floor != null { $inner: max(#{ease-floor(fluid-rem(math.min(fluid-px($floor), $hi)), 9px)}, #{$inner}); }
+
+  $value: min(#{fluid-rem($hi)}, #{$inner});
+  @if $sign < 0 { @return calc(-1 * #{$value}); }
+  @return $value;
+}
+
+// A vh size that keeps the main monitor's proportions on a narrower screen.
+//
+// The sections are composed in vh, so on the monitor ($fluid `viewport`) a heading measured
+// against its vw column is in proportion. A 16:10 laptop is relatively taller: the same vh
+// heading grows against the same vw column and wraps. fit-vh(4.24vh) is 4.24vh on the monitor
+// and on anything wider, and the vw that 4.24vh measured there on anything narrower.
+@function fit-vh($vh) {
+  @if math.unit($vh) != "vh" { @error "fit-vh() takes vh, got #{$vh}"; }
+  $size: map.get(bp.$fluid, viewport);
+  $aspect: math.div(list.nth($size, 2), list.nth($size, 1));
+  $vw: math.div(math.round(math.div($vh, 1vh) * $aspect * 1000), 1000) * 1vw;
+  @return min(#{$vh}, #{$vw});
+}
+
+// fluid() for the design-tool panels the fake cursor works in (Vrstvy, Text, the shortcut
+// toast). They are drawn in px like a real app, so on the monitor they keep their px size; on a
+// laptop the whole panel shrinks by one shared ratio ($fluid `ui-ratio`) — text, padding and
+// radius together, so it stays the same panel, only smaller.
+@function fluid-ui($max, $floor: null) {
+  @return fluid($max, map.get(bp.$fluid, ui-ratio), $floor);
+}
+
+// fluid() for any size, not only rem/px: `$value` on the monitor, `$ratio` × `$value` at the
+// narrowest laptop, a straight line between — fluid-scale(46vh, 0.85) is a 46vh photo that is
+// 0.85 × as big on a 1200px laptop.
+//
+// The line rises with the viewport width from `$ratio` × value and is capped at the value, so it
+// lands on it at the monitor and stays there above it. How fast it rises is fixed from what the
+// value measures on the monitor's viewport ($fluid `viewport`); a vh/vw/rem/px number works that
+// out itself, anything else (a min() from fit-vh(), say) passes it as `$ref` in px.
+@function fluid-scale($value, $ratio, $ref: null) {
+  $size: map.get(bp.$fluid, viewport);
+  $from: map.get(bp.$fluid, from);
+  $to: map.get(bp.$fluid, to);
+  @if $ref == null {
+    $unit: math.unit($value);
+    @if $unit == "vh" { $ref: math.div($value, 1vh) * math.div(list.nth($size, 2), 100); }
+    @else if $unit == "vw" { $ref: math.div($value, 1vw) * math.div(list.nth($size, 1), 100); }
+    @else if $unit == "rem" or $unit == "px" { $ref: fluid-px($value); }
+    @else { @error "fluid-scale() needs $ref for #{$value}"; }
+  }
+  $rise: math.div(math.round(math.div((1 - $ratio) * $ref, $to - $from) * 10000), 10000);
+  // Below `from` it holds at `$ratio` × value — that value is vh/vw itself, so it still shrinks
+  // with the screen, and the line would otherwise run down to nothing on a phone.
+  @return min(#{$value}, max(calc(#{$value} * #{$ratio}), calc(#{$value} * #{$ratio} + (100vw - #{$from}) * #{$rise})));
+}
+
+// A minimum (the first argument of a clamp(), or fluid()'s floor) that gives way on a short or
+// narrow landscape screen — a phone on its side.
+//
+// The floors were set for laptops and up, where they keep text readable. On a 844 × 390 phone
+// they stop the layout from scaling: the text stays laptop-sized and runs over its column. This
+// keeps `$min` on any screen at least 500px tall and 1200px wide, and below that shrinks it with
+// whichever is tighter — the height (to 500px) or the width (to 1200px) — but never under `$abs`.
+@function ease-floor($min, $abs: null) {
+  $px: fluid-px($min);
+  $by-h: math.div(math.round($px * 0.2 * 1000), 1000);
+  $by-w: math.div(math.round(math.div($px, map.get(bp.$fluid, from)) * 100 * 1000), 1000);
+  $value: min(#{$min}, #{math.div($by-h, 1px) * 1vh}, #{$by-w * 1vw});
+  @if $abs != null { @return max(#{fluid-rem(math.min(fluid-px($abs), $px))}, #{$value}); }
+  @return $value;
 }

@@ -27,3 +27,11 @@
   height: 100%;
   z-index: 0;
 }
+
+// Náhrada za shader, když na něj stroj nemá nebo uživatel nechce pohyb:
+// plochá obloha ve stejném tónu, overlay nad ní zůstává.
+.fallback {
+  position: absolute;
+  inset: 0;
+  background-color: #9c9c9c;
+}

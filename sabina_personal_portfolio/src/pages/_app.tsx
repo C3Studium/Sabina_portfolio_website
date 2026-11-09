@@ -6,6 +6,7 @@ import Lenis from "lenis";
 import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
 import ContactModal from "@/components/layout/contact-modal";
+import { CONTACT_OPEN_EVENT } from "@/components/layout/contact-modal/open";
 import ShaderBackground from "@/components/layout/shader-background";
 import Cursor from "@/components/common/cursor";
 import { withStudio } from "@c3studium/valecms";
@@ -58,6 +59,13 @@ function App({ Component, pageProps }: AppProps) {
   const [contactOpen, setContactOpen] = useState(false);
   const globals = (pageProps as GlobalPageProps).globals ?? null;
 
+  // Ostatní výzvy (CTA na homepage) modal otevírají událostí — openContact().
+  useEffect(() => {
+    const open = () => setContactOpen(true);
+    window.addEventListener(CONTACT_OPEN_EVENT, open);
+    return () => window.removeEventListener(CONTACT_OPEN_EVENT, open);
+  }, []);
+
   // Proměnné písem i na <html>: opona a závoj (chrome z withStudio) stojí
   // MIMO obal níž, takže by `--font-poppins` nezdědily a padly na serif.
   // Až v efektu, protože `<html>` server nevykresluje a na obalu zůstávají
@@ -82,6 +90,24 @@ function App({ Component, pageProps }: AppProps) {
 
     window.lenisInstance = lenis;
 
+    // Během preloaderu (`html[data-preload]`) se nescrolluje. Engine opony
+    // Lenis zastaví sám, ale jen instanci, kterou najde při startu — ve
+    // vývoji StrictMode tenhle efekt pustí dvakrát a druhá instance by
+    // jela. Proto si to hlídá každá instance sama: stojí, dokud atribut
+    // nezmizí. (`overflow: hidden` z opony Lenisu nebrání — scrolluje
+    // programově.)
+    const html = document.documentElement;
+    let preloadWatch: MutationObserver | null = null;
+    if (html.getAttribute("data-preload") === "1") {
+      lenis.stop();
+      preloadWatch = new MutationObserver(() => {
+        if (html.getAttribute("data-preload") === "1") return;
+        preloadWatch?.disconnect();
+        lenis.start();
+      });
+      preloadWatch.observe(html, { attributes: true, attributeFilter: ["data-preload"] });
+    }
+
     // rAF handle si držíme, aby smyčka šla při odmountování zastavit —
     // jinak by běžela dál a sahala na už zničenou instanci.
     let rafId = 0;
@@ -95,6 +121,7 @@ function App({ Component, pageProps }: AppProps) {
 
     return () => {
       cancelAnimationFrame(rafId);
+      preloadWatch?.disconnect();
       lenis.destroy();
       if (window.lenisInstance === lenis) {
         window.lenisInstance = undefined;
@@ -109,7 +136,7 @@ function App({ Component, pageProps }: AppProps) {
       <Cursor />
       <Header onContactClick={() => setContactOpen(true)} copy={globals?.header} />
       <Component {...pageProps} />
-      <Footer copy={globals?.footer} />
+      <Footer copy={globals?.footer} socials={globals?.socials ?? null} />
       <ContactModal
         open={contactOpen}
         onClose={() => setContactOpen(false)}

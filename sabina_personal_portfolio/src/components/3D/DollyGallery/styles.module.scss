@@ -1,0 +1,90 @@
+@use "../../../styles/system/_shortcuts.scss" as *;
+
+// DollyGallery — kamera jede do hloubky mezi dlaždicemi (CSS 3D, bez WebGL).
+// Polohu, průhlednost a viditelnost dlaždic píše engine každý snímek.
+
+.root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  outline: none;
+
+  // Ovládání myší / kolečkem (bez `offset`).
+  &[data-interactive] {
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  &:focus-visible {
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6);
+  }
+}
+
+.stage {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.tile {
+  position: absolute;
+  visibility: hidden;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+
+// Obrázková dlaždice: ořez a podklad jako v původní galerii.
+.imageTile {
+  overflow: hidden;
+  background: #262626;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* ---------- DollyLine ---------- */
+
+// Vrstva s křivkou v rámu galerie. Polohy, tloušťku a průhlednost píše
+// komponenta každý snímek.
+.line {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.lineSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+// Uzel: vzhled dodá třída zvenku, tady jen ukotvení (posun píše komponenta).
+.lineNode {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  will-change: transform, opacity;
+}

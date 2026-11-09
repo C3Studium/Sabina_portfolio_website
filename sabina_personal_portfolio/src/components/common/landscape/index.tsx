@@ -6,6 +6,7 @@ import {
   useState,
   useSyncExternalStore,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -40,9 +41,9 @@ export interface LandscapeProps {
   scale?: number;
   /** How much fine detail rides on top of the landforms */
   detail?: number;
-  /** Ray marching steps, higher is cleaner and slower */
+  /** Ray marching steps, higher is cleaner and slower, 24 to 400 */
   steps?: number;
-  /** Samples per pixel used to smooth the silhouette, 1 to 4 */
+  /** Samples per pixel used to smooth the silhouette, 1 to 4 (hard limit) */
   samples?: number;
   /** How far the camera can see */
   distance?: number;
@@ -74,14 +75,6 @@ export interface LandscapeProps {
   ringStrength?: number;
   /** Overall brightness before the highlight rolloff */
   gain?: number;
-  /** Film grain strength, 0 to 1 */
-  grain?: number;
-  /** Anchor the grain to the terrain surface instead of the screen */
-  grainSurface?: boolean;
-  /** How fine the surface-anchored grain is, in cells per world unit */
-  grainDensity?: number;
-  /** Grain refreshes per second */
-  grainRate?: number;
   /** How many hover-reactive particles float over the terrain, 0 = off */
   particles?: number;
   /** Particle diameter in device pixels */
@@ -124,6 +117,8 @@ export interface LandscapeProps {
   adaptiveQuality?: boolean;
   /** Frame rate the quality meter aims to hold */
   targetFps?: number;
+  /** Frame rate the whole canvas is held to, 0 = every display frame */
+  fps?: number;
   /** Upper device pixel ratio bound */
   dpr?: number;
   className?: string;
@@ -191,10 +186,6 @@ uniform float uRingSpeed;
 uniform float uRingWidth;
 uniform float uRingGain;
 uniform float uGain;
-uniform float uGrain;
-uniform float uGrainSurface;
-uniform float uGrainDensity;
-uniform float uGrainRate;
 uniform float uVignette;
 uniform vec3 uBackdrop;
 uniform float uBackdropAlpha;
@@ -310,17 +301,6 @@ vec4 trace(vec2 field) {
   float facing = clamp(dot(normal, -dir), 0.0, 1.0);
   base += uRim * pow(1.0 - facing, uRimPower) * uRimGain;
 
-  // Zrno ukotvené k POVRCHU. Vzorkuje se ve světových souřadnicích
-  // dopadu paprsku a kvantuje do buněk, takže buňka drží svou hodnotu,
-  // dokud na ni míří stejný kus terénu — zrno pak sedí na zemi a vlní
-  // se s ní. Zrno v main() je proti tomu vázané na pixel a po povrchu
-  // klouže. Mlha ho ztlumí sama, protože base se dole násobí solid.
-  if (uGrainSurface > 0.5) {
-    float gtick = floor(t * max(uGrainRate, 1.0));
-    vec2 gcell = floor(spot.xz * max(uGrainDensity, 0.001));
-    base += (shuffle(gcell + gtick * 13.0) - 0.5) * uGrain;
-  }
-
   float wave = sin(depth * uRingSpacing - t * uRingSpeed);
   float ring = smoothstep(1.0 - max(uRingWidth, 0.001), 1.0, wave);
   base += uRingC * ring * uRingGain;
@@ -351,11 +331,8 @@ ${gridOffsets(samples)
   .join("\n")}
   acc /= ${samples}.0;
 
-  // Kolik z pixelu pokrývá terén: 0 = čistá obloha, 1 = plná zem.
-  // Zrno se přimíchá jen sem. Původně jelo přes celý framebuffer
-  // (na obloze na 25 %), což vypadalo jako šum přes monitor.
-  float ground = acc.a;
-
+  // Zrno tu bývalo (na obrazovce i ukotvené k povrchu). Nahradily ho
+  // částice, tak šlo pryč i s uniformy — stálo dva hashe na pixel.
   float rest = uBackdropAlpha * (1.0 - acc.a);
   vec3 rgb = acc.rgb + uBackdrop * rest;
   float alpha = acc.a + rest;
@@ -364,14 +341,6 @@ ${gridOffsets(samples)
   float shade = (1.0 - uVignette) + uVignette * vig;
   rgb *= shade;
   alpha *= shade;
-  ground *= shade;
-
-  float tick = floor(uClock * max(uGrainRate, 1.0));
-  float speck = shuffle(pixel + tick * 17.0) - 0.5;
-  float sparkle = shuffle(pixel * 1.37 + tick * 5.11) - 0.5;
-  // Když jede zrno na povrchu, tohle se vypne, ať se nesčítají.
-  rgb += speck * uGrain * ground * (1.0 - uGrainSurface);
-  rgb += sparkle * 0.0035 * ground;
   rgb = clamp(rgb, vec3(0.0), vec3(alpha));
 
   gl_FragColor = vec4(rgb, alpha) * uOpacity;
@@ -422,6 +391,58 @@ interface PointerState {
   inside: boolean;
 }
 
+// Takt plátna. FrameCap ho plní před každým useFrame v plátně (běží s
+// prioritou -1, tedy první): render říká, jestli se tenhle snímek vůbec
+// počítá a kreslí, delta je čas od posledního VYKRESLENÉHO snímku.
+// Terén i částice se řídí tímhle, ne deltou z R3F — ta jde po snímcích
+// displeje a při stropu 30 fps by všechno běželo poloviční rychlostí.
+export interface FrameGate {
+  render: boolean;
+  delta: number;
+}
+
+// Drží plátno na daném fps. R3F s frameloop="always" kreslí každý snímek
+// displeje; jakmile má ale někdo useFrame s prioritou > 0, přenechá mu
+// kreslení. Toho se tu využívá: první callback rozhodne, druhý kreslí
+// jen když se má. Alternativa frameloop="never" + advance(t) se nepoužila,
+// protože R3F v tom režimu počítá deltu z předaného času a zároveň ho
+// o reálný čas posouvá THREE.Clock — výsledek závisí na jednotkách.
+//
+// Takt vlastní tahle komponenta a potomkům ho podává render propem:
+// React Compiler nedovolí mutovat ref, který přišel jako prop, vlastní
+// useRef mutovat lze. Potomci z něj jen čtou.
+function FrameCap({
+  fps,
+  children,
+}: {
+  fps: number;
+  children: (gate: RefObject<FrameGate>) => ReactNode;
+}) {
+  const gate = useRef<FrameGate>({ render: true, delta: 0 });
+  const pending = useRef(0);
+
+  useFrame((_, delta) => {
+    const tick = gate.current;
+    // Strop proti skoku po návratu z jiné karty — rAF tam stojí.
+    pending.current += Math.min(delta, 0.25);
+    // Tolerance 2 ms: na 60 Hz dají dva snímky 33,3 ms, interval je 33,33.
+    // Bez ní by se co chvíli čekalo na třetí a výsledek by byl 20 fps.
+    if (fps > 0 && pending.current + 0.002 < 1 / fps) {
+      tick.render = false;
+      return;
+    }
+    tick.render = true;
+    tick.delta = pending.current;
+    pending.current = 0;
+  }, -1);
+
+  useFrame((state) => {
+    if (gate.current.render) state.gl.render(state.scene, state.camera);
+  }, 1);
+
+  return <>{children(gate)}</>;
+}
+
 interface TerrainViewProps {
   speed: number;
   waveSpeed: number;
@@ -451,10 +472,6 @@ interface TerrainViewProps {
   ringWidth: number;
   ringStrength: number;
   gain: number;
-  grain: number;
-  grainSurface: boolean;
-  grainDensity: number;
-  grainRate: number;
   vignette: number;
   backgroundColor: string;
   opacity: number;
@@ -463,8 +480,10 @@ interface TerrainViewProps {
   paused: boolean;
   adaptiveQuality: boolean;
   targetFps: number;
+  fps: number;
   ceiling: number;
   readPointer: () => PointerState;
+  gate: RefObject<FrameGate>;
 }
 
 const TerrainView = ({
@@ -496,10 +515,6 @@ const TerrainView = ({
   ringWidth,
   ringStrength,
   gain,
-  grain,
-  grainSurface,
-  grainDensity,
-  grainRate,
   vignette,
   backgroundColor,
   opacity,
@@ -508,16 +523,20 @@ const TerrainView = ({
   paused,
   adaptiveQuality,
   targetFps,
+  fps,
   ceiling,
   readPointer,
+  gate,
 }: TerrainViewProps) => {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
   const clock = useRef(0);
   const glide = useRef({ x: 0, y: 0 });
-  const budget = useRef({ frames: 0, span: 0, wins: 0, cap: 4 });
+  const budget = useRef({ frames: 0, span: 0, wins: 0, cap: 4, warmup: 0 });
   const { gl, size } = useThree();
 
-  const marches = Math.round(clamp(steps, 24, 200));
+  // Dřív byl strop 200 a config posílal 240 — ladilo se číslo bez účinku.
+  // samples zůstávají 1–4, víc vzorů gridOffsets nemá.
+  const marches = Math.round(clamp(steps, 24, 400));
   const taps = Math.round(clamp(samples, 1, 4));
 
   const fragment = useMemo(
@@ -553,10 +572,6 @@ const TerrainView = ({
       uRingWidth: { value: 0.04 },
       uRingGain: { value: 0.4 },
       uGain: { value: 1 },
-      uGrain: { value: 0.05 },
-      uGrainSurface: { value: 0 },
-      uGrainDensity: { value: 25 },
-      uGrainRate: { value: 24 },
       uVignette: { value: 0.2 },
       uBackdrop: { value: literal("#0a0a0a", "#0a0a0a") },
       uBackdropAlpha: { value: 1 },
@@ -586,10 +601,13 @@ const TerrainView = ({
     if (!clear) repaint(material.uniforms.uBackdrop.value, backgroundColor);
   }, [color, midColor, farColor, rimColor, ringColor, backgroundColor]);
 
-  useFrame((_, delta) => {
+  useFrame(() => {
     const material = materialRef.current;
     if (!material) return;
 
+    const tick = gate.current;
+    if (!tick.render) return;
+    const delta = tick.delta;
     const beat = Math.min(delta, 0.05);
     if (!paused) clock.current += beat;
 
@@ -616,10 +634,6 @@ const TerrainView = ({
     set.uRingWidth.value = ringWidth;
     set.uRingGain.value = ringStrength;
     set.uGain.value = gain;
-    set.uGrain.value = grain;
-    set.uGrainSurface.value = grainSurface ? 1 : 0;
-    set.uGrainDensity.value = grainDensity;
-    set.uGrainRate.value = grainRate;
     set.uVignette.value = vignette;
     set.uOpacity.value = opacity;
 
@@ -634,18 +648,26 @@ const TerrainView = ({
 
     if (!adaptiveQuality) return;
     const meter = budget.current;
+    // Prvních pár vteřin se neměří: načítání, hydratace a preloader srazí
+    // fps bez ohledu na GPU a meter by kvalitu snížil natrvalo — přesně
+    // to se dělo, i RTX 3080 jela na poměru 1,0 místo 1,5.
+    meter.warmup += delta;
+    if (meter.warmup < 3) return;
     meter.frames += 1;
     meter.span += delta;
     if (meter.span < 0.75) return;
-    const fps = meter.frames / meter.span;
+    const measured = meter.frames / meter.span;
     meter.frames = 0;
     meter.span = 0;
+    // Při stropu fps se měří jen vykreslené snímky, takže cíl nesmí být
+    // vyšší než strop — jinak by meter srážel kvalitu pořád.
+    const goal = fps > 0 ? Math.min(targetFps, fps) : targetFps;
     const roof = Math.min(ceiling, meter.cap);
-    if (fps < targetFps * 0.85 && ratio > 0.6) {
+    if (measured < goal * 0.85 && ratio > 0.6) {
       meter.wins = 0;
       meter.cap = Math.max(0.6, ratio * 0.9);
       gl.setPixelRatio(Math.max(0.6, ratio * 0.75));
-    } else if (fps > targetFps * 0.98 && ratio < roof - 0.01) {
+    } else if (measured > goal * 0.98 && ratio < roof - 0.01) {
       meter.wins += 1;
       if (meter.wins >= 3) {
         meter.wins = 0;
@@ -703,7 +725,6 @@ export const Landscape = ({
   ringWidth = 0.04,
   ringStrength = 0.4,
   gain = 1,
-  grain = 0.05,
   // 0 = žádné částice, tedy původní chování.
   particles = 0,
   particleSize = 2.6,
@@ -718,10 +739,6 @@ export const Landscape = ({
   hoverPush = 0.1,
   ringPush = 0,
   ridgeFlow = 0,
-  // false = zrno na obrazovce, tedy původní chování.
-  grainSurface = false,
-  grainDensity = 25,
-  grainRate = 24,
   vignette = 0.2,
   backgroundColor = "#0a0a0a",
   opacity = 1,
@@ -730,6 +747,8 @@ export const Landscape = ({
   paused = false,
   adaptiveQuality = true,
   targetFps = 60,
+  // 0 = každý snímek displeje, tedy původní chování.
+  fps = 0,
   dpr = 1.75,
   className,
   children,
@@ -799,78 +818,87 @@ export const Landscape = ({
             powerPreference: "high-performance",
           }}
         >
-          <TerrainView
-            speed={speed}
-            waveSpeed={waveSpeed}
-            altitude={altitude}
-            focal={focal}
-            pitch={pitch}
-            offsetX={offsetX}
-            offsetY={offsetY}
-            offsetZ={offsetZ}
-            elevation={elevation}
-            scale={scale}
-            detail={detail}
-            steps={steps}
-            samples={samples}
-            distance={distance}
-            fogStart={fogStart}
-            rampDistance={rampDistance}
-            color={color}
-            midColor={midColor}
-            farColor={farColor}
-            rimColor={rimColor}
-            rimPower={rimPower}
-            rimStrength={rimStrength}
-            ringColor={ringColor}
-            ringSpacing={ringSpacing}
-            ringSpeed={ringSpeed}
-            ringWidth={ringWidth}
-            ringStrength={ringStrength}
-            gain={gain}
-            grain={grain}
-            grainSurface={grainSurface}
-            grainDensity={grainDensity}
-            grainRate={grainRate}
-            vignette={vignette}
-            backgroundColor={backgroundColor}
-            opacity={opacity}
-            cursorInteraction={cursorInteraction}
-            cursorSteer={cursorSteer}
-            paused={paused}
-            adaptiveQuality={adaptiveQuality}
-            targetFps={targetFps}
-            ceiling={ceiling}
-            readPointer={readPointer}
-          />
-          <ParticleField
-            count={particles}
-            size={particleSize}
-            color={particleColor}
-            opacity={particleOpacity}
-            speed={particleSpeed}
-            noiseScale={particleNoiseScale}
-            noiseStrength={particleNoiseStrength}
-            damping={particleDamping}
-            lifespan={particleLifespan}
-            cursorRadius={hoverRadius}
-            cursorStrength={hoverPush}
-            ringSpacing={ringSpacing}
-            ringSpeed={ringSpeed}
-            ringWidth={ringWidth}
-            ringPush={ringPush}
-            ridgeFlow={ridgeFlow}
-            altitude={altitude + offsetY}
-            focal={focal}
-            pitch={pitch}
-            camPanX={offsetX}
-            camPanZ={offsetZ}
-            terrainScale={scale}
-            terrainElevation={elevation}
-            terrainDetail={detail}
-            waveSpeed={waveSpeed}
-            paused={paused}
-          />
+          <FrameCap fps={fps}>
+            {(gate) => (
+              <>
+                <TerrainView
+                  speed={speed}
+                  waveSpeed={waveSpeed}
+                  altitude={altitude}
+                  focal={focal}
+                  pitch={pitch}
+                  offsetX={offsetX}
+                  offsetY={offsetY}
+                  offsetZ={offsetZ}
+                  elevation={elevation}
+                  scale={scale}
+                  detail={detail}
+                  steps={steps}
+                  samples={samples}
+                  distance={distance}
+                  fogStart={fogStart}
+                  rampDistance={rampDistance}
+                  color={color}
+                  midColor={midColor}
+                  farColor={farColor}
+                  rimColor={rimColor}
+                  rimPower={rimPower}
+                  rimStrength={rimStrength}
+                  ringColor={ringColor}
+                  ringSpacing={ringSpacing}
+                  ringSpeed={ringSpeed}
+                  ringWidth={ringWidth}
+                  ringStrength={ringStrength}
+                  gain={gain}
+                  vignette={vignette}
+                  backgroundColor={backgroundColor}
+                  opacity={opacity}
+                  cursorInteraction={cursorInteraction}
+                  cursorSteer={cursorSteer}
+                  paused={paused}
+                  adaptiveQuality={adaptiveQuality}
+                  targetFps={targetFps}
+                  fps={fps}
+                  ceiling={ceiling}
+                  readPointer={readPointer}
+                  gate={gate}
+                />
+                {/* Při particles = 0 se pole nepřipojí vůbec — jeho useFrame
+                    by jinak simulaci počítal dál, i když nic nekreslí. */}
+                {particles > 0 && (
+                  <ParticleField
+                    count={particles}
+                    size={particleSize}
+                    color={particleColor}
+                    opacity={particleOpacity}
+                    speed={particleSpeed}
+                    noiseScale={particleNoiseScale}
+                    noiseStrength={particleNoiseStrength}
+                    damping={particleDamping}
+                    lifespan={particleLifespan}
+                    cursorRadius={hoverRadius}
+                    cursorStrength={hoverPush}
+                    ringSpacing={ringSpacing}
+                    ringSpeed={ringSpeed}
+                    ringWidth={ringWidth}
+                    ringPush={ringPush}
+                    ridgeFlow={ridgeFlow}
+                    altitude={altitude + offsetY}
+                    focal={focal}
+                    pitch={pitch}
+                    camPanX={offsetX}
+                    camPanZ={offsetZ}
+                    terrainScale={scale}
+                    terrainElevation={elevation}
+                    terrainDetail={detail}
+                    waveSpeed={waveSpeed}
+                    paused={paused}
+                    gate={gate}
+                  />
+                )}
+              </>
+            )}
+          </FrameCap>
         </Canvas>
       </div>
       {children ? <div className={styles.content}>{children}</div> : null}

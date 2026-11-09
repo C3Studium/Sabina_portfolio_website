@@ -1,8 +1,32 @@
 import Image from "next/image";
 import Link from "next/link";
-import { editableIn } from "@c3studium/valecms/edit";
-import type { CopyItem, GlobalBlock } from "@/lib/site/globals";
+import { editableDoc, editableIn } from "@c3studium/valecms/edit";
+import type { CopyItem, GlobalBlock, SocialLink } from "@/lib/site/globals";
+import { useRegisterRef } from "@/providers/RefContext";
+import MeasureText from "@/components/common/measure-text";
 import styles from "./styles.module.scss";
+
+// Hover jako v hlavičce: tečka kurzoru se nad logem, odkazem i sítí rozpadne
+// do rohů prvku (common/cursor, RefContext) a MeasureText kolem něj nakreslí
+// rámeček s rozměrem a drobky. Okraj kolem boxu v px.
+const PAD = { brand: 10, link: 4, social: 5 } as const;
+
+// Právní odkaz — vlastní komponenta kvůli registru (hook nejde volat
+// v cyklu). `data-measure-frame`: rámeček obejme celý odkaz, text měří.
+function LegalLink({ id, href, measured, children }: { id: number; href: string; measured: boolean; children: React.ReactNode }) {
+  const ref = useRegisterRef(`footer.legal.${id}`, { pad: PAD.link });
+  return (
+    <a ref={ref} className={styles.legalLink} href={href} data-measure-frame={measured ? "" : undefined}>
+      {children}
+    </a>
+  );
+}
+
+// Kroužek sítě — jen rámeček (`data-measure-frame` bez měřeného textu).
+function SocialItem({ id, ...props }: { id: string } & React.AnchorHTMLAttributes<HTMLAnchorElement>) {
+  const ref = useRegisterRef(`footer.social.${id}`, { pad: PAD.social });
+  return <a ref={ref} data-measure-frame="" {...props} />;
+}
 
 // Rok je zapsaný natvrdo schválně — new Date() na serveru a v prohlížeči
 // může spadnout do jiného roku a rozbít hydrataci kvůli jedinému číslu.
@@ -52,9 +76,9 @@ const LINES = {
   legalTitle: 4,
   legalFrom: 5, // tři právní odkazy
   followTitle: 8,
-  socialsFrom: 9, // tři sítě — ikony jsou z kódu, vázané pořadím
-  copyright: 12,
-  sign: 13,
+  // Sítě nejsou položky bloku, ale dokumenty `socialLink` (prop `socials`).
+  copyright: 9,
+  sign: 10,
 } as const;
 
 /**
@@ -99,21 +123,64 @@ function BehanceIcon() {
   );
 }
 
-// Ikony jsou kód, ne obsah — k položkám z CMS se váží pořadím.
-const SOCIAL_ICONS = [InstagramIcon, LinkedinIcon, BehanceIcon];
+function LinkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <path d="M10.2 13.8a3.6 3.6 0 0 0 5.1 0l3.1-3.1a3.6 3.6 0 0 0-5.1-5.1L11.8 7" strokeLinecap="round" />
+      <path d="M13.8 10.2a3.6 3.6 0 0 0-5.1 0l-3.1 3.1a3.6 3.6 0 0 0 5.1 5.1L12.2 17" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// Ikony jsou kód, ne obsah — k dokumentu sítě se váží polem „Síť". Síť bez
+// ikony v kódu dostane obecný řetízek, nebo vlastní ikonu z dokumentu.
+const PLATFORM_ICONS: Record<string, () => React.JSX.Element> = {
+  instagram: InstagramIcon,
+  linkedin: LinkedinIcon,
+  behance: BehanceIcon,
+};
+
+// Názvy pro čtečku, když dokument nemá vlastní.
+const PLATFORM_NAMES: Record<string, string> = {
+  instagram: "Instagram",
+  linkedin: "LinkedIn",
+  behance: "Behance",
+  facebook: "Facebook",
+  tiktok: "TikTok",
+  dribbble: "Dribbble",
+};
 
 type FooterProps = {
   // Blok `global.footer` z `props.globals` stránky; `null` bez CMS i na 404.
   copy?: GlobalBlock | null;
+  // Dokumenty „Sociální sítě" ze Studia; prázdné = sítě z kódu.
+  socials?: SocialLink[] | null;
 };
 
-export default function Footer({ copy = null }: FooterProps) {
+export default function Footer({ copy = null, socials = null }: FooterProps) {
   // Dokument zadaný jednou, ne u každé anotace. Mimo Studio je `docId`
   // undefined a `edit(...)` vrací prázdno, takže na web se nerozprostře nic.
   const edit = editableIn(copy?.docId ?? null);
   const items = copy?.items;
+  // Ve Studiu bez MeasureText — překryv čte a přepisuje text přímo v DOMu.
+  const editing = Boolean(copy?.docId);
+  const brandRef = useRegisterRef("footer.brand", { pad: PAD.brand });
+  const links: SocialLink[] = socials?.length
+    ? socials
+    : FALLBACK.socials.map((social) => ({
+        platform: social.label.toLowerCase(),
+        label: social.label,
+        url: social.href,
+        icon: null,
+      }));
 
   return (
+    // Patička se odkrývá zpod CTA: obal má výšku patičky a ořez (clip-path),
+    // uvnitř je o výšku okna delší dráha a v ní patička přilepená ke spodku
+    // okna (sticky, top = 100vh − výška). Při scrollu tak stojí na místě
+    // a horní hrana obalu ji postupně odkrývá — sekce nad ní po ní odjede.
+    <div className={styles.reveal}>
+    <div className={styles.revealTrack}>
     <footer className={styles.footer} data-motion-hold="">
       <div className={styles.decor} aria-hidden="true" />
 
@@ -123,7 +190,8 @@ export default function Footer({ copy = null }: FooterProps) {
           <div className={styles.brandCol}>
             {/* Stejná stavba i rozměry jako brand v hlavičce, aby footer
                 seděl na svislici s navbarem. */}
-            <Link className={styles.brand} href="/">
+            <MeasureText variant="brand" enabled={!editing}>
+            <Link ref={brandRef} className={styles.brand} href="/" data-measure-frame="">
               {/* `alt` prázdný i s obrázkem z CMS: jméno je hned vedle jako
                   text a čtečka by ho slyšela dvakrát. */}
               <Image
@@ -144,6 +212,7 @@ export default function Footer({ copy = null }: FooterProps) {
               </span>
               <span className={styles.brandDot} aria-hidden="true" />
             </Link>
+            </MeasureText>
 
             {/* Každý řádek ve vlastním <span> a s vlastní anotací: překryv
                 ukládá textContent a jeden prvek se třemi řádky by slil. Třetí
@@ -171,24 +240,24 @@ export default function Footer({ copy = null }: FooterProps) {
             <h2 className={styles.colLabel} {...edit(`items.${LINES.legalTitle}.label`)}>
               {textAt(items, LINES.legalTitle, "label", FALLBACK.legalTitle)}
             </h2>
+            <MeasureText variant="link" enabled={!editing}>
             <ul className={styles.legalList}>
               {FALLBACK.legal.map((link, i) => {
                 const at = LINES.legalFrom + i;
                 return (
                   <li key={at}>
-                    {/* Text i cíl z jedné položky: `label` je slovo na stránce,
-                        `value` adresa. */}
-                    <a
-                      className={styles.legalLink}
-                      href={textAt(items, at, "value", link.href)}
-                      {...edit.link({ text: `items.${at}.label`, href: `items.${at}.value` })}
-                    >
-                      {textAt(items, at, "label", link.label)}
-                    </a>
+                    {/* Vnitřní odkaz: slovo se upravuje, cíl je kód — stránky
+                        webu nejsou obsah, který se přesměrovává ze Studia. */}
+                    <LegalLink id={at} href={link.href} measured={!editing}>
+                      <span data-measure={editing ? undefined : ""} {...edit(`items.${at}.label`)}>
+                        {textAt(items, at, "label", link.label)}
+                      </span>
+                    </LegalLink>
                   </li>
                 );
               })}
             </ul>
+            </MeasureText>
           </nav>
 
           {/* ---------- Sociální sítě ---------- */}
@@ -196,28 +265,35 @@ export default function Footer({ copy = null }: FooterProps) {
             <h2 className={styles.colLabel} {...edit(`items.${LINES.followTitle}.label`)}>
               {textAt(items, LINES.followTitle, "label", FALLBACK.followTitle)}
             </h2>
+            {/* Každá síť je dokument (Sociální sítě ve Studiu): klik otevře
+                jeho formulář — síť, název, odkaz, případně vlastní ikona. */}
+            <MeasureText variant="cta" enabled={!editing}>
             <ul className={styles.socials}>
-              {FALLBACK.socials.map((social, i) => {
-                const at = LINES.socialsFrom + i;
-                const Icon = SOCIAL_ICONS[i];
+              {links.map((social, i) => {
+                const Icon = PLATFORM_ICONS[social.platform] ?? LinkIcon;
+                const name = social.label || PLATFORM_NAMES[social.platform] || social.platform;
                 return (
-                  <li key={at}>
-                    {/* Ikona nemá slova na obrazovce, takže se upravuje jen
-                        cíl; `label` slouží čtečce. */}
-                    <a
+                  <li key={social.id ?? i}>
+                    <SocialItem
+                      id={social.id ?? `${social.platform}-${i}`}
                       className={styles.social}
-                      href={textAt(items, at, "value", social.href)}
-                      aria-label={textAt(items, at, "label", social.label)}
+                      href={social.url}
+                      aria-label={name}
                       target="_blank"
                       rel="noreferrer noopener"
-                      {...edit.link({ href: `items.${at}.value` })}
+                      {...editableDoc(social.id ?? null, "socialLink")}
                     >
-                      <Icon />
-                    </a>
+                      {social.icon?.src ? (
+                        <Image src={social.icon.src} alt="" width={24} height={24} className={styles.socialImage} />
+                      ) : (
+                        <Icon />
+                      )}
+                    </SocialItem>
                   </li>
                 );
               })}
             </ul>
+            </MeasureText>
           </div>
         </div>
 
@@ -233,5 +309,7 @@ export default function Footer({ copy = null }: FooterProps) {
         </div>
       </div>
     </footer>
+    </div>
+    </div>
   );
 }

@@ -7,20 +7,43 @@
 // z hlavičky (ta je taky rem, má pevnou výšku) a footer s ní má sedět
 // na svislici i velikosti písma.
 
+// Sazba ve třech barvách: bílá, zelená a uhlově černá.
 $accent: #bec948;
-$ink: #2e2e2e;
-$ink-soft: #4f4f4f;
+$ink: #141414;
+$ink-soft: $ink;
 $backdrop: #9c9c9c;
 
 // Stejný gutter jako hlavička — díky němu je logo v patě přesně pod
 // logem v navbaru.
 $gutter: clamp(1.5rem, 4vw, 3.25rem);
 
-.footer {
+// Výška patičky — na nízkém viewportu by se obsah do 40vh nevešel, proto
+// podlaha.
+$height: max(40vh, 21rem);
+
+/* ---------- Odkrytí zpod sekce nad ní ---------- */
+
+// Obal s výškou patičky ořízne vše mimo sebe (clip-path ořízne i přilepený
+// obsah). Dráha uvnitř začíná o výšku okna výš, takže přilepená patička
+// stojí u spodku okna celou dobu, co je obal vidět — a sekce nad ní
+// (CTA) po ní odjede nahoru.
+.reveal {
   position: relative;
-  height: 40vh;
-  // Na nízkém viewportu by se obsah do 40vh nevešel, proto podlaha.
-  min-height: 21rem;
+  height: $height;
+  clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+}
+
+.revealTrack {
+  position: relative;
+  top: -100vh;
+  height: calc(100vh + #{$height});
+}
+
+.footer {
+  position: sticky;
+  // lvh: poloha vůči spodku okna, ne rámu obsahu (postcss/viewport-frame).
+  top: calc(100lvh - #{$height});
+  height: $height;
   overflow: hidden;
   color: $ink;
   // Identický gradient jako sekce, ale vykreslený na viewport-velkém
@@ -143,7 +166,7 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
     bottom: 0.4vh;
     left: 0;
     width: 1px;
-    background: rgba(46, 46, 46, 0.3);
+    background: rgba(20, 20, 20, 0.4);
   }
 
   &::after {
@@ -182,7 +205,7 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   font-weight: 400;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: rgba(46, 46, 46, 0.55);
+  color: $ink;
 }
 
 /* ---------- Právní odkazy ---------- */
@@ -237,7 +260,7 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   place-items: center;
   width: clamp(2rem, 5.6vh, 7.4rem);
   height: clamp(2rem, 5.6vh, 7.4rem);
-  border: 1px solid rgba(46, 46, 46, 0.4);
+  border: 1px solid rgba(20, 20, 20, 0.5);
   border-radius: 50%;
   color: $ink;
   transition: background 0.24s ease, border-color 0.24s ease, color 0.24s ease;
@@ -274,7 +297,7 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   right: 0;
   left: 0;
   height: 1px;
-  background: rgba(46, 46, 46, 0.28);
+  background: rgba(20, 20, 20, 0.35);
 
   &::before,
   &::after {
@@ -316,8 +339,23 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
 
 // Pod 1100 px se tři sloupce nevejdou — footer se rozbalí do sloupce
 // a pevná výška ustoupí obsahu.
-@media (max-width: 1100px) {
+// Úzké okno NA VÝŠKU (telefon, tablet). Na šířku zůstává kompozice
+// z notebooku — telefony a tablety na šířku řeší blok Responzivita dole.
+@media (max-width: 1100px) and (orientation: portrait) {
+  // Bez odkrývání — obsah je vyšší a výška patičky není pevná.
+  .reveal {
+    height: auto;
+    clip-path: none;
+  }
+
+  .revealTrack {
+    top: 0;
+    height: auto;
+  }
+
   .footer {
+    position: relative;
+    top: 0;
     height: auto;
     min-height: 0;
   }
@@ -369,7 +407,9 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   }
 }
 
-@media (max-width: 620px) {
+// Úzké okno NA VÝŠKU (telefon, tablet). Na šířku zůstává kompozice
+// z notebooku — telefony a tablety na šířku řeší blok Responzivita dole.
+@media (max-width: 620px) and (orientation: portrait) {
   .legalList {
     flex-direction: column;
     align-items: flex-start;
@@ -379,5 +419,89 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
     li + li::before {
       display: none;
     }
+  }
+}
+
+// Vlastní ikona sítě z dokumentu — stejná velikost jako SVG z kódu.
+.socialImage {
+  width: 46%;
+  height: 46%;
+  object-fit: contain;
+}
+
+/* ---------- Responzivita na šířku (telefon → notebook → monitor) ---------- */
+// Všechno na šířku od telefonu po monitor. Základ je malý notebook (md,
+// 1200px); k monitoru (2560) hodnoty rostou po přímce a dávají tam přesně
+// původní hodnotu, pod md (tablet, telefon) klesají v poměru šířky:
+//  - fluid()  pevné rem, písmo ne pod 11px,
+//  - fluid-ui() totéž pro panely nástroje (Vrstvy, Text, toast) — celé,
+//    jedním poměrem ($fluid ui-ratio),
+//  - fit-vh() drží písmo ve vh v poměru k vw sloupcům i na užší obrazovce.
+// (Vše v styles/system/_mixins.scss.) Zařízení s jinou výškou (tablet,
+// telefon na šířku) mají vlastní bloky pod tímhle.
+@include xxs-h {
+  .brand {
+    gap: fluid(0.7rem);
+  }
+
+  .brandMark {
+    height: fluid(2.15rem);
+  }
+
+  .brandName {
+    font-size: fluid(1.32rem, null, 11px);
+  }
+
+  .brandSurname {
+    margin-top: fluid(0.24rem);
+    font-size: fluid(0.62rem, null, 11px);
+  }
+
+  .brandDot {
+    width: fluid(0.34rem);
+    height: fluid(0.34rem);
+    margin-bottom: fluid(0.12rem);
+  }
+
+  .tagline {
+    font-size: clamp(ease-floor(0.66rem, 9px), fit-vh(1.5vh), 2rem);
+
+    &::after {
+      width: clamp(ease-floor(0.2rem), 0.36vw, 0.5rem);
+      height: clamp(ease-floor(0.2rem), 0.36vw, 0.5rem);
+    }
+  }
+
+  .colLabel {
+    font-size: clamp(ease-floor(0.58rem, 9px), fit-vh(1.26vh), 1.7rem);
+  }
+
+  .legalList {
+    li + li::before {
+      width: clamp(ease-floor(0.16rem), 0.3vw, 0.42rem);
+      height: clamp(ease-floor(0.16rem), 0.3vw, 0.42rem);
+    }
+  }
+
+  .legalLink {
+    font-size: clamp(ease-floor(0.62rem, 9px), fit-vh(1.34vh), 1.8rem);
+  }
+
+  .social {
+    width: clamp(ease-floor(2rem), 5.6vh, 7.4rem);
+    height: clamp(ease-floor(2rem), 5.6vh, 7.4rem);
+  }
+
+  .bottomRule {
+    &::before,
+    &::after {
+      width: clamp(ease-floor(0.18rem), 0.34vw, 0.46rem);
+      height: clamp(ease-floor(0.18rem), 0.34vw, 0.46rem);
+    }
+  }
+
+  .copy,
+  .sign {
+    font-size: clamp(ease-floor(0.55rem, 9px), fit-vh(1.2vh), 1.6rem);
   }
 }

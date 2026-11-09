@@ -1,0 +1,8 @@
+@use "../../../styles/system/_shortcuts.scss" as *;
+
+// Plátno leží přes prvek s přesahem (left/top/width/height píše engine).
+.canvas {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}

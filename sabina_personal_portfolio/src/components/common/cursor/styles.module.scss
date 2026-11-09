@@ -1,0 +1,24 @@
+@use "../../../styles/system/_shortcuts.scss" as *;
+
+$accent: #bec948;
+
+// Tečka kurzoru. Pozici i průhlednost píše framer-motion (viz index.tsx) —
+// top/left zůstávají na nule, aby se nikdy nepřepočítával layout.
+.dot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 10000;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: $accent;
+  pointer-events: none;
+  will-change: transform, opacity;
+
+  // Dotyková zařízení tečku nedostanou vůbec; smyčka tam nic nedělá,
+  // tohle je jen pojistka proti bliknutí před hydratací.
+  @include touch {
+    display: none;
+  }
+}

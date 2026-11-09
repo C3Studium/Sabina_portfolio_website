@@ -19,6 +19,8 @@ import {
     viewOf,
 } from '@c3studium/valecms/server/site'
 
+import { projectSlug } from '../cms/slug.ts'
+
 /** Co si stránka přečetla z preview cookie: publikovaný web, koncept, nebo okamžik. */
 export type View = { draft: boolean; at: string | null }
 
@@ -48,6 +50,8 @@ export type Project = {
     title: string
     tagline: string
     perex: string
+    /** Cíle projektu, jeden na položku. */
+    goals: string[]
     /** richText jako HTML; `bodyText` je totéž bez značek. */
     body: string
     bodyText: string
@@ -55,6 +59,10 @@ export type Project = {
     gallery: ProjectImage[]
     tone: ProjectTone
     order: number
+    /** Karta v galerii úvodní stránky. */
+    featured: boolean
+    /** Text tlačítka na kartě úvodní stránky; '' = výchozí z komponenty. */
+    cardCta: string
 }
 
 /**
@@ -111,10 +119,12 @@ export const getProjects = async ({
             const title = stringValue(data.title)
             return {
                 ...provenance(data),
-                slug: slugValue(data.slug),
+                // Prázdný slug = adresa z názvu, stejně jako `paths` v konfiguraci.
+                slug: slugValue(data.slug) || projectSlug({ title }),
                 title,
                 tagline: stringValue(data.tagline),
                 perex: stringValue(data.perex),
+                goals: Array.isArray(data.goals) ? data.goals.map(stringValue).filter(Boolean) : [],
                 body: stringValue(data.body),
                 bodyText: plainText(data.body),
                 cover: asImage(data.cover, title),
@@ -123,6 +133,8 @@ export const getProjects = async ({
                     : [],
                 tone: asTone(data.tone),
                 order: numberValue(data.order) ?? 100,
+                featured: data.featured === true,
+                cardCta: stringValue(data.cardCta),
             }
         })
         .filter((project) => project.title && project.slug)

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { editableDoc } from "@c3studium/valecms/edit";
+import { editableDoc, editableIn } from "@c3studium/valecms/edit";
+import { FALLBACK_LABELS, labelText, type LabelsCopy } from "@/components/projects/hero-list";
 import type { Project } from "@/lib/site/projects";
 import styles from "./styles.module.scss";
 
@@ -11,6 +12,8 @@ type Props = {
   project: Project;
   /** Další projekt v řadě, kam vede odkaz na konci. `null` = jediný projekt. */
   next: Project | null;
+  /** Blok `projects.labels` — „Case study", „Další projekt". */
+  labels?: LabelsCopy | null;
 };
 
 function ArrowIcon() {
@@ -36,8 +39,9 @@ function ArrowIcon() {
  * Sekce s prázdným obsahem se nevykreslují: prototyp má dnes jen název, podtitul
  * a obrázek, a prázdný nadpis „Zadání" nad ničím by lhal o tom, co tu je.
  */
-export default function CaseStudy({ project, next }: Props) {
+export default function CaseStudy({ project, next, labels = null }: Props) {
   const cover = project.cover;
+  const editLabels = editableIn(labels?.docId ?? null);
 
   return (
     <article
@@ -46,7 +50,9 @@ export default function CaseStudy({ project, next }: Props) {
     >
       <section id="case-study-hero" className={styles.hero}>
         <div className={styles.heroText}>
-          <p className={styles.eyebrow}>Case study</p>
+          <p className={styles.eyebrow} {...editLabels("items.2.label")}>
+            {labelText(labels?.eyebrow, FALLBACK_LABELS.eyebrow)}
+          </p>
           <h1 className={styles.title}>{project.title}</h1>
           {project.tagline ? (
             <p className={styles.tagline}>{project.tagline}</p>
@@ -80,6 +86,24 @@ export default function CaseStudy({ project, next }: Props) {
         </section>
       ) : null}
 
+      {project.goals.length ? (
+        <section id="case-study-goals" className={styles.goals}>
+          <h2 className={styles.goalsTitle} {...editLabels("items.4.label")}>
+            {labelText(labels?.goalsTitle, FALLBACK_LABELS.goalsTitle)}
+          </h2>
+          <ol className={styles.goalsList}>
+            {project.goals.map((goal, index) => (
+              <li key={index} className={styles.goal}>
+                <span className={styles.goalNumber} aria-hidden="true">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                {goal}
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
+
       {project.gallery.length ? (
         <section id="case-study-process" className={styles.gallery}>
           {project.gallery.map((picture, index) => (
@@ -98,7 +122,9 @@ export default function CaseStudy({ project, next }: Props) {
 
       {next ? (
         <section id="case-study-next" className={styles.next}>
-          <p className={styles.nextLabel}>Další projekt</p>
+          <p className={styles.nextLabel} {...editLabels("items.3.label")}>
+            {labelText(labels?.nextLabel, FALLBACK_LABELS.nextLabel)}
+          </p>
           <Link className={styles.nextLink} href={`/projects/${next.slug}`}>
             <span className={styles.nextTitle}>{next.title}</span>
             <span className={styles.nextArrow} aria-hidden="true">

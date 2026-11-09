@@ -26,6 +26,7 @@ export const FALLBACK_PROJECTS: Project[] = [
     title: "Gummylife",
     tagline: "Bannerová kampaň",
     perex: "",
+    goals: [],
     body: "",
     bodyText: "",
     cover: picture(
@@ -37,12 +38,15 @@ export const FALLBACK_PROJECTS: Project[] = [
     gallery: [],
     tone: "dark",
     order: 1,
+    featured: true,
+    cardCta: "Zjistit víc",
   },
   {
     slug: "vecicky",
     title: "Věcicky",
     tagline: "Sezónní kampaň",
     perex: "",
+    goals: [],
     body: "",
     bodyText: "",
     cover: picture(
@@ -54,12 +58,15 @@ export const FALLBACK_PROJECTS: Project[] = [
     gallery: [],
     tone: "light",
     order: 2,
+    featured: true,
+    cardCta: "Zjistit víc",
   },
   {
     slug: "bruzek",
     title: "Bruzek",
     tagline: "Digitální kampaň",
     perex: "",
+    goals: [],
     body: "",
     bodyText: "",
     cover: picture(
@@ -71,12 +78,15 @@ export const FALLBACK_PROJECTS: Project[] = [
     gallery: [],
     tone: "dark",
     order: 3,
+    featured: true,
+    cardCta: "Zjistit víc",
   },
   {
     slug: "wooline",
     title: "Wooline",
     tagline: "Obsah pro e-shop",
     perex: "",
+    goals: [],
     body: "",
     bodyText: "",
     cover: picture(
@@ -88,12 +98,15 @@ export const FALLBACK_PROJECTS: Project[] = [
     gallery: [],
     tone: "light",
     order: 4,
+    featured: false,
+    cardCta: "",
   },
   {
     slug: "mistr-pet",
     title: "Mistr Pet",
     tagline: "Promo vizuály",
     perex: "",
+    goals: [],
     body: "",
     bodyText: "",
     cover: picture(
@@ -105,12 +118,15 @@ export const FALLBACK_PROJECTS: Project[] = [
     gallery: [],
     tone: "dark",
     order: 5,
+    featured: false,
+    cardCta: "",
   },
   {
     slug: "samurai",
     title: "Samurai",
     tagline: "Uvedení produktu",
     perex: "",
+    goals: [],
     body: "",
     bodyText: "",
     cover: picture(
@@ -122,6 +138,8 @@ export const FALLBACK_PROJECTS: Project[] = [
     gallery: [],
     tone: "light",
     order: 6,
+    featured: true,
+    cardCta: "Chci vědět víc",
   },
 ];
 

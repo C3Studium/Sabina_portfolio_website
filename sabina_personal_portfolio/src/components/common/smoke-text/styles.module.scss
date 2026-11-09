@@ -1,0 +1,16 @@
+@use "../../../styles/system/_shortcuts.scss" as *;
+
+// Kořen kouře: plátno se do něj vkládá absolutně (smoke.ts) a písmena se
+// měří od něj (offsetParent) — proto `position: relative`.
+.root {
+  position: relative;
+}
+
+.face {
+  display: inline;
+}
+
+// Slovo se nezalomí uprostřed, i když je rozsekané na písmena.
+.word {
+  white-space: nowrap;
+}

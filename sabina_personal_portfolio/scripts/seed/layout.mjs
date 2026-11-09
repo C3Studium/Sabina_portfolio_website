@@ -39,29 +39,30 @@ export const blocks = [
             { label: 'Design.' },
             { label: 'Výsledky.' },
             { label: 'Právní informace' }, // 4 nadpis sloupce
-            // 5–7 právní odkazy: label = text, value = cíl. Cíle jsou zatím
-            // zástupné, stejně jako v kódu — až stránky vzniknou, přepíší se
-            // ve Studiu, ne v kódu.
-            { label: 'Zásady ochrany údajů', value: '#' },
-            { label: 'Obchodní podmínky', value: '#' },
-            { label: 'Cookies', value: '#' },
+            // 5–7 právní odkazy: jen text. Cíl je vnitřní stránka webu a ten
+            // je v kódu (patička), ze Studia se nepřesměrovává.
+            { label: 'Zásady ochrany údajů' },
+            { label: 'Obchodní podmínky' },
+            { label: 'Cookies' },
             { label: 'Sledujte mě' }, // 8 nadpis sloupce
-            // 9–11 sítě: label čte čtečka obrazovky, value je cíl; ikony jsou
-            // v kódu a váží se pořadím.
-            { label: 'Instagram', value: '#' },
-            { label: 'LinkedIn', value: '#' },
-            { label: 'Behance', value: '#' },
-            { label: '© 2026 Sabina Hudrmentová. Všechna práva vyhrazena.' }, // 12
-            { label: 'Pojďme tvořit.' }, // 13 podpis
+            { label: '© 2026 Sabina Hudrmentová. Všechna práva vyhrazena.' }, // 9
+            { label: 'Pojďme tvořit.' }, // 10 podpis
         ],
     },
+
+    // Sociální sítě jsou dokumenty, ne položky patičky: každá má odkaz,
+    // ikonu podle sítě a pořadí. Odkazy jsou zatím zástupné, jako v kódu.
+    { type: 'socialLink', key: 'social.instagram', platform: 'instagram', label: 'Instagram', url: 'https://www.instagram.com/', order: 1 },
+    { type: 'socialLink', key: 'social.linkedin', platform: 'linkedin', label: 'LinkedIn', url: 'https://www.linkedin.com/', order: 2 },
+    { type: 'socialLink', key: 'social.behance', platform: 'behance', label: 'Behance', url: 'https://www.behance.net/', order: 3 },
     {
         key: 'global.contact', // = GLOBAL.contact
         page: 'global',
         title: 'Kontakt',
         image: LOGO,
-        // Odstavec pod nadpisem. Nadpis sám („Pustíme se / do něčeho, / co
-        // *funguje*?") zůstává v kódu — viz komentář v komponentě.
+        // Nadpis: řádky oddělené \n, zvýraznění hvězdičkami.
+        headline: 'Pustíme se\ndo něčeho,\nco *funguje*?',
+        // Odstavec pod nadpisem.
         body: 'Máte v hlavě projekt? Pojďme si o něm říct. Vyplňte formulář a ozvu se vám co nejdřív.',
         items: [
             BRAND, // 0 značka
@@ -85,7 +86,8 @@ export const blocks = [
             { label: 'Odeslat — ozvu se obratem' }, // 13 tlačítko
             { label: 'Vaše údaje jsou v bezpečí a nikdy je nikomu nepředám.' }, // 14
             { label: 'Zavřít' }, // 15 aria-label křížku
-            // 16+ typy projektu — ocas seznamu, jediná část, kde je počet
+            { label: 'Souhlasím se zpracováním osobních údajů' }, // 16 povinný souhlas
+            // 17+ typy projektu — ocas seznamu, jediná část, kde je počet
             // položek obsah. Přidat šestý = přidat položku na konec.
             { label: 'Bannerová kampaň' },
             { label: 'Obsah pro sociální sítě' },

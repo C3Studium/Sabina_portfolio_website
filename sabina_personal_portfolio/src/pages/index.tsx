@@ -1,7 +1,21 @@
 import Head from "next/head";
 import type { GetStaticPropsContext } from "next";
-import { getPageContent, viewOf } from "@c3studium/valecms/server/site";
+import { getPageContent } from "@c3studium/valecms/server/site";
 import { getGlobalCopy, type GlobalCopy } from "@/lib/site/globals";
+// Čtečky typů ve `sources` (src/lib/cms/home.ts). Projekty se registrují při
+// načtení modulu, ostatní voláním níž — oboje musí proběhnout dřív, než
+// `getPageContent` po nich sáhne. Použité jen v getStaticProps, takže je Next
+// do stránky pro prohlížeč nevezme.
+import { viewFrom, type Project } from "@/lib/site/projects";
+import {
+  registerHomeSources,
+  type HeroWord,
+  type ProcessStep,
+  type Reference,
+  type Service,
+  type StackItem,
+  type StatItem,
+} from "@/lib/site/home";
 import Hero, { type HeroCopy } from "@/components/home/hero";
 import Info, { type InfoCopy } from "@/components/home/info";
 import Process, { type ProcessCopy } from "@/components/home/process";
@@ -11,12 +25,9 @@ import Cta, { type CtaCopy } from "@/components/home/cta";
 // ze Studia dostane na web bez deploye.
 const REVALIDATE_SECONDS = 600;
 
-// Pohled, kterým se čte: publikované, koncept, nebo stav k danému okamžiku.
-// `viewOf` ho čte z podepsané preview cookie Next.js (`draftMode`,
-// `previewData`), nikdy z query — proto bere celý kontext getStaticProps.
-// Deklarace v balíčku ho ale popisují jako `{ draft, at }` a odpověď jako
-// `unknown`; tady se to jen pojmenuje, za běhu se nic nemění.
-type View = { draft?: boolean; at?: string | null };
+// Pohled, kterým se čte (publikované, koncept, nebo stav k danému okamžiku),
+// bere `viewFrom` z podepsané preview cookie Next.js, nikdy z query — proto
+// celý kontext getStaticProps. Stejně jako stránky /projects.
 
 type HomeProps = {
   content: {
@@ -24,6 +35,14 @@ type HomeProps = {
     info?: InfoCopy;
     process?: ProcessCopy;
     cta?: CtaCopy;
+    // Dokumenty ze `sources` v src/lib/cms/home.ts.
+    projects?: Project[];
+    heroWords?: HeroWord[];
+    stack?: StackItem[];
+    stats?: StatItem[];
+    services?: Service[];
+    steps?: ProcessStep[];
+    references?: Reference[];
   };
   globals: GlobalCopy;
 };
@@ -36,7 +55,8 @@ type HomeProps = {
  * pod každou routou, `_app` si je bere z pageProps (viz src/lib/site/globals.ts).
  */
 export async function getStaticProps(context: GetStaticPropsContext) {
-  const view = viewOf(context);
+  registerHomeSources();
+  const view = viewFrom(context);
   const [content, globals] = await Promise.all([
     getPageContent("/", view),
     getGlobalCopy(view),
@@ -63,10 +83,31 @@ export default function HomePage({ content }: HomeProps) {
       <main>
         {/* `content.<at>` je blok podle src/lib/cms/home.ts. `docId` v něm je
             jen v editačním rámu Studia; na webu chybí a anotace mlčí. */}
-        <Hero copy={content?.hero} />
-        <Info copy={content?.info} />
-        <Process copy={content?.process} />
-        <Cta copy={content?.cta} />
+        <Hero
+          copy={content?.hero}
+          projects={content?.projects ?? null}
+          words={content?.heroWords?.filter((word) => word.place === "hero") ?? null}
+        />
+        <Info
+          copy={content?.info}
+          stack={content?.stack ?? null}
+          stats={content?.stats ?? null}
+          services={content?.services ?? null}
+        />
+        {/* CTA je poslední dlaždice dolly v Procesu (portál na konci). */}
+        <Process
+          copy={content?.process}
+          steps={content?.steps ?? null}
+          cta={(progress, still) => (
+            <Cta
+              copy={content?.cta}
+              references={content?.references ?? null}
+              words={content?.heroWords?.filter((word) => word.place === "cta") ?? null}
+              progress={progress}
+              still={still}
+            />
+          )}
+        />
       </main>
     </>
   );

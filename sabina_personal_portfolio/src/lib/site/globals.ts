@@ -11,7 +11,14 @@
 // — tedy komponenta. Kdyby pozice překládala už čtečka, byla by dvě místa, kde
 // se číslo opisuje (tady a v anotaci), a shodnout se musí ručně. Takhle je
 // číslo jen v komponentě, hned vedle prvku, který ho čte.
-import { getSiteCopy, readerFor } from '@c3studium/valecms/server/site'
+import {
+    documentId,
+    getSiteCopy,
+    imageValue,
+    numberValue,
+    readerFor,
+    stringValue,
+} from '@c3studium/valecms/server/site'
 
 import { GLOBAL } from '../cms/layout.ts'
 
@@ -49,10 +56,22 @@ export type GlobalBlock = {
     items: CopyItem[]
 }
 
+/** Odkaz na sociální síť v patičce — dokument typu `socialLink`. */
+export type SocialLink = {
+    /** Id dokumentu — jen v konceptu, kvůli anotaci. */
+    id?: string
+    platform: string
+    label: string
+    url: string
+    icon: CopyImage | null
+}
+
 export type GlobalCopy = {
     header: GlobalBlock | null
     footer: GlobalBlock | null
     contact: GlobalBlock | null
+    /** Prázdné = patička ukáže sítě z kódu. */
+    socials: SocialLink[]
 }
 
 /** Co stránka předává dál z `viewOf(context)`. */
@@ -93,11 +112,45 @@ const shapeBlock = (raw: RawBlock | undefined, draft: boolean): GlobalBlock | nu
  */
 export const getGlobalCopy = async (view: GlobalsView = {}): Promise<GlobalCopy> => {
     const { draft = false, at = null } = view
-    const copy = await getSiteCopy({ page: 'global', read: readerFor({ draft, at }) })
+    const read = readerFor({ draft, at })
+    const [copy, socials] = await Promise.all([getSiteCopy({ page: 'global', read }), getSocialLinks(read)])
 
     return {
         header: shapeBlock(copy[GLOBAL.header], draft),
         footer: shapeBlock(copy[GLOBAL.footer], draft),
         contact: shapeBlock(copy[GLOBAL.contact], draft),
+        socials,
     }
+}
+
+type Reader = (args: Record<string, unknown>) => Promise<Record<string, unknown>[]>
+
+/**
+ * Sociální sítě v pořadí `order`. Nikdy nespadne — chyba čtení dá prázdný
+ * seznam a patička ukáže sítě z kódu.
+ */
+const getSocialLinks = async (read: unknown): Promise<SocialLink[]> => {
+    let rows: Record<string, unknown>[] = []
+    try {
+        rows = await (read as Reader)({ type: 'socialLink', sort: { field: 'data.order', direction: 'asc' }, perPage: 20 })
+    } catch {
+        return []
+    }
+    return [...rows]
+        .sort((a, b) => (numberValue(a.order) ?? 100) - (numberValue(b.order) ?? 100))
+        .map((data) => {
+            const id = documentId(data)
+            const picture = imageValue(data.icon)
+            return {
+                // Spread, ne `id: undefined` — getStaticProps undefined odmítá.
+                ...(id ? { id } : {}),
+                platform: stringValue(data.platform) || 'other',
+                label: stringValue(data.label),
+                url: stringValue(data.url),
+                icon: picture?.url
+                    ? { src: String(picture.src ?? picture.url), url: String(picture.url), alt: '' }
+                    : null,
+            }
+        })
+        .filter((link) => link.url)
 }

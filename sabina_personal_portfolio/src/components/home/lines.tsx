@@ -1,4 +1,4 @@
-import { createElement, Fragment } from "react";
+import { createElement, Fragment, type ReactNode } from "react";
 
 // Společný tvar toho, co sekcím úvodní stránky chodí z CMS (viz src/lib/cms/home.ts).
 
@@ -63,6 +63,13 @@ type LinesProps = {
    * vykreslí mimo něj, s touhle třídou. Nezadané = zůstává uvnitř.
    */
   trailClass?: string;
+  /**
+   * Obsah zvýrazněného úseku místo holého slova — např. `<MeasureText>`.
+   * Musí vykreslit totéž slovo jako text v DOMu (překryv Studia ho čte zpátky);
+   * v editačním rámu ho proto nezadávej. `index` = pořadí zvýrazněného úseku
+   * v `lines` (0, 1, …), např. pro výběr náhradního slova.
+   */
+  renderMark?: (word: string, index: number) => ReactNode;
 };
 
 /**
@@ -71,8 +78,19 @@ type LinesProps = {
  * anotace jde na prvek, který tohle drží. Co se vrátí, musí být znak po znaku
  * to, co dával literál; překryv to čte zpátky z DOMu.
  */
-export default function Lines({ lines, markClass, markTag = "span", trailClass }: LinesProps) {
+export default function Lines({
+  lines,
+  markClass,
+  markTag = "span",
+  trailClass,
+  renderMark,
+}: LinesProps) {
   const accent = [ACCENT, markClass].filter(Boolean).join(" ");
+  // Pořadí každého zvýrazněného úseku napříč řádky, spočítané předem —
+  // ne počítadlem při kreslení, to by při částečném překreslení ujelo.
+  const markOrder = lines.map((_, line) =>
+    lines.slice(0, line).reduce((n, parts) => n + parts.filter(([, marked]) => marked).length, 0),
+  );
 
   return lines.map((parts, line) => (
     <Fragment key={line}>
@@ -85,9 +103,10 @@ export default function Lines({ lines, markClass, markTag = "span", trailClass }
 
         const split = trailClass !== undefined ? run.match(TRAIL) : null;
         const word = split ? run.slice(0, -split[1].length) : run;
+        const order = markOrder[line] + parts.slice(0, index).filter(([, m]) => m).length;
         return (
           <Fragment key={index}>
-            {createElement(markTag, { className: accent }, word)}
+            {createElement(markTag, { className: accent }, renderMark ? renderMark(word, order) : word)}
             {split ? (
               trailClass ? <span className={trailClass}>{split[1]}</span> : split[1]
             ) : null}

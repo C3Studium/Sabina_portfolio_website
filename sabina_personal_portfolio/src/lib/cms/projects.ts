@@ -6,11 +6,36 @@
 // nadpis a úvod nad řadou karet. Čtečku typu registruje src/lib/site/projects.ts.
 import { defineBlock, defineList, definePage, f } from '@c3studium/valecms/site'
 
+import { projectSlug } from './slug.ts'
+
 // Klíče bloků téhle stránky. Tvar `<stránka>.<sekce>` = `page` v getSiteCopy.
 // Komponenty i seed se odkazují jen na ně; keys.ts je pouze rozcestník.
 export const PROJECTS = {
     list: 'projects.list',
+    // Drobné popisky obou rout: 0 nápověda posunu, 1 odkaz karty, 2 štítek
+    // nad názvem v detailu, 3 popisek odkazu na další projekt, 4 nadpis cílů.
+    labels: 'projects.labels',
 } as const
+
+// Čtečka popisku podle indexu položky (viz poznámka u `f.label` v cms/home.ts).
+const label = (f as unknown as { label: (index: number) => ReturnType<typeof f.text> }).label
+
+// Jeden blok na obou routách — `copy: 'projects'` ho dává oběma a publikace
+// přegeneruje seznam i detaily.
+const labelsBlock = () =>
+    defineBlock({
+        at: 'labels',
+        key: PROJECTS.labels,
+        title: 'Projekty — popisky',
+        fields: {
+            scrollHint: label(0),
+            cardLink: label(1),
+            eyebrow: label(2),
+            nextLabel: label(3),
+            goalsTitle: label(4),
+            docId: f.docId(),
+        },
+    })
 
 // Obě routy čtou tentýž zdroj. Jednou pojmenovaný, aby se `paths` níž nemohly
 // rozejít s tím, co seznam vykresluje.
@@ -47,6 +72,7 @@ export const projectsPage = definePage({
             },
         }),
         defineList({ at: 'projects', source: 'projects', title: 'Projekty' }),
+        labelsBlock(),
     ],
 })
 
@@ -60,19 +86,18 @@ export const projectPage = definePage({
     copy: 'projects',
     sources,
     paths: {
-        // Slug přichází tolerantně — `{ current }` nebo holý řetězec (viz
-        // fieldTypes.js) — a `slugValue` z knihovny je server-only, kdežto tenhle
-        // soubor čte i prohlížeč. Proto se normalizuje tady znovu.
-        projects: (body: { slug?: unknown } | null | undefined) => {
-            const raw = body?.slug
-            const slug = raw && typeof raw === 'object' ? (raw as { current?: unknown }).current : raw
-            return typeof slug === 'string' && slug ? `/projects/${slug}` : null
+        // Prázdný slug = adresa z názvu (viz cms/slug.ts). Tatáž funkce jako
+        // ve čtečce, jinak by publikace přegenerovala jinou stránku, než na
+        // kterou vede karta.
+        projects: (body: { slug?: unknown; title?: unknown } | null | undefined) => {
+            const slug = projectSlug(body)
+            return slug ? `/projects/${slug}` : null
         },
     },
-    // Detail vykresluje jen pole dokumentu — název, podtitul, obrázek, text —
-    // a kliknutí na kterékoli z nich otevře záznam celý (editableDoc). Žádný
-    // blok siteCopy tu proto není: nemá co držet.
-    blocks: [],
+    // Detail vykresluje pole dokumentu — název, podtitul, obrázek, text —
+    // a kliknutí na kterékoli z nich otevře záznam celý (editableDoc). Z bloků
+    // jen popisky („Case study", „Další projekt").
+    blocks: [labelsBlock()],
 })
 
 export const projectPages = [projectPage]

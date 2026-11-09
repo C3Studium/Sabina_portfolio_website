@@ -9,23 +9,24 @@
 // JEDNOTKY: vh/vw se štědrými stropy v clamp(), jako sekce na homepage.
 
 $accent: #bec948;
-$ink: #2e2e2e;
-$ink-soft: #4f4f4f;
+// Sazba ve třech barvách: bílá, zelená a uhlově černá (žádné šedé).
+$ink: #141414;
+$ink-soft: $ink;
 $backdrop: #9c9c9c;
 $violet: #6c5ce7;
 
 // Karty mají vlastní stupnici — jsou to samostatné plochy, tmavé i světlé.
 $card-dark: #141414;
-$card-dark-text: #f0efec;
-$card-dark-muted: #8e8e88;
+$card-dark-text: #ffffff;
+$card-dark-muted: #ffffff;
 $card-light: #f2f1ee;
-$card-light-text: #1c1c1c;
-$card-light-muted: #6f6f68;
+$card-light-text: #141414;
+$card-light-muted: #141414;
 
 
 .heroList {
   position: relative;
-  height: 100svh;
+  height: var(--frame-h);
   overflow: hidden;
   color: $ink;
   // Doslovná kopie podkladu ze sekcí na homepage — web má držet jeden tón.
@@ -381,7 +382,7 @@ $card-light-muted: #6f6f68;
   display: flex;
   align-items: center;
   gap: 1vw;
-  color: #d2d2cc;
+  color: #fff;
 }
 
 .pagerCount {

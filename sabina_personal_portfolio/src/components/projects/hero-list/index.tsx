@@ -19,6 +19,24 @@ export type ListCopy = {
 // Texty stránky, jak stály v kódu — zůstávají jako záloha: prázdné pole ve
 // Studiu nesmí vyrobit prázdný nadpis. Musí být doslova to, co zakládá
 // scripts/seed/projects.mjs.
+/** Blok `projects.labels` (cms/projects.ts). Sdílí ho seznam i detail. */
+export type LabelsCopy = {
+  scrollHint?: string;
+  cardLink?: string;
+  eyebrow?: string;
+  nextLabel?: string;
+  goalsTitle?: string;
+  docId?: string;
+};
+
+export const FALLBACK_LABELS = {
+  scrollHint: "Objevujte posunutím",
+  cardLink: "Zobrazit projekt",
+  eyebrow: "Case study",
+  nextLabel: "Další projekt",
+  goalsTitle: "Cíle projektu",
+};
+
 const FALLBACK_COPY = {
   headline: ["Práce,", "která"],
   accent: "funguje",
@@ -71,10 +89,17 @@ const linesOr = (lines: string[] | undefined, fallback: string[]) => {
 
 type Props = {
   copy?: ListCopy | null;
+  /** Blok `projects.labels` — drobné popisky stránky. */
+  labels?: LabelsCopy | null;
   projects?: Project[] | null;
 };
 
-export default function HeroList({ copy = null, projects = null }: Props) {
+/** Popisek z CMS, nebo ten z kódu. Prázdný řetězec je „nic nenapsáno". */
+export const labelText = (value: string | undefined, fallback: string) =>
+  (typeof value === "string" && value.trim()) || fallback;
+
+export default function HeroList({ copy = null, labels = null, projects = null }: Props) {
+  const editLabels = editableIn(labels?.docId ?? null);
   const list = projectsOrFallback(projects);
   // Dokument zadaný jednou, ne u každé anotace zvlášť. Mimo Studio je `docId`
   // undefined a `edit(...)` vrací prázdný objekt, takže na web nejde nic.
@@ -95,7 +120,9 @@ export default function HeroList({ copy = null, projects = null }: Props) {
         <span className={styles.railLine} aria-hidden="true" />
         <span className={styles.railIndex}>{pad(1)}</span>
         <span className={styles.railLine} aria-hidden="true" />
-        <span className={styles.railLabel}>Objevujte posunutím</span>
+        <span className={styles.railLabel} {...editLabels("items.0.label")}>
+          {labelText(labels?.scrollHint, FALLBACK_LABELS.scrollHint)}
+        </span>
         <span className={styles.railLine} aria-hidden="true" />
         <button
           type="button"
@@ -170,7 +197,9 @@ export default function HeroList({ copy = null, projects = null }: Props) {
                   <ArrowIcon />
                 </span>
               </span>
-              <span className={styles.cardLinkLabel}>Zobrazit projekt</span>
+              <span className={styles.cardLinkLabel} {...editLabels("items.1.label")}>
+                {labelText(labels?.cardLink, FALLBACK_LABELS.cardLink)}
+              </span>
             </Link>
           </article>
         ))}

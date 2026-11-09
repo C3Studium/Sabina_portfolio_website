@@ -1,0 +1,40 @@
+@use "../../../styles/system/_shortcuts.scss" as *;
+
+.root {
+  position: relative;
+}
+
+// Pro čtečky a vyhledávače celý text.
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// Sizery a řádek přes sebe v jedné buňce — rozměr drží nejdelší z nich.
+.grid {
+  display: inline-grid;
+  max-width: 100%;
+  vertical-align: top;
+}
+
+.sizer,
+.line {
+  grid-area: 1 / 1;
+  white-space: pre-wrap;
+}
+
+.sizer {
+  visibility: hidden;
+}
+
+// Zástupný text (před psaním) je ztlumený.
+.line [data-placeholder] {
+  opacity: 0.45;
+}

@@ -1,0 +1,83 @@
+@use "../../../styles/system/_shortcuts.scss" as *;
+
+// CardSwap — balíček karet. Rozměry a barvy přicházejí jako proměnné
+// z komponenty (--swap-*); polohu karet píše engine do transformu.
+
+.root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+// Scéna: přesně velká na balíček, uprostřed, zmenšená do kontejneru (fit).
+.stage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--swap-stage-w);
+  height: var(--swap-stage-h);
+  perspective: 900px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transform-style: preserve-3d;
+}
+
+.slot {
+  position: absolute;
+  top: var(--swap-oy);
+  left: var(--swap-ox);
+  width: var(--swap-w);
+  height: var(--swap-h);
+  margin: calc(var(--swap-h) / -2) 0 0 calc(var(--swap-w) / -2);
+  border-radius: var(--swap-radius);
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow: var(--swap-shadow);
+  pointer-events: auto;
+  user-select: none;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+// Ztmavení karet v hloubce (průhlednost píše engine).
+.shade {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: var(--swap-shade);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--swap-tile-edge);
+  border-radius: inherit;
+  background: var(--swap-tile);
+  color: var(--swap-ink);
+  backdrop-filter: blur(6px);
+}
+
+// Jemná světlá hrana nahoře.
+.rim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 1px 0 var(--swap-tile-highlight);
+  pointer-events: none;
+}
+
+.root:focus-visible .slot[data-front] {
+  outline: 2px solid #bec948;
+  outline-offset: 3px;
+}
+
+// Ukotvení k levé hraně kontejneru (align="start").
+.stage[data-align="start"] {
+  left: 0;
+  transform-origin: 0 50%;
+}

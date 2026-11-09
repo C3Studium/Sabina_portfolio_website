@@ -10,8 +10,9 @@
 // Přepočet: px_navrh / 707 * 100 = vh   |   px_navrh / 1267 * 100 = vw
 
 $accent: #bec948;
-$ink: #2e2e2e;
-$ink-soft: #4f4f4f;
+// Sazba ve třech barvách: bílá, zelená a uhlově černá (žádné šedé).
+$ink: #141414;
+$ink-soft: $ink;
 $backdrop: #9c9c9c;
 
 $surface: #ffffff;
@@ -25,10 +26,28 @@ $line: rgba(46, 46, 46, 0.16);
 $col-intro: 20%;
 $col-portrait: 24%;
 
+// Dráha sekce: 200vh = 100vh, kdy je vnitřek přišpendlený a obsah
+// nastupuje, + 100vh výšky. margin-top -100vh = překryv s posledními
+// 100vh přišpendleného hera: sekce přes něj (průhledná) vyjíždí a
+// v okamžiku uvolnění sticky hera stojí nahoře. Nad herem (z-index).
+.infoTrack {
+  position: relative;
+  z-index: 2;
+  // 1238vh = 1138vh přišpendleného scrollu: stavba umělou myší (~525vh),
+  // lišta, volný čas (~130vh, myš jen „přemýšlí"), mazání a odnesení
+  // portrétu do Procesu. Časy choreografie jsou podíly, takže výška sekce
+  // přímo určuje tempo myši.
+  height: 1238vh;
+  margin-top: -100vh;
+}
+
 .info {
+  position: sticky;
+  // Rám obsahu (strop 2560 × 1440, globals.scss): na vyšším okně uprostřed.
+  top: var(--frame-y);
   display: flex;
   flex-direction: column;
-  height: 100svh;
+  height: var(--frame-h);
   padding-block: 11vh 2vh;
   // Stejný podklad jako hero.
   // Průhledné schválně — podklad celého webu dělá globální shader
@@ -106,6 +125,8 @@ $col-portrait: 24%;
 }
 
 // Pill 138x40px v návrhu = 10.9vw x 5.66vh.
+// Pilulka. Plocha, rámeček a stín jsou ve vrstvě .pillFill — při nástupu
+// se nejdřív obtáhne obrys (.drawFrame) a teprve pak naskočí plocha.
 .tool {
   display: flex;
   align-items: center;
@@ -113,10 +134,6 @@ $col-portrait: 24%;
   width: clamp(7rem, 10.9vw, 22rem);
   height: clamp(2rem, 5.66vh, 7.65rem);
   padding-inline: 0.8vw;
-  border: 1px solid $surface-border;
-  border-radius: 999px;
-  background: $surface;
-  box-shadow: 0 1vh 2.2vh rgba(30, 30, 30, 0.1);
   font-size: clamp(0.68rem, 1.84vh, 2.5rem); // 13px
   font-weight: 400;
   white-space: nowrap;
@@ -148,13 +165,202 @@ $col-portrait: 24%;
   color: $accent;
 }
 
+/* ---------- Nástup (reveal.tsx) ---------- */
+
+// Stavba jako v preloaderu: obrys (kontura, čárkovaný rámeček) → výplň.
+
+// Obal: skutečný obsah (sketchFill) drží rozměr, kontura leží přes něj.
+.sketchText {
+  position: relative;
+}
+
+.sketchFill {
+  display: block;
+}
+
+// Tentýž obsah podruhé jako zelená kontura: písmena jen obtažená, plochy
+// průhledné s obrysem, obrázky schované.
+.sketchOutline {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: transparent;
+  -webkit-text-stroke: 0.7px $accent;
+
+  * {
+    color: transparent !important;
+    -webkit-text-stroke: inherit;
+    background: transparent !important;
+    border-color: rgba(190, 201, 72, 0.7) !important;
+    box-shadow: none !important;
+  }
+
+  img {
+    opacity: 0;
+  }
+}
+
+/* ---------- Stavba jako u bannerů (reveal.tsx) ---------- */
+
+// Rámeček stavby přes pozicovaného rodiče (odsazení píše BuildFrame inline).
+.buildFrame {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 6;
+}
+
+// Čárkovaný obvod — obtahuje ho maska (pathLength) od levého horního rohu.
+.buildGuide {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.7);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.buildMarks {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 1;
+}
+
+.buildDot {
+  fill: $accent;
+}
+
+// Popisek nad rámečkem: rozměr bíle, štítek vrstvy („T · …") zeleně.
+.buildLabel {
+  position: absolute;
+  z-index: 6;
+  transform: translateY(calc(-100% - 5px));
+  white-space: nowrap;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #fff;
+  pointer-events: none;
+
+  &[data-tag] {
+    color: $accent;
+  }
+}
+
+// Mřížka třetin uvnitř velkého bloku (čárkovaná, jako v bannerech).
+.buildGrid {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+
+  > span {
+    position: absolute;
+    border: 0 dashed rgba(255, 255, 255, 0.4);
+  }
+
+  > span:nth-child(1),
+  > span:nth-child(2) {
+    top: 0;
+    bottom: 0;
+    border-left-width: 1px;
+  }
+
+  > span:nth-child(1) {
+    left: 33.333%;
+  }
+
+  > span:nth-child(2) {
+    left: 66.666%;
+  }
+
+  > span:nth-child(3),
+  > span:nth-child(4) {
+    left: 0;
+    right: 0;
+    border-top-width: 1px;
+  }
+
+  > span:nth-child(3) {
+    top: 33.333%;
+  }
+
+  > span:nth-child(4) {
+    top: 66.666%;
+  }
+}
+
+// Obal karet: drží místo karet v mřížce sekce, nese rámeček stavby; maska
+// odhalení jde na .cards uvnitř, aby jejich 3D natočení zůstalo celé.
+.cardsBuild {
+  position: relative;
+  z-index: 2;
+  align-self: center;
+}
+
+/* Pilulka: kontura i plná vrstva leží přes celou pilulku a mají její
+   rozložení (odsazení, mezera). */
+.buildPill {
+  position: relative;
+
+  > .sketchOutline,
+  > .pillSolid {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: inherit;
+    padding-inline: inherit;
+  }
+}
+
+.pillFill {
+  position: absolute;
+  inset: 0;
+  border: 1px solid $surface-border;
+  border-radius: 999px;
+  background: $surface;
+  box-shadow: 0 1vh 2.2vh rgba(30, 30, 30, 0.1);
+}
+
+// Obsah pilulky nad plochou, ve stejném rozložení jako dřív.
+.pillBody {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: inherit;
+  width: 100%;
+}
+
+/* Položka statistik: kontura i výplň mají rozložení položky. Oddělovač
+   je na nich (ne na položce), takže se staví spolu s nimi — čárkovaně
+   v kontuře, plně ve výplni. */
+.stat > .sketchFill,
+.stat > .sketchOutline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: inherit;
+  height: 100%;
+  padding-inline: 1.3vw;
+}
+
+.stat + .stat > .sketchFill {
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.stat + .stat > .sketchOutline {
+  border-left: 1px dashed rgba(190, 201, 72, 0.7);
+}
+
 .lead {
   max-width: 15vw;
   margin: 0 0 3vh;
   font-size: clamp(0.7rem, 1.7vh, 2.3rem); // 12px
   font-weight: 300;
   line-height: 1.5;
-  color: $ink-soft;
+  // Světlý — tmavý $ink-soft na šedém podkladu shaderu nebyl vidět.
+  color: #fff;
 }
 
 .cta {
@@ -406,26 +612,68 @@ $col-portrait: 24%;
 /* ---------- Statistiky ----------
    V návrhu 8.5vh vysoký pruh, začíná až za levým sloupcem (22.9vw). */
 
-.stats {
-  flex-shrink: 0;
+// Lišta statistik: 5vh přes celou šířku u spodku sekce, PŘES spodek
+// portrétu i karet. Pás se rozjede zleva (statsBarFill), položky pak
+// vyjedou jedna po druhé (RiseItem).
+.statsBar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 5;
+  width: 100vw;
+  height: 5vh;
   display: flex;
   align-items: center;
-  margin-top: 2vh;
-  margin-left: calc(#{$col-intro} + 3vw);
-  padding-top: 2vh;
-  border-top: 1px solid $line;
+}
+
+.statsBarFill {
+  position: absolute;
+  inset: 0;
+  background: rgba(24, 24, 26, 0.78);
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(10px);
+  transform-origin: 0 50%;
+}
+
+.stats {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 90vw;
+  height: 100%;
+  margin-inline: auto;
   list-style: none;
 }
 
+// Zjednodušená položka: ikona, hodnota a popisek na jednom řádku, světle
+// na tmavém pásu.
 .stat {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 1vw;
-  padding-inline: 1.3vw;
+  justify-content: center;
+  gap: 0.7vw;
+  height: 100%;
+  color: #fff;
 
-  & + & {
-    border-left: 1px solid $line;
+  .statBadge {
+    width: 2.6vh;
+    height: 2.6vh;
+    border-radius: 0.6vh;
+  }
+
+  .statText {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.6vw;
+  }
+
+  .statValue {
+    font-size: clamp(0.8rem, 1.9vh, 2.4rem);
+  }
+
+  .statLabel {
+    color: #fff;
   }
 
   &:first-child {
@@ -468,7 +716,9 @@ $col-portrait: 24%;
 
 /* ---------- Responsivita ---------- */
 
-@media (max-width: 1100px) {
+// Úzké okno NA VÝŠKU (telefon, tablet). Na šířku zůstává kompozice
+// z notebooku — telefony a tablety na šířku řeší blok Responzivita dole.
+@media (max-width: 1100px) and (orientation: portrait) {
   .inner {
     grid-template-columns: minmax(11rem, 30%) 1fr;
   }
@@ -501,7 +751,9 @@ $col-portrait: 24%;
   }
 }
 
-@media (max-width: 820px) {
+// Úzké okno NA VÝŠKU (telefon, tablet). Na šířku zůstává kompozice
+// z notebooku — telefony a tablety na šířku řeší blok Responzivita dole.
+@media (max-width: 820px) and (orientation: portrait) {
   .info {
     height: auto;
     min-height: 100svh;
@@ -559,6 +811,810 @@ $col-portrait: 24%;
 
     & + & {
       border-left: 0;
+    }
+  }
+}
+
+// ---------- Ikony z CMS ----------
+// Stejné rozměry jako zástupné tvary, které nahrazují (tečka nástroje, kroužek
+// statistiky, slot obrázku služby) — dokument s ikonou i bez ní drží rozvržení.
+
+.toolIcon {
+  width: clamp(1.1rem, 3.68vh, 5rem);
+  height: clamp(1.1rem, 3.68vh, 5rem);
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+// Jen nad 1100px: pod ním je kroužek schovaný (display: none výš) a pravidlo
+// psané až sem by ho jinak vrátilo.
+@media (min-width: 1101px), (orientation: landscape) {
+  .statBadge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+}
+
+.statIcon {
+  width: 62%;
+  height: 62%;
+  object-fit: contain;
+}
+
+.cardMedia {
+  height: 100%;
+  overflow: hidden;
+  border-radius: 1.3vw;
+  background: rgba(46, 46, 46, 0.07);
+}
+
+.cardMediaImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* ---------- Portrét níž ----------
+   Fotka končí rovným řezem v pase — stojí 10vh pod spodkem okna, takže
+   řez není vidět (sekce ho ořízne). Přelet z hera míří sem. */
+.portrait {
+  margin-bottom: -10vh;
+}
+
+/* ---------- Pilulka jako odkaz hlavičky (NavPill) ---------- */
+
+// Linka přes střed pilulky — jako linka hlavičky v preloaderu.
+.navLine {
+  position: absolute;
+  left: -0.6vw;
+  right: -0.6vw;
+  top: 50%;
+  height: 0;
+  border-top: 1px dashed rgba(255, 255, 255, 0.7);
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+
+// Rámeček, který se rozevře z linky (výška 0 → plná).
+.navOpen {
+  position: absolute;
+  inset: 0;
+  border: 1px dashed rgba(255, 255, 255, 0.75);
+  border-radius: 999px;
+  transform-origin: 50% 50%;
+  pointer-events: none;
+}
+
+// Pořadové číslo nad pilulkou („01").
+.navNumber {
+  position: absolute;
+  left: 0.6vw;
+  bottom: calc(100% + 3px);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: $accent;
+  pointer-events: none;
+}
+
+// Výběr duplikátu během tahu.
+.navSelect {
+  position: absolute;
+  inset: -4px;
+  border: 1px solid $accent;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+/* ---------- Výběr a najetí (designer.tsx), kurzor návštěvníka ---------- */
+
+
+// Výběr vrstvy: rámeček s čtvercovými úchyty a popiskem.
+.designSelection {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 59;
+  border: 1px solid $accent;
+  pointer-events: none;
+
+  // Najetí: čárkovaný zaoblený rámeček — stejný jako pilulky.
+  &[data-variant="hover"] {
+    margin: -8px;
+    padding: 8px;
+    box-sizing: content-box;
+    border: 1px dashed rgba(255, 255, 255, 0.85);
+    border-radius: 14px;
+  }
+}
+
+.designHandle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border: 1px solid $accent;
+  background: #ffffff;
+
+  &[data-at="tl"] {
+    left: -4.5px;
+    top: -4.5px;
+  }
+
+  &[data-at="tr"] {
+    right: -4.5px;
+    top: -4.5px;
+  }
+
+  &[data-at="br"] {
+    right: -4.5px;
+    bottom: -4.5px;
+  }
+
+  &[data-at="bl"] {
+    left: -4.5px;
+    bottom: -4.5px;
+  }
+}
+
+.designSelectionLabel {
+  position: absolute;
+  left: 50%;
+  bottom: -26px;
+  transform: translateX(-50%);
+  padding: 3px 7px;
+  border-radius: 3px;
+  background: $accent;
+  color: #141414;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+/* ---------- Panel vrstev nad nástroji ---------- */
+
+.toolsBlock {
+  position: relative;
+}
+
+// Panely editoru (portál, pevně vlevo nahoře): vrstvy a pod nimi toast se
+// zkratkou. Měřítko a průhlednost píše choreografie.
+// Pod logem hlavičky (stejné odsazení zleva jako hlavička, 3vh), o kus níž.
+.toolPanels {
+  position: fixed;
+  // Od levého okraje rámu obsahu (strop 2560px, globals.scss).
+  left: calc(var(--frame-x) + 3vh);
+  top: calc(var(--frame-y) + 5.75rem + 1vh + 30px);
+  z-index: 58;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+// Vrstvy — nové přibývají nahoře, vidět jsou poslední čtyři.
+.layersPanel {
+  position: relative;
+  width: clamp(14rem, 15vw, 22rem);
+  padding: 0.65rem 0.6rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: rgba(28, 28, 28, 0.78);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  box-shadow: 0 1.4vh 3vh rgba(0, 0, 0, 0.22);
+  pointer-events: none;
+}
+
+.layersTitle {
+  display: block;
+  margin: 0 0.45rem 0.55rem;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.layersList {
+  // Tři řádky — panel se zkratkami se vejde mezi hlavičku a nástroje.
+  max-height: 6.2rem;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.layersRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  overflow: hidden;
+  padding: 0.32rem 0.45rem;
+  border-radius: 5px;
+  font-size: 14px;
+  white-space: nowrap;
+
+  &[data-active] {
+    background: rgba(190, 201, 72, 0.2);
+    color: $accent;
+  }
+}
+
+.layersIcon {
+  width: 1.1rem;
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.layersName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Karty v balíčku (CardSwap) ---------- */
+
+// Karta je v balíčku 880 × 1120 a balíček se zmenšuje na výšku sekce —
+// rozměry v em od základu 2rem, aby obsah škáloval s kartou.
+.swapCard {
+  display: flex;
+  flex-direction: column;
+  padding: 3.2em 2.2em 2.2em;
+  font-size: 2rem;
+
+  .cardTitle {
+    margin-bottom: 0.6em;
+    font-size: 2.6em;
+  }
+
+  .cardLabel {
+    font-size: 0.75em;
+  }
+
+  .cardLead {
+    margin: 0 0 1.4em;
+    font-size: 1em;
+    line-height: 1.5;
+  }
+
+  .cardTags {
+    margin-bottom: auto;
+    font-size: 1em;
+  }
+
+  .cardTag {
+    font-size: 0.9em;
+  }
+
+  .cardCta {
+    margin-top: auto;
+    font-size: 0.95em;
+  }
+}
+
+// Pořadové číslo karty vpravo nahoře.
+.swapNumber {
+  position: absolute;
+  top: 1.4rem;
+  right: 1.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: #141414;
+}
+
+/* ---------- Odchod prvků a letící portrét ---------- */
+
+// Prvek s rámečkem odchodu (ExitFrame) — rámeček leží přes něj.
+.exitHost {
+  position: relative;
+}
+
+// Rámeček odchodu: čárkovaný, tečky v rozích (jako stavba); pilulka zaoblená.
+.exitFrame {
+  position: absolute;
+  z-index: 6;
+  border: 1px dashed rgba(255, 255, 255, 0.75);
+  pointer-events: none;
+
+  &[data-round] {
+    border-radius: 999px;
+  }
+
+  > span {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: $accent;
+  }
+
+  > [data-at="tl"] {
+    left: -3px;
+    top: -3px;
+  }
+
+  > [data-at="tr"] {
+    right: -3px;
+    top: -3px;
+  }
+
+  > [data-at="br"] {
+    right: -3px;
+    bottom: -3px;
+  }
+
+  > [data-at="bl"] {
+    left: -3px;
+    bottom: -3px;
+  }
+}
+
+// Portrét, který myš nese do Procesu — nad stránkou, nic ho neořízne.
+.flightImage {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 57;
+  object-fit: contain;
+  object-position: bottom center;
+  pointer-events: none;
+}
+
+/* ---------- Toast se zkratkou (pod vrstvami) ---------- */
+
+.shortcutToast {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0.85rem 0.5rem 0.6rem;
+  border: 1px solid rgba(190, 201, 72, 0.45);
+  border-radius: 10px;
+  background: rgba(28, 28, 28, 0.86);
+  backdrop-filter: blur(10px);
+  color: $accent;
+  box-shadow: 0 1.4vh 3vh rgba(0, 0, 0, 0.25);
+  transform-origin: 0 0;
+}
+
+.shortcutLabel {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.shortcutKeys {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.shortcutPlus {
+  margin: 0 0.25rem;
+  font-size: 11px;
+  color: #fff;
+}
+
+// Klávesa — v toastu „zmáčknutá" (v barvě akcentu).
+.keycap {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.7rem;
+  padding: 0.14rem 0.45rem;
+  border: 1px solid $accent;
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: $accent;
+  color: #141414;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+// Výběr tažením: průsvitný obdélník v barvě akcentu.
+.designSelection[data-variant="marquee"] {
+  border: 1px solid $accent;
+  background: rgba(190, 201, 72, 0.12);
+}
+
+/* ---------- Tablet na výšku (lg-v, od 1000px) ---------- */
+// Základ pro zařízení na výšku. Místo tří sloupců nad sebou: nahoře řada
+// pilulek přes celou šířku obsahu, pod ní nadpis, text a výzva, a dole
+// portrét vlevo a balíček karet vpravo PŘES něj (pořadí jako na monitoru).
+// Lišta statistik dole, menší. Panel vrstev vpravo vedle
+// nadpisu — vlevo nahoře by ležel přes pilulky.
+// Píše se před blok na šířku: ten generátor přepisuje od své značky dál.
+@include lg-v {
+  .info {
+    padding-block: calc(5.75rem + 4vh) 2vh;
+  }
+
+  .inner {
+    grid-template-columns: 100%;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 3vh;
+  }
+
+  // Nahoře v jedné řadě: vlevo nadpis, text a výzva, vpravo pilulky
+  // v mřížce 2 × 2 (v DOM jsou pilulky první — order je pošle doprava).
+  .intro {
+    grid-area: 1 / 1;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 4vw;
+    padding: 0;
+  }
+
+  .headingBlock {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .toolsBlock {
+    order: 2;
+    flex: 0 0 auto;
+  }
+
+  .toolsLabel {
+    margin: 0 0 1.6vh;
+    font-size: 1.25vh;
+  }
+
+  .toolsLabelLine {
+    width: 3vw;
+    margin-top: 0.85vh;
+  }
+
+  // Pilulky v mřížce 2 × 2 vpravo, 0,9× proti dřívější řadě přes celou
+  // šířku (~21vw × 4,4vh → 19vw × 3,96vh), písmo a ikona s nimi.
+  .tools {
+    display: grid;
+    grid-template-columns: repeat(2, 19vw);
+    gap: 1.4vh 1.6vw;
+  }
+
+  .tool {
+    width: 19vw;
+    min-width: 0;
+    height: 3.96vh;
+    gap: 1.25vw;
+    padding-inline: 1.45vw;
+    font-size: 1.44vh;
+  }
+
+  .toolDot,
+  .toolIcon {
+    width: 2.7vh;
+    height: 2.7vh;
+  }
+
+  .heading {
+    margin: 0 0 1.6vh;
+    font-size: 3.9vh;
+  }
+
+  .lead {
+    max-width: none;
+    margin: 0 0 3vh;
+    font-size: 1.65vh;
+  }
+
+  .cta {
+    align-self: flex-start;
+    max-width: none;
+    gap: 2vw;
+    font-size: 1.45vh;
+  }
+
+  .ctaArrow svg {
+    width: 2.1vh;
+    height: 2.1vh;
+  }
+
+  // Portrét vlevo dole, řez v pase pod spodkem okna (jako na monitoru).
+  // Stojí tam, kde ho nechá hero po posunu tracku, a skoro stejně velký —
+  // přelet do Info je jen krátký posun.
+  .portrait {
+    grid-area: 2 / 1;
+    display: flex;
+    justify-self: start;
+    align-self: end;
+    height: 56vh;
+    margin: 0 0 -10vh -3vw;
+  }
+
+  // Balíček vpravo přes pravou půlku portrétu (obličej zůstává volný).
+  // CardSwap se na tabletu vejde do boxu celý (fitBy "both",
+  // info/index.tsx), proto box potřebuje i šířku.
+  .cardsBuild {
+    grid-area: 2 / 1;
+    justify-self: end;
+    align-self: center;
+    width: 60vw;
+    // Lišta statistik dole zabírá 6,5vh — balíček nad ní.
+    margin-bottom: 7vh;
+  }
+
+  .cards {
+    width: 100%;
+    height: 46vh;
+  }
+
+  // Lišta: hodnota nad popiskem a položky podle obsahu, ať se pět položek
+  // vejde na šířku.
+  .statsBar {
+    height: 6.5vh;
+  }
+
+  .stats {
+    width: 92vw;
+    margin-inline: auto;
+  }
+
+  .stat {
+    flex: 1 1 auto;
+    gap: 0.6vw;
+
+    .statBadge {
+      width: 2.2vh;
+      height: 2.2vh;
+    }
+
+    .statText {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.2vh;
+    }
+
+    .statValue {
+      font-size: 1.6vh;
+    }
+
+    .statLabel {
+      font-size: 1vh;
+    }
+  }
+
+  .stat > .sketchFill,
+  .stat > .sketchOutline {
+    padding-inline: 0.8vw;
+  }
+
+  .statBadge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  // Panel vrstev vpravo vedle nadpisu, roste od pravého horního rohu.
+  .toolPanels {
+    left: auto;
+    right: calc(var(--frame-x) + 5vw);
+    top: calc(var(--frame-y) + 5.75rem + 24vh);
+    align-items: flex-end;
+    transform-origin: 100% 0;
+  }
+}
+
+/* ---------- Responzivita na šířku (telefon → notebook → monitor) ---------- */
+// Všechno na šířku od telefonu po monitor. Základ je malý notebook (md,
+// 1200px); k monitoru (2560) hodnoty rostou po přímce a dávají tam přesně
+// původní hodnotu, pod md (tablet, telefon) klesají v poměru šířky:
+//  - fluid()  pevné rem, písmo ne pod 11px,
+//  - fluid-ui() totéž pro panely nástroje (Vrstvy, Text, toast) — celé,
+//    jedním poměrem ($fluid ui-ratio),
+//  - fit-vh() drží písmo ve vh v poměru k vw sloupcům i na užší obrazovce.
+// (Vše v styles/system/_mixins.scss.) Zařízení s jinou výškou (tablet,
+// telefon na šířku) mají vlastní bloky pod tímhle.
+@include xxs-h {
+  .toolsLabel {
+    font-size: clamp(ease-floor(0.5rem, 9px), fit-vh(1.42vh), 1.95rem);
+  }
+
+  .tool {
+    width: clamp(ease-floor(7rem), 10.9vw, 22rem);
+    height: clamp(ease-floor(2rem), 5.66vh, 7.65rem);
+    font-size: clamp(ease-floor(0.68rem, 9px), fit-vh(1.84vh), 2.5rem);
+  }
+
+  .toolDot {
+    width: clamp(ease-floor(1.1rem), 3.68vh, 5rem);
+    height: clamp(ease-floor(1.1rem), 3.68vh, 5rem);
+  }
+
+  .heading {
+    font-size: clamp(ease-floor(1.35rem, 9px), fit-vh(4.24vh), 5.75rem);
+  }
+
+  .lead {
+    font-size: clamp(ease-floor(0.7rem, 9px), fit-vh(1.7vh), 2.3rem);
+  }
+
+  .cta {
+    font-size: clamp(ease-floor(0.6rem, 9px), fit-vh(1.56vh), 2.1rem);
+  }
+
+  .ctaArrow svg {
+    width: clamp(ease-floor(0.8rem), 2.3vh, 3.1rem);
+    height: clamp(ease-floor(0.8rem), 2.3vh, 3.1rem);
+  }
+
+  .cardNavButton {
+    width: clamp(ease-floor(1.5rem), 4.24vh, 5.75rem);
+    height: clamp(ease-floor(1.5rem), 4.24vh, 5.75rem);
+
+    svg {
+      width: clamp(ease-floor(0.6rem), 1.7vh, 2.3rem);
+      height: clamp(ease-floor(0.6rem), 1.7vh, 2.3rem);
+    }
+  }
+
+  .cardLabel {
+    font-size: clamp(ease-floor(0.5rem, 9px), fit-vh(1.42vh), 1.95rem);
+  }
+
+  .cardTitle {
+    font-size: clamp(ease-floor(1.2rem, 9px), fit-vh(4.67vh), 6.3rem);
+  }
+
+  .cardLead {
+    font-size: clamp(ease-floor(0.7rem, 9px), fit-vh(1.7vh), 2.3rem);
+  }
+
+  .cardTag {
+    height: clamp(ease-floor(1.4rem), 4.24vh, 5.75rem);
+    font-size: clamp(ease-floor(0.62rem, 9px), fit-vh(1.56vh), 2.1rem);
+  }
+
+  .cardTagDot {
+    width: clamp(ease-floor(0.3rem), 0.85vh, 1.15rem);
+    height: clamp(ease-floor(0.3rem), 0.85vh, 1.15rem);
+  }
+
+  .cardCta {
+    font-size: clamp(ease-floor(0.68rem, 9px), fit-vh(1.7vh), 2.3rem);
+  }
+
+  .cardCtaArrow svg {
+    width: clamp(ease-floor(0.75rem), 2.1vh, 2.85rem);
+    height: clamp(ease-floor(0.75rem), 2.1vh, 2.85rem);
+  }
+
+  .cardNumber {
+    font-size: clamp(ease-floor(0.5rem, 9px), fit-vh(1.42vh), 1.95rem);
+  }
+
+  .cardStackedTitle {
+    font-size: clamp(ease-floor(0.68rem, 9px), fit-vh(1.84vh), 2.5rem);
+  }
+
+  .stat {
+    .statValue {
+      font-size: clamp(ease-floor(0.8rem, 9px), fit-vh(1.9vh), 2.4rem);
+    }
+  }
+
+  .statBadge {
+    width: clamp(ease-floor(1.5rem), 4.8vh, 6.5rem);
+    height: clamp(ease-floor(1.5rem), 4.8vh, 6.5rem);
+  }
+
+  .statValue {
+    font-size: clamp(ease-floor(0.9rem, 9px), fit-vh(2.69vh), 3.65rem);
+  }
+
+  .statLabel {
+    font-size: clamp(ease-floor(0.6rem, 9px), fit-vh(1.56vh), 2.1rem);
+  }
+
+  .toolIcon {
+    width: clamp(ease-floor(1.1rem), 3.68vh, 5rem);
+    height: clamp(ease-floor(1.1rem), 3.68vh, 5rem);
+  }
+
+  .toolPanels {
+    gap: fluid-ui(0.6rem);
+  }
+
+  .layersPanel {
+    padding: fluid-ui(0.65rem) fluid-ui(0.6rem) fluid-ui(0.5rem);
+    border-radius: fluid-ui(10px);
+  }
+
+  .layersTitle {
+    margin: 0 fluid-ui(0.45rem) fluid-ui(0.55rem);
+    font-size: fluid-ui(11px, 9px);
+  }
+
+  .layersList {
+    max-height: fluid-ui(6.2rem);
+  }
+
+  .layersRow {
+    gap: fluid-ui(0.6rem);
+    padding: fluid-ui(0.32rem) fluid-ui(0.45rem);
+    border-radius: fluid-ui(5px);
+    font-size: fluid-ui(14px, 9px);
+  }
+
+  .layersIcon {
+    width: fluid-ui(1.1rem);
+    font-size: fluid-ui(12px, 9px);
+  }
+
+  // Panely těsně pod hlavičkou (ta se v md zmenšuje, layout/header). Mezera
+  // 30px pod ní na notebooku skoro mizí — panel jinak ležel přes nástroje.
+  .toolPanels {
+    top: calc(var(--frame-y) + #{fluid(5.75rem)} + 1vh + #{fluid(30px, 0)});
+  }
+
+  // Portrét a balíček karet stojí ve vw sloupcích, ale měří se na výšku —
+  // na užší obrazovce by přerostly sloupec (karty přes pravý okraj).
+  .portrait {
+    height: fit-vh(79.5vh);
+  }
+
+  // Balíček se zmenšuje na výšku tohohle boxu (CardSwap fitBy="height"):
+  // na notebooku 0,85×.
+  .cards {
+    height: fluid-scale(fit-vh(71.7vh), 0.85, 935.7px);
+  }
+
+  // Panel vrstev: šířka 15vw nechávala na notebooku 14px písmo v úzkém
+  // panelu. Šířka teď klesá spolu s obsahem (fluid-ui), na monitoru 22rem.
+  .layersPanel {
+    width: fluid(22rem, 0.42);
+  }
+
+  // Toast se zkratkou (Ctrl + D …) menší než panel vrstev nad ním.
+  .shortcutToast {
+    gap: fluid(0.7rem, 0.6);
+    padding: fluid(0.5rem, 0.6) fluid(0.85rem, 0.6) fluid(0.5rem, 0.6) fluid(0.6rem, 0.6);
+    border-radius: fluid(10px, 0.6);
+  }
+
+  .shortcutLabel {
+    font-size: fluid(13px, 0.6, 9px);
+  }
+
+  .shortcutPlus {
+    margin: 0 fluid(0.25rem, 0.6);
+    font-size: fluid(11px, 0.6, 8px);
+  }
+
+  .keycap {
+    min-width: fluid(1.7rem, 0.6);
+    padding: fluid(0.14rem, 0.6) fluid(0.45rem, 0.6);
+    border-radius: fluid(5px, 0.6);
+    font-size: fluid(12px, 0.6, 8.5px);
+  }
+
+  // Telefon na šířku: panel vrstev a toast se zkratkou se do 320–430px výšky
+  // nevejdou, aniž by ležely přes nástroje — vypnuté. Umělá myš i panel Text
+  // v Procesu zůstávají.
+  @include phs-h {
+    .toolPanels {
+      display: none;
+    }
+  }
+
+  // Nejmenší telefon na šířku (568 × 320): pilulka nástroje o kus širší
+  // a písmo v ní 8px, jinak se „Canva Pro“ nevejde.
+  @include phs-h {
+    @media (max-width: 699.98px) {
+      .tool {
+        width: 12.5vw;
+        font-size: 8px;
+      }
     }
   }
 }

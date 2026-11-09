@@ -15,6 +15,8 @@ const blocks = [
         page: 'about',
         title: 'Pojďme se poznat',
         headline: 'Něco\n*o mně*',
+        // Popisky svislé lišty vlevo: 0 jméno sekce, 1 nápověda posunu.
+        items: [{ label: 'O mně' }, { label: 'Objevujte posunutím' }],
         image: { image: '/assets/rest/main_photo.png', alt: 'Sabina Hudrmentová' },
     },
     {

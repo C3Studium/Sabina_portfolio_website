@@ -15,15 +15,16 @@
 // JEDNOTKY: vh/vw se štědrými stropy v clamp(), jako zbytek webu.
 
 $accent: #bec948;
-$ink: #2e2e2e;
-$ink-soft: #4f4f4f;
-$ink-muted: rgba(46, 46, 46, 0.55);
+// Sazba ve třech barvách: bílá, zelená a uhlově černá (žádné šedé).
+$ink: #141414;
+$ink-soft: $ink;
+$ink-muted: $ink;
 $backdrop: #9c9c9c;
 
 // Karty jsou jediné tmavé plochy na stránce, mají vlastní stupnici.
 $card: #1b1b1b;
-$card-text: #f0efec;
-$card-muted: #96968f;
+$card-text: #ffffff;
+$card-muted: #ffffff;
 $card-line: rgba(255, 255, 255, 0.12);
 
 .about {

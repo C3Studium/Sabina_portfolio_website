@@ -9,13 +9,14 @@
 // `data.key` pozná, co už založil), v typu je to skryté pole.
 import { PROJECTS } from '../../src/lib/cms/projects.ts'
 
-const project = ({ slug, title, tagline, tone, order, image, alt }) => ({
+const project = ({ slug, title, tagline, tone, order, image, alt, featured = false, cardCta = '' }) => ({
     type: 'project',
     key: `project.${slug}`,
     title,
     slug,
     tagline,
     perex: '',
+    goals: [],
     body: '',
     // Značka k nahrání: runner soubor uloží do knihovny médií a nahradí ji
     // { id, url, alt, width, height }.
@@ -23,6 +24,9 @@ const project = ({ slug, title, tagline, tone, order, image, alt }) => ({
     gallery: [],
     tone,
     order,
+    // Karta v galerii úvodní stránky a text jejího tlačítka.
+    featured,
+    cardCta,
 })
 
 export const blocks = [
@@ -42,9 +46,25 @@ export const blocks = [
         ],
     },
 
+    // Drobné popisky seznamu i detailu — pořadí = PROJECTS.labels v cms/projects.ts.
+    {
+        key: PROJECTS.labels,
+        page: 'projects',
+        title: 'Projekty — popisky',
+        items: [
+            { label: 'Objevujte posunutím' }, // 0 nápověda posunu
+            { label: 'Zobrazit projekt' }, // 1 odkaz karty
+            { label: 'Case study' }, // 2 štítek nad názvem v detailu
+            { label: 'Další projekt' }, // 3 odkaz na další projekt
+            { label: 'Cíle projektu' }, // 4 nadpis cílů v detailu
+        ],
+    },
+
     // `tone` střídá tmavou a světlou kartu, `order` drží pořadí „01 / 06".
     project({
         slug: 'gummylife',
+        featured: true,
+        cardCta: 'Zjistit víc',
         title: 'Gummylife',
         tagline: 'Bannerová kampaň',
         tone: 'dark',
@@ -54,6 +74,8 @@ export const blocks = [
     }),
     project({
         slug: 'vecicky',
+        featured: true,
+        cardCta: 'Zjistit víc',
         title: 'Věcicky',
         tagline: 'Sezónní kampaň',
         tone: 'light',
@@ -63,6 +85,8 @@ export const blocks = [
     }),
     project({
         slug: 'bruzek',
+        featured: true,
+        cardCta: 'Zjistit víc',
         title: 'Bruzek',
         tagline: 'Digitální kampaň',
         tone: 'dark',
@@ -90,6 +114,8 @@ export const blocks = [
     }),
     project({
         slug: 'samurai',
+        featured: true,
+        cardCta: 'Chci vědět víc',
         title: 'Samurai',
         tagline: 'Uvedení produktu',
         tone: 'light',

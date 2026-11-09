@@ -18,4 +18,9 @@ export default defineSite({
     pages: [homepage, aboutPage, projectsPage, ...projectPages],
     globals,
     surfaces,
+    // Knihovní modul recenzí je fronta ke schválení recenzí z formuláře. Tenhle
+    // web takový formulář nemá — reference zapisuje Sabina sama do vlastního
+    // typu `reference` (src/lib/valecms.types.ts). Vypnuto, ať Studio nenabízí
+    // dvě různé „Recenze".
+    reviews: false,
 })

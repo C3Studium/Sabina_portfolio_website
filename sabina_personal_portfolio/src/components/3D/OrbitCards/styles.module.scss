@@ -1,0 +1,224 @@
+@use "../../../styles/system/_shortcuts.scss" as *;
+
+// OrbitCards — vzhled obalu. Samotné karty kreslí WebGL v engine.ts,
+// tady je jen kontejner, popisek pod kartou a skryté prvky pro čtečky.
+// Next v pages routeru nepovolí globální CSS mimo _app, proto modul.
+
+.root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  overflow: hidden;
+  outline: none;
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in oklch, currentColor 35%, transparent);
+    outline-offset: -2px;
+  }
+}
+
+// Plocha, na kterou engine vloží canvas a poslouchá ukazatel.
+// pan-y nechá svislý scroll stránky projít i přes karty.
+.stage {
+  position: absolute;
+  inset: 0;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+// Popisek karty vpředu. Průhlednost řídí engine inline každý snímek.
+.caption {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-50%);
+  will-change: opacity;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+// Záloha, když WebGL nejde vytvořit: obyčejná mřížka obrázků.
+.fallback {
+  position: absolute;
+  inset: 12% 8%;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 12px;
+
+  img {
+    object-fit: cover;
+  }
+}
+
+// Vizuálně skryté, ale dostupné čtečkám obrazovky.
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- HTML vrstva nad kartou pod myší ---------- */
+
+// Rámeček ve stylu MeasureText. Kreslí ho overlay.ts; leží nad WebGL
+// plátnem (to engine vkládá do .stage až za tyhle prvky, bez z-indexu).
+.frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+// Kotva panelu: levý dolní roh karty. overlay.ts sem každý snímek zapíše
+// translate + rotate podle spodní hrany karty a šířku karty.
+.panel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 0;
+  z-index: 2;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+// Obsah stojí na spodní hraně karty, uvnitř ní.
+.panelInner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: clamp(1rem, 1.6vw, 1.6rem);
+  color: #fff;
+  // Jemný přechod do tmava pod textem, ať je čitelný na každém banneru.
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+
+  // Postupné odhalení: každá položka má --i a přijede o kus později.
+  > * {
+    opacity: 0;
+    transform: translateY(10px);
+    transition:
+      opacity 0.28s ease,
+      transform 0.38s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition-delay: 0s;
+  }
+}
+
+.panel[data-shown="true"] .panelInner > * {
+  opacity: 1;
+  transform: none;
+  // Nejdřív se dokreslí rámeček, pak text po řádcích.
+  transition-delay: calc(0.12s + var(--i, 0) * 0.07s);
+}
+
+.panelTitle {
+  font-size: clamp(1.1rem, 1.5vw, 1.6rem);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+
+// Tlumení barvou, ne opacity — opacity řídí postupné odhalení.
+.panelText {
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  color: #fff;
+}
+
+// Odkaz je jediná část panelu, která bere myš.
+.panelCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+  padding: 0.55rem 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: none;
+  pointer-events: auto;
+  cursor: pointer;
+
+  svg {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.25s ease;
+  }
+
+  &:hover svg {
+    transform: translateX(3px);
+  }
+}
+
+.panel[data-shown="false"] .panelCta {
+  pointer-events: none;
+}
+
+/* ---------- Responzivita na šířku (telefon → notebook → monitor) ---------- */
+// Všechno na šířku od telefonu po monitor. Základ je malý notebook (md,
+// 1200px); k monitoru (2560) hodnoty rostou po přímce a dávají tam přesně
+// původní hodnotu, pod md (tablet, telefon) klesají v poměru šířky:
+//  - fluid()  pevné rem, písmo ne pod 11px,
+//  - fluid-ui() totéž pro panely nástroje (Vrstvy, Text, toast) — celé,
+//    jedním poměrem ($fluid ui-ratio),
+//  - fit-vh() drží písmo ve vh v poměru k vw sloupcům i na užší obrazovce.
+// (Vše v styles/system/_mixins.scss.) Zařízení s jinou výškou (tablet,
+// telefon na šířku) mají vlastní bloky pod tímhle.
+@include xxs-h {
+  .panelInner {
+    gap: fluid(0.45rem);
+    padding: clamp(ease-floor(1rem), 1.6vw, 1.6rem);
+  }
+
+  .panelTitle {
+    font-size: clamp(ease-floor(1.1rem, 9px), 1.5vw, 1.6rem);
+  }
+
+  .panelText {
+    font-size: fluid(0.85rem, null, 11px);
+  }
+
+  .panelCta {
+    gap: fluid(0.6rem);
+    margin-top: fluid(0.4rem);
+    padding: fluid(0.55rem) fluid(0.95rem);
+    font-size: fluid(0.72rem, null, 11px);
+  }
+}

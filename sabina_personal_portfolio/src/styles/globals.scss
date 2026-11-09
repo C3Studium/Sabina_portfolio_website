@@ -11,6 +11,33 @@
 
 * { box-sizing: border-box; }
 
+/* Rám obsahu: vždy přes celou VÝŠKU okna (100vh, bez stropu), šířka nejvýš
+   16 : 9 podle výšky (100vh / 9 × 16). Na širším okně (ultrawide) stojí
+   obsah uprostřed a po stranách je vidět pozadí (shader přes celé okno).
+   --vw / --vh jsou „vw / vh rámu“ — postcss/viewport-frame.cjs na ně
+   přepisuje každé vw / vh ve stylech webu. --frame-x je levý (i pravý)
+   okraj rámu pro fixní prvky (hlavička, panely, modal); procenta se
+   dopočítají až u prvku, tedy z šířky okna bez posuvníku.
+   --frame-h / --frame-y (výška přišpendlených sekcí a odsazení shora) jsou
+   celé okno — zůstávají kvůli místům, která je čtou. */
+:root {
+  --vw: 1vw;
+  --vh: 1vh;
+  --frame-x: 0px;
+  --frame-h: 100svh;
+  --frame-y: 0px;
+}
+
+/* 16 : 9 podle výšky platí od notebooku (md, na šířku). Telefony a tablety
+   na šířku (pod 1200px) bývají širší než 16 : 9 a jedou dál přes celou
+   šířku. JS dvojče: viewFrame() v lib/fluid.ts. */
+@media (min-width: 1200px) and (orientation: landscape) {
+  :root {
+    --vw: min(1vw, calc(1vh * 16 / 9));
+    --frame-x: max(0px, (100% - 100vh * 16 / 9) / 2);
+  }
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -45,7 +72,7 @@ html {
 
 body {
   font-family: var(--font-poppins), system-ui, -apple-system, "Segoe UI", sans-serif;
-  color: #2e2e2e;
+  color: #141414;
   background: transparent;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -68,6 +95,12 @@ main,
 footer {
   position: relative;
   z-index: 1;
+  // Rám obsahu (viz :root nahoře). clip, ne hidden — sticky uvnitř musí
+  // zůstat vázané na okno.
+  // Šířka rámu: 100 × --vw (od md nejvýš 16 : 9 podle výšky okna).
+  max-width: calc(100 * var(--vw));
+  margin-inline: auto;
+  overflow-x: clip;
 }
 
 /* --- z Home.module.css ---------------------------------------------

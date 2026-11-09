@@ -1,7 +1,7 @@
 import type { GetStaticProps } from "next";
 import Head from "next/head";
 import { getPageContent } from "@c3studium/valecms/server/site";
-import HeroList, { type ListCopy } from "@/components/projects/hero-list";
+import HeroList, { type LabelsCopy, type ListCopy } from "@/components/projects/hero-list";
 import { getGlobalCopy, type GlobalCopy } from "@/lib/site/globals";
 // Import odsud zároveň registruje čtečku typu `project` (registerSources při
 // načtení modulu) — musí proběhnout dřív, než `getPageContent` sáhne po `sources`.
@@ -13,6 +13,7 @@ const REVALIDATE_SECONDS = 600;
 
 type PageContent = {
   list?: ListCopy;
+  labels?: LabelsCopy;
   projects?: Project[];
 };
 
@@ -52,7 +53,11 @@ export default function ProjectsPage({ content }: Props) {
         />
       </Head>
       <main>
-        <HeroList copy={content?.list ?? null} projects={content?.projects ?? null} />
+        <HeroList
+          copy={content?.list ?? null}
+          labels={content?.labels ?? null}
+          projects={content?.projects ?? null}
+        />
         <section id="projects-grid" />
       </main>
     </>
