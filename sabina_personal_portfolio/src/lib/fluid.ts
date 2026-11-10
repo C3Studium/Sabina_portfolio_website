@@ -49,8 +49,11 @@ export function useLandscapeFluid(): LandscapeFluid {
 // ---------------------------------------------------------------------------
 // Na výšku. Dotazy musí sedět s CSS mixiny `v()` (styles/system, mapa $v).
 
-/** Tablet na výšku od 1000px — CSS `@include lg-v`. */
-export const PORTRAIT_TABLET = "(min-width: 1000px) and (orientation: portrait)";
+/** Kompozice na výšku (tablet i telefon, od 320px) — CSS `@include xs-v`. */
+export const PORTRAIT_TABLET = "(min-width: 320px) and (orientation: portrait)";
+
+/** Telefon na výšku (pod 600px) — CSS bloky „Telefon na výšku" za blokem xs-v. */
+export const PORTRAIT_PHONE = "(max-width: 599.98px) and (orientation: portrait)";
 
 /** Platí media query? Na serveru a do hydratace false. */
 export function useMedia(query: string): boolean {

@@ -348,56 +348,6 @@ $track-width: 160vw;
 
 /* ---------- Responsivita ---------- */
 
-// Úzké okno NA VÝŠKU (telefon, tablet). Na šířku zůstává kompozice
-// z notebooku — telefony a tablety na šířku řeší blok Responzivita dole.
-@media (max-width: 820px) and (orientation: portrait) {
-  .panelHero {
-    align-items: flex-start;
-  }
-
-  .content {
-    padding-block: calc(#{$header-height} + 3.5rem) 0;
-    padding-inline: $gutter;
-  }
-
-  .headline {
-    font-size: clamp(2.5rem, 12vw, 4.5rem);
-  }
-
-  .portrait {
-    right: -8%;
-    height: 62%;
-  }
-
-  .scrollHint {
-    display: none;
-  }
-
-  .panelWork {
-    padding-left: clamp(1rem, 4vw, 3rem);
-  }
-
-  .scene {
-    perspective: 1400px;
-  }
-
-  .stage {
-    gap: 0.8rem;
-    margin-right: 2vw;
-    transform: rotateY(-26deg);
-  }
-
-  .card {
-    width: clamp(12vw, 26vh, 20vw);
-    height: 48vh;
-    border-radius: 16px;
-  }
-
-  .galleryHintLabel {
-    display: none;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .card,
   .cardCtaArrow svg,
@@ -467,13 +417,13 @@ $track-width: 160vw;
   -webkit-mask-image: linear-gradient(90deg, transparent 0, transparent 6vw, #000 13vw);
 }
 
-/* ---------- Tablet na výšku (lg-v, od 1000px) ---------- */
+/* ---------- Na výšku: tablet i telefon (xs-v, od 320px; základ je tablet 1128 × 1440) ---------- */
 // Základ pro zařízení na výšku. Titulek vlevo nahoře přes celou šířku,
 // portrét (a bannery za ním, měří se podle něj) menší vpravo dole —
 // přelet do Info pak jede jen kousek. Částice jsou na výšku vypnuté
 // (hero/index.tsx). Píše se před blok na šířku: ten generátor přepisuje od
 // své značky dál.
-@include lg-v {
+@include xs-v {
   .panelHero {
     align-items: flex-start;
   }
@@ -523,6 +473,24 @@ $track-width: 160vw;
     height: 100vh;
     mask-image: linear-gradient(90deg, transparent 0, transparent 10vw, #000 18vw);
     -webkit-mask-image: linear-gradient(90deg, transparent 0, transparent 10vw, #000 18vw);
+  }
+}
+
+/* ---------- Telefon na výšku (pod 600px) ---------- */
+// Kompozice z tabletu, jen vedle velkého portrétu se karta nevejde:
+// portrét neroste a s trackem dojede k levému okraji (PHONE_GROW / PHONE_SHIFT_VW
+// v hero/index.tsx), karta (cardHeight 0,4) stojí vpravo od obličeje PŘED
+// tělem — střed čočky na 66vw okna (panel galerie končí na 48vw, scéna
+// o 32vw vlevo).
+@media (max-width: 599.98px) and (orientation: portrait) {
+  .flex {
+    left: -32vw;
+    z-index: 2;
+  }
+
+  .galleryHint {
+    right: 12vw;
+    zoom: 1;
   }
 }
 

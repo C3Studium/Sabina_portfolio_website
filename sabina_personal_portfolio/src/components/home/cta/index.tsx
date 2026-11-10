@@ -13,7 +13,7 @@ import { BuildFrame, SketchText, softMask } from "@/components/home/info/reveal"
 import { ease, within, type Window } from "@/components/home/info/choreography";
 import { editableDoc, editableIn } from "@c3studium/valecms/edit";
 import type { HeroWord, Reference } from "@/lib/site/home";
-import { lerp, useLandscapeFluid } from "@/lib/fluid";
+import { lerp, PORTRAIT_TABLET, useLandscapeFluid, useMedia } from "@/lib/fluid";
 import Lines, {
   hasLines,
   picture,
@@ -379,6 +379,10 @@ export default function Cta({
   const [arrived, setArrived] = useState(still);
   // Částice jako v heru: jen na šířku od md, na notebooku čtvrtina a 0,25px.
   const fluid = useLandscapeFluid();
+  // Na výšku stojí pás recenzí vodorovně mezi podtitulem a výzvou (styles,
+  // blok xs-v) — karty zůstávají na výšku, jede jen pás.
+  const portraitLayout = useMedia(PORTRAIT_TABLET);
+  const stripOrientation = portraitLayout ? "horizontal" : "vertical";
   // Zelené slovo nadpisu se po příjezdu dokola přelévá (TITLE_MORPH).
   const [titleWord, setTitleWord] = useState(0);
   useEffect(() => {
@@ -650,9 +654,10 @@ export default function Cta({
           >
             {cards ? (
               <ScrollBend
+                key={stripOrientation}
                 ref={strip}
                 items={cards.items}
-                orientation="vertical"
+                orientation={stripOrientation}
                 itemSize={1}
                 aspectRatio={cards.aspect}
                 autoScroll={0}

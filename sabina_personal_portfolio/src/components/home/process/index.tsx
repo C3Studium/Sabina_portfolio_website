@@ -42,7 +42,7 @@ import { editableDoc, editableIn } from "@c3studium/valecms/edit";
 import type { ProcessDetail, ProcessStep } from "@/lib/site/home";
 import Lines, { hasLines, picture, text, type MarkedLine } from "../lines";
 import styles from "./styles.module.scss";
-import { cvw, cvh } from "@/lib/fluid";
+import { cvw, cvh, PORTRAIT_TABLET, useMedia } from "@/lib/fluid";
 
 // Úvod, kroky 01–06, výzva a CTA jako dlaždice DollyGallery (components/3D):
 // kamera jimi projíždí do hloubky podle scrollu. Dlaždice nese celý krok,
@@ -80,6 +80,27 @@ const DOLLY = {
     { x: 0.02 },
     { x: 0.02 },
     { fit: { width: 0.8, height: 1 }, x: 0, y: 0 },
+    { fit: { width: 1, height: 1 }, x: 0, y: 0 },
+  ],
+};
+
+// Tablet na výšku: úvod přes celou šířku, kroky skoro přes celou (text nad
+// kompozicí, ta je zmenšená celá — styles, blok xs-v), žádné střídání do
+// stran. Výzva a CTA jako na šířku.
+const DOLLY_TABLET = {
+  /** Dlaždice stojí na výšku za sebou uprostřed — další z dálky jen
+   *  naznačená, jinak by (hlavně velký text výzvy) prosvítala přes krok. */
+  revealRange: 1.1,
+  fit: { width: 0.94, height: 1 },
+  tiles: [
+    { fit: { width: 1, height: 1 }, x: 0, y: 0 },
+    { x: 0 },
+    { x: 0 },
+    { x: 0 },
+    { x: 0 },
+    { x: 0 },
+    { x: 0 },
+    { fit: { width: 0.9, height: 1 }, x: 0, y: 0 },
     { fit: { width: 1, height: 1 }, x: 0, y: 0 },
   ],
 };
@@ -785,8 +806,9 @@ const shotOf = (
 // kurzor návštěvníka se na ně nerozkládá.
 const NO_SNAP = { snap: false };
 
-// Úzké okno: kroky pod sebou (styles), bez stavby a bez umělé myši.
-const NARROW = "(max-width: 820px)";
+// Úzké okno na šířku (telefon): bez stavby a bez umělé myši. Na výšku
+// (tablet i telefon) jede Proces celý jako na tabletu — styles, blok xs-v.
+const NARROW = "(max-width: 820px) and (orientation: landscape)";
 const subscribeNarrow = (notify: () => void) => {
   const media = window.matchMedia(NARROW);
   media.addEventListener("change", notify);
@@ -892,6 +914,8 @@ export default function Process({
   const narrow = useSyncExternalStore(subscribeNarrow, readNarrow, () => false);
   // Hotový stav bez stavby a bez myši: Studio a úzké okno.
   const still = editing || narrow;
+  const tablet = useMedia(PORTRAIT_TABLET);
+  const dollyLayout = tablet ? DOLLY_TABLET : DOLLY;
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -1063,12 +1087,12 @@ export default function Process({
           label={eyebrow}
           offset={dolly}
           infinite={false}
-          fit={DOLLY.fit}
+          fit={dollyLayout.fit}
           perspective={DOLLY.perspective}
           spacing={DOLLY.spacing}
           spread={DOLLY.spread}
           scatter={0}
-          revealRange={DOLLY.revealRange}
+          revealRange={dollyLayout.revealRange}
           passRange={DOLLY.passRange}
           smooth={DOLLY.smooth}
           drift={DOLLY.drift}
@@ -1076,7 +1100,7 @@ export default function Process({
           tilt={0}
           parallaxX={0}
           parallaxY={0}
-          tiles={DOLLY.tiles}
+          tiles={dollyLayout.tiles}
           onFrame={(frame) => lineRef.current?.draw(frame)}
           items={[
             // ---------- Úvod: nadpis, text, nápověda a portrét ----------
@@ -1757,6 +1781,7 @@ export default function Process({
         shortcut={designer.ui.shortcut}
         opacity={designer.panelOpacity}
         scale={designer.panelScale}
+        className={styles.toolPanels}
       />
       <TextPanel
         opacity={designer.textPanel.opacity}

@@ -937,95 +937,6 @@ $line: rgba(46, 46, 46, 0.16);
 
 /* ---------- Responsivita ---------- */
 
-// Úzké okno NA VÝŠKU (telefon, tablet). Na šířku zůstává kompozice
-// z notebooku — telefony a tablety na šířku řeší blok Responzivita dole.
-@media (max-width: 1100px) and (orientation: portrait) {
-  .intro {
-    grid-template-columns: 44vw;
-  }
-
-  .portrait {
-    display: none;
-  }
-
-  .leadText,
-  .stepHead {
-    max-width: none;
-  }
-}
-
-// Úzké okno NA VÝŠKU (telefon, tablet). Na šířku zůstává kompozice
-// z notebooku — telefony a tablety na šířku řeší blok Responzivita dole.
-@media (max-width: 820px) and (orientation: portrait) {
-  // Na mobilu jízda do hloubky nedává smysl — dlaždice se rozbalí pod
-  // sebe. Engine píše polohy inline, proto !important.
-  .container {
-    height: auto;
-  }
-
-  .sticky {
-    position: static;
-    height: auto;
-    overflow: visible;
-  }
-
-  .curve,
-  .ctaAnchor {
-    display: none;
-  }
-
-  .dolly {
-    position: static;
-    height: auto;
-    overflow: visible;
-
-    > * {
-      position: static !important;
-    }
-  }
-
-  .dollyTile {
-    position: static !important;
-    width: 100% !important;
-    height: auto !important;
-    margin: 0 !important;
-    padding-inline: 6vw;
-    transform: none !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-    pointer-events: auto !important;
-  }
-
-  .intro {
-    height: auto;
-    grid-template-columns: 1fr;
-    padding: 8vh 0 0;
-  }
-
-  .step {
-    height: auto;
-    padding-block: 6vh 4vh;
-    padding-left: 0;
-  }
-
-  .lead {
-    height: auto;
-    padding-block: 4vh;
-  }
-
-  .briefComposition,
-  .conceptComposition,
-  .makeComposition,
-  .tuneComposition,
-  .deliverComposition {
-    height: 52vh;
-  }
-
-  .annotation {
-    display: none;
-  }
-}
-
 // Nápověda posunu pod textem (ScrollPlaceholder, vodorovná) — menší než
 // v heru. Přidá ji umělá myš (info/choreography.ts).
 .hint {
@@ -1342,6 +1253,127 @@ $line: rgba(46, 46, 46, 0.16);
   font-weight: 300;
   line-height: 1.55;
   color: #fff;
+}
+
+/* ---------- Na výšku: tablet i telefon (xs-v, od 320px; základ je tablet 1128 × 1440) ---------- */
+// Úvod: text přes šířku vlevo, portrét vpravo za ním, záda za pravým
+// okrajem okna. Kroky: text NAD kompozicí a kompozice zmenšená CELÁ —
+// --vw / --vh uvnitř kroku jsou „vw / vh" okna 16 : 9 široké jako
+// dlaždice (0,94 okna, index.tsx DOLLY_TABLET), takže obrázky, karty
+// i anotace drží poměry z monitoru. Hlava kroku má zpátky skutečné
+// jednotky. Píše se před blok na šířku: ten generátor přepisuje od své
+// značky dál.
+@include xs-v {
+  .intro {
+    position: relative;
+    display: block;
+    padding-left: 7vw;
+  }
+
+  .lead {
+    z-index: 2;
+    width: 64vw;
+    padding-block: calc(5.75rem + 6vh) 8vh;
+  }
+
+  .headline {
+    font-size: 6vh;
+  }
+
+  .leadText {
+    max-width: 52vw;
+    font-size: 1.9vh;
+  }
+
+  .portrait {
+    display: flex;
+    position: absolute;
+    right: -14vw;
+    bottom: 0;
+    height: 74vh;
+  }
+
+  .step {
+    --vw: 1.42vw;
+    --vh: 0.8vw;
+    // Blok (text + kompozice) zvednutý ode dna, ať stojí zhruba uprostřed
+    // pod hlavičkou — anotace se měří od spodku kroku, jedou s ním.
+    height: calc(100% - 12svh);
+  }
+
+  .stepHead {
+    --vw: 1vw;
+    --vh: 1vh;
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 74vw;
+    margin-bottom: 4vh;
+  }
+
+  // Panel Vrstvy v Procesu pod logem hlavičky (vlevo, odsazení hlavičky
+  // 3vh) — Info ho sem dotáhne (panelX/panelY v info/choreography).
+  .toolPanels.toolPanels {
+    left: calc(var(--frame-x) + 3vh);
+    right: auto;
+    top: calc(var(--frame-y) + 5.75rem + 1vh);
+    align-items: flex-start;
+    transform-origin: 0 0;
+  }
+
+  // Výzva menší — nadpis i podle šířky, ať se vejde i na užší okno.
+  .calloutHeadline {
+    font-size: min(7.2vh, 7.6vw);
+  }
+
+  .calloutEyebrow {
+    font-size: 1.75vh;
+  }
+
+  .calloutLead {
+    max-width: 60vw;
+    font-size: 1.8vh;
+  }
+}
+
+/* ---------- Telefon na výšku (pod 600px) ---------- */
+// Úvod: text přes celou šířku, portrét menší pod ním a víc za pravým
+// okrajem. Kroky: kompozice větší (okraje anotací smí utéct za okno),
+// hlava kroku přes šířku.
+@media (max-width: 599.98px) and (orientation: portrait) {
+  .intro {
+    padding-left: 6vw;
+  }
+
+  .lead {
+    width: 88vw;
+  }
+
+  .headline {
+    font-size: 10.5vw;
+  }
+
+  .leadText {
+    max-width: 80vw;
+  }
+
+  .portrait {
+    right: -26vw;
+    height: 52vh;
+  }
+
+  .step {
+    --vw: 1.85vw;
+    --vh: 1.04vw;
+  }
+
+  .stepHead {
+    width: 88vw;
+  }
+
+  .calloutLead {
+    max-width: none;
+  }
 }
 
 /* ---------- Responzivita na šířku (telefon → notebook → monitor) ---------- */

@@ -223,6 +223,61 @@ $roll: 0.42s cubic-bezier(0.22, 1, 0.36, 1);
   }
 }
 
+// Tlačítko menu — box jako výzva vedle něj, tři zelené čáry. Kde se
+// navigace vejde, je schované.
+.menuButton {
+  display: none;
+  place-items: center;
+  flex-shrink: 0;
+  // Výška jako výzva (3rem kroužek + 2 × 1rem odsazení).
+  width: 5rem;
+  height: 5rem;
+  margin-left: -1rem;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: rgba(70, 70, 66, 0.82);
+  color: $accent;
+  cursor: pointer;
+  transition: background 0.24s ease;
+
+  &:hover {
+    background: rgba(52, 52, 48, 0.92);
+  }
+}
+
+.menuLines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+  width: 1.6rem;
+
+  span {
+    display: block;
+    height: 2px;
+    border-radius: 1px;
+    background: currentColor;
+  }
+
+  // Prostřední čára kratší — drobný detail jako šipka u výzvy.
+  span:nth-child(2) {
+    width: 70%;
+    margin-left: auto;
+  }
+}
+
+// Místo navigace tlačítko menu (layout/menu) hned vedle výzvy — výzva se
+// odsune doprava (space-between by ji se třemi prvky dal doprostřed).
+@media (max-width: 1180px) and (orientation: portrait), (max-width: 899px) {
+  .menuButton {
+    display: grid;
+  }
+
+  .cta {
+    margin-left: auto;
+  }
+}
+
 @media (max-width: 560px) {
   .ctaLabel {
     display: none;
@@ -230,6 +285,51 @@ $roll: 0.42s cubic-bezier(0.22, 1, 0.36, 1);
 
   .cta {
     padding: 0.6rem;
+  }
+}
+
+// Telefon na výšku: značka, výzva (jen šipka) a menu se musí vejít vedle
+// sebe i na 360px — menší značka a dvě stejné čtvercové tlačítka.
+@media (max-width: 599.98px) and (orientation: portrait) {
+  .header {
+    gap: 0.6rem;
+    padding-inline: 4vw;
+  }
+
+  .brand {
+    gap: 0.5rem;
+  }
+
+  .brandMark {
+    height: 2.9rem;
+  }
+
+  .brandName {
+    font-size: 1.2rem;
+  }
+
+  .brandSurname {
+    font-size: 0.68rem;
+  }
+
+  .cta {
+    padding: 0.5rem;
+  }
+
+  .ctaArrow {
+    width: 2.6rem;
+    height: 2.6rem;
+
+    svg {
+      width: 1.35rem;
+      height: 1.35rem;
+    }
+  }
+
+  .menuButton {
+    width: 3.6rem;
+    height: 3.6rem;
+    margin-left: 0;
   }
 }
 

@@ -639,6 +639,8 @@ export default function Info({ copy = null, stack = null, stats = null, services
           shortcut={designer.shortcut}
           opacity={designer.panelOpacity}
           scale={designer.panelScale}
+          x={designer.panelX}
+          y={designer.panelY}
         />
         <DesignSelection {...designer.marquee} variant="marquee" />
         <DesignSelection {...designer.hover} variant="hover" />

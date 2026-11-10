@@ -563,118 +563,6 @@ $card-line: rgba(255, 255, 255, 0.15);
 
 /* ---------- Responsivita ---------- */
 
-// Pod 1100 px absolutní rozvržení nedává smysl — sekce se rozbalí do
-// běžného toku, portrét a dekorace odpadnou.
-// Úzké okno NA VÝŠKU (telefon, tablet). Na šířku zůstává kompozice
-// z notebooku — telefony a tablety na šířku řeší blok Responzivita dole.
-@media (max-width: 1100px) and (orientation: portrait) {
-  .portalBackdrop,
-  .portalVeil,
-  .portalFrame {
-    display: none;
-  }
-
-  .cta {
-    height: auto;
-    min-height: 100svh;
-    padding: 12vh 5vw 8vh;
-  }
-
-  .stage {
-    top: auto;
-    bottom: -34vh;
-    left: 8vw;
-    width: 110vw;
-    height: 76vh;
-  }
-
-  .swoosh,
-  .portrait {
-    display: none;
-  }
-
-  .inner {
-    position: static;
-    display: flex;
-    flex-direction: column;
-    gap: 6vh;
-  }
-
-  .intro,
-  .status,
-  .review,
-  .claim {
-    position: static;
-    inset: auto;
-    width: auto;
-    height: auto;
-  }
-
-  .intro {
-    max-width: 34rem;
-  }
-
-  .headline {
-    font-size: clamp(2.6rem, 13vw, 5rem);
-  }
-
-  .actionLabel {
-    font-size: clamp(1.6rem, 8vw, 3rem);
-  }
-
-  .lead,
-  .status,
-  .claim {
-    font-size: clamp(0.72rem, 2vw, 1.05rem);
-  }
-
-  .actionDisc {
-    width: clamp(3rem, 9vw, 4.5rem);
-    height: clamp(3rem, 9vw, 4.5rem);
-  }
-
-  .review {
-    max-width: 34rem;
-    padding: 4vh 6vw;
-  }
-
-  .reviewText {
-    font-size: clamp(0.85rem, 2.2vw, 1.05rem);
-  }
-
-  .reviewAuthor {
-    margin-top: 4vh;
-  }
-
-  .statValue {
-    font-size: clamp(1.4rem, 5vw, 2.2rem);
-  }
-
-  .reviewFrame,
-  .backgroundBanners,
-  .bannerArea {
-    display: none;
-  }
-
-  // Pás recenzí v toku.
-  .reviewStrip {
-    position: relative;
-    inset: auto;
-    width: 100%;
-    max-width: 34rem;
-    height: 70vh;
-  }
-
-  .claim {
-    grid-template-columns: auto;
-    letter-spacing: 0.18em;
-  }
-
-  .claimRule {
-    display: none;
-  }
-}
-
 // Logo klienta z recenze (dokument v Recenzích) — vyplní kroužek monogramu.
 .reviewLogo {
   width: 100%;
@@ -684,6 +572,184 @@ $card-line: rgba(255, 255, 255, 0.15);
 
 .reviewAvatar {
   overflow: hidden;
+}
+
+/* ---------- Na výšku: tablet i telefon (xs-v, od 320px; základ je tablet 1128 × 1440) ---------- */
+// Místo tří vrstev vedle sebe jeden sloupec vlevo: nadpis, podtitul, pás
+// recenzí NA ŠÍŘKU (ScrollBend horizontal, karty zůstávají na výšku —
+// index.tsx), pod ním výzva a stav. Písmo menší než na monitoru. Portrét
+// s bannery zůstává vpravo za sloupcem. .intro je `display: contents`, aby
+// pás (sourozenec .intro v DOM) mohl stát mezi podtitulem a výzvou.
+// Píše se před blok na šířku: ten generátor přepisuje od své značky dál.
+@include xs-v {
+  .inner {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: calc(5.75rem + 5vh) 7vw 0;
+  }
+
+  .intro {
+    display: contents;
+  }
+
+  // Bez obalu se z-indexem — položky sloupce si ho nesou samy (nad portrétem).
+  .headline,
+  .lead,
+  .actionHit,
+  .status {
+    position: relative;
+    z-index: 5;
+  }
+
+  .headline {
+    order: 1;
+    margin: 0 0 2.2vh;
+    font-size: 6.2vh;
+  }
+
+  .lead {
+    order: 2;
+    margin: 0 0 3vh;
+    padding-left: 1.6vw;
+    font-size: 1.25vh;
+  }
+
+  // Pás recenzí: jedna karta uprostřed, sousední vykukují. Rám stavby
+  // (.reviewFrame) má rozměr karty — podle něj se karty kreslí — a leží
+  // uprostřed pásu (záporný spodní okraj ho pod pás vrací).
+  .reviewFrame {
+    order: 3;
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 30vw;
+    height: 32vh;
+    margin: 0 0 -32vh 16vw;
+  }
+
+  .reviewStrip {
+    order: 3;
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 62vw;
+    height: 32vh;
+    margin-bottom: 3.6vh;
+
+    // ScrollBend má vlastní min-height 420px — tady platí výška pásu,
+    // jinak by karta (výška = výška pásu) přetekla a spodek se ořízl.
+    > * {
+      min-height: 0;
+    }
+  }
+
+  // DOM karta (Studio, stav bez nástupu) na místě pásu.
+  .review {
+    order: 3;
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 30vw;
+    height: auto;
+    min-height: 32vh;
+    margin: 0 0 3.6vh 16vw;
+  }
+
+  .actionHit {
+    order: 4;
+  }
+
+  .actionBody {
+    gap: 2.4vw;
+  }
+
+  .actionLabel {
+    font-size: 3.6vh;
+  }
+
+  .actionDisc {
+    width: 8vh;
+    height: 8vh;
+  }
+
+  .status {
+    order: 5;
+    bottom: auto;
+    left: auto;
+    margin-top: 3.2vh;
+    gap: 1.4vw;
+    font-size: 1vh;
+  }
+
+  .claim {
+    right: 40vw;
+    bottom: 4vh;
+    font-size: 1vh;
+  }
+
+  .portrait {
+    left: 84vw;
+    height: 74vh;
+  }
+
+  .bannerArea {
+    top: 26vh;
+    left: 70vw;
+    width: 28vw;
+    height: 74vh;
+  }
+}
+
+/* ---------- Telefon na výšku (pod 600px) ---------- */
+// Sloupec přes celou šířku, pás recenzí taky; písmo drobných textů
+// o kus větší (na telefonu by vh-písmo bylo pod čitelností). Portrét
+// s bannery jen jako detail v pozadí vpravo dole.
+@media (max-width: 599.98px) and (orientation: portrait) {
+  .inner {
+    padding-inline: 6vw;
+  }
+
+  .headline {
+    font-size: 5.6vh;
+  }
+
+  .lead {
+    padding-left: 3vw;
+    font-size: 1.5vh;
+  }
+
+  .reviewFrame {
+    width: 60vw;
+    height: 34vh;
+    margin: 0 0 -34vh 14vw;
+  }
+
+  .reviewStrip {
+    width: 88vw;
+    height: 34vh;
+  }
+
+  .status {
+    gap: 3vw;
+    font-size: 1.25vh;
+  }
+
+  // Claim v patě se pod výzvu a stav nevejde — na telefonu odpadá.
+  .claim {
+    display: none;
+  }
+
+  .portrait {
+    left: 88vw;
+    height: 52vh;
+    opacity: 0.55;
+  }
+
+  .bannerArea,
+  .backgroundBanners {
+    display: none;
+  }
 }
 
 /* ---------- Responzivita na šířku (telefon → notebook → monitor) ---------- */

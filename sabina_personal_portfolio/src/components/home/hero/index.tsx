@@ -6,7 +6,7 @@ import { useRefRegistry } from "@/providers/RefContext";
 import { editableIn, editableDoc } from "@c3studium/valecms/edit";
 import type { Project } from "@/lib/site/projects";
 import { usePerformance } from "@/providers/PerformanceProvider";
-import { cvh, lerp, PORTRAIT_TABLET, useLandscapeFluid, useMedia } from "@/lib/fluid";
+import { cvh, lerp, PORTRAIT_PHONE, PORTRAIT_TABLET, useLandscapeFluid, useMedia } from "@/lib/fluid";
 import { useGate } from "@/motion/LoadProvider";
 import ScrollPlaceholder from "@/components/common/scroll-placeholder";
 import MeasureText from "@/components/common/measure-text";
@@ -103,6 +103,11 @@ const FLIGHT_FROM = heroAt(489);
 // kousek za levým okrajem okna.
 const TABLET_GROW = 79.2 / 54;
 const TABLET_SHIFT_VW = -18.4;
+// Telefon: vedle velkého portrétu se karta nevejde — portrét neroste
+// a jede jen s trackem (o 6vw míň): obličej u levého okraje, karta stojí
+// vpravo od obličeje, PŘED tělem.
+const PHONE_GROW = 1;
+const PHONE_SHIFT_VW = 6;
 
 // Koncová interpunkce u slova z CMS patří mimo něj (tečku kreslí řádek).
 const TRAILING = /[.,;:!?…]+$/;
@@ -369,7 +374,8 @@ export default function Hero({
   // (-32,5 %): fotka má vlevo prázdný okraj, vlasy pak stojí u samého
   // levého okraje okna.
   const tablet = useMedia(PORTRAIT_TABLET);
-  const x = useTransform(scrollYProgress, [heroAt(10), heroAt(210)], ["0%", tablet ? "-32.5%" : "-37.5%"]);
+  const phone = useMedia(PORTRAIT_PHONE);
+  const x =useTransform(scrollYProgress, [heroAt(10), heroAt(210)], ["0%", tablet ? "-32.5%" : "-37.5%"]);
 
   // PRAVIDLO: na nule scrollu musí první obrazovka vypadat přesně podle
   // návrhu — bez posunu a bez natočení. Preloader (IntroBanners) i rámečky
@@ -448,8 +454,8 @@ export default function Hero({
       const k = tablet
         ? Math.min(Math.max((p - heroAt(10)) / (heroAt(210) - heroAt(10)), 0), 1)
         : 0;
-      const grow = 1 + (TABLET_GROW - 1) * k;
-      const baseX = (TABLET_SHIFT_VW / 100) * window.innerWidth * k;
+      const grow = 1 + ((phone ? PHONE_GROW : TABLET_GROW) - 1) * k;
+      const baseX = ((phone ? PHONE_SHIFT_VW : TABLET_SHIFT_VW) / 100) * window.innerWidth * k;
       const baseY = -(grow - 1) * (frame?.offsetHeight ?? 0);
       if (t <= 0 || !frame || !target) {
         flightX.set(baseX);
@@ -475,7 +481,7 @@ export default function Hero({
     };
     update(scrollYProgress.get());
     return scrollYProgress.on("change", update);
-  }, [scrollYProgress, registry, flightX, flightY, flightScale, tablet]);
+  }, [scrollYProgress, registry, flightX, flightY, flightScale, tablet, phone]);
   // Částice při přeletu zhasnou (portrét v Info je nemá) a v 1.0 se
   // portrét hera vymění za portrét Info.
   const particlesFade = useTransform(scrollYProgress, fade(FLIGHT_FROM, heroAt(720)));
@@ -721,7 +727,7 @@ export default function Hero({
                      na výšku má box přes celou výšku okna (ohnuté karty
                      nenarazí na jeho hranu) a jedna velká karta ~50vh ve
                      vlastním poměru, sousední jen nakukují; mezera s ní. */
-                  cardHeight={tablet ? 0.5 : 0.575}
+                  cardHeight={phone ? 0.4 : tablet ? 0.5 : 0.575}
                   /* Větší mezera mezi bannery. */
                   gap={tablet ? 40 : 36}
                   squeeze={0.2}

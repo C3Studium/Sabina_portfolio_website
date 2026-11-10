@@ -79,16 +79,28 @@ export function ToolPanels({
   shortcut,
   opacity,
   scale,
+  x,
+  y,
+  className,
 }: {
   rows: LayerRow[];
   active: string | null;
   shortcut: Shortcut;
   opacity: MotionValue<number>;
   scale: MotionValue<number>;
+  /** Posun panelů (px) — Info je na tabletu přesouvá do Procesu. */
+  x?: MotionValue<number>;
+  y?: MotionValue<number>;
+  /** Vlastní poloha pro sekci (Proces má na tabletu panel jinde než Info). */
+  className?: string;
 }) {
   return (
     <Portal>
-      <motion.div className={styles.toolPanels} style={{ opacity, scale }} aria-hidden="true">
+      <motion.div
+        className={className ? `${styles.toolPanels} ${className}` : styles.toolPanels}
+        style={{ opacity, scale, x, y }}
+        aria-hidden="true"
+      >
         <LayersPanel rows={rows} active={active} />
         <ShortcutToast active={shortcut} />
       </motion.div>

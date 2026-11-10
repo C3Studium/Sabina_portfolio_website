@@ -27,7 +27,7 @@ import { heroAt, heroProgress } from "@/components/home/hero/progress";
 import { isTyped, resetTyped } from "@/components/home/typing";
 import { PROCESS, PROCESS_PINNED } from "@/components/home/designer-timeline";
 import type { LayerRow } from "./designer";
-import { viewFrame } from "@/lib/fluid";
+import { PORTRAIT_TABLET, viewFrame } from "@/lib/fluid";
 
 /* ---------- Časy ---------- */
 
@@ -219,6 +219,12 @@ export function useDesigner({ stage, names, refs, cardsPad, enabled }: Options) 
   const infoPortrait = useMotionValue(1);
   const panelOpacity = useMotionValue(0);
   const panelScale = useMotionValue(0);
+  /** Posun panelů (px). Na tabletu na výšku stojí panel v Info vlevo pod
+   *  textem — v úvodu Procesu by ležel přes nadpis, proto při přechodu
+   *  odjede doprava nahoru, na místo panelu Procesu (process/styles). */
+  const panelX = useMotionValue(0);
+  const panelY = useMotionValue(0);
+  const tabletQuery = useRef<MediaQueryList | null>(null);
   const [layers, setLayers] = useState<{ rows: LayerRow[]; active: string | null }>({ rows: [], active: null });
   const [typing, setTyping] = useState<Typing>({ heading: false, lead: false, cards: false });
   const [shortcut, setShortcut] = useState<Shortcut>(null);
@@ -565,6 +571,17 @@ export function useDesigner({ stage, names, refs, cardsPad, enabled }: Options) 
     const shown = within(HERO.panel)(h) * (1 - within(PROCESS.leave)(ps));
     panelScale.set(ease(clamp01(shown / 0.45)));
     panelOpacity.set(clamp01((shown - 0.3) / 0.7));
+    tabletQuery.current ??= window.matchMedia(PORTRAIT_TABLET);
+    if (tabletQuery.current.matches) {
+      // Z left 5vw / top 27,5vh (info/styles, xs-v) pod logo hlavičky:
+      // left 3vh (odsazení hlavičky) / top 1vh pod ní (process/styles).
+      const move = ease(within([0.25, 0.85])(pe));
+      panelX.set(move * (vh * 0.03 - vw * 0.05));
+      panelY.set(move * -0.265 * vh);
+    } else {
+      panelX.set(0);
+      panelY.set(0);
+    }
 
     // Řádky panelu vrstev v pořadí vzniku; smazané (`until`) odjedou.
     const T = pe >= 1 && ps > 0 ? 2 + ps : p > 0 ? 1 + p : h;
@@ -637,6 +654,8 @@ export function useDesigner({ stage, names, refs, cardsPad, enabled }: Options) 
     infoPortrait,
     panelOpacity,
     panelScale,
+    panelX,
+    panelY,
     layers,
     typing,
     shortcut,

@@ -1,3 +1,4 @@
+import { useCallback, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { editableIn } from "@c3studium/valecms/edit";
@@ -9,6 +10,7 @@ import { useGate } from "@/motion/LoadProvider";
 import { useIntroAt } from "@/motion/intro/useIntroAt";
 import { LOGO } from "@/motion/intro/timeline";
 import { NAV_ITEMS } from "../nav-items";
+import Menu from "../menu";
 import styles from "./styles.module.scss";
 
 // Hover hlavičky dělá kurzor: nad logem, odkazem i tlačítkem se jeho tečka
@@ -114,6 +116,12 @@ export default function Header({ onContactClick, copy = null }: HeaderProps) {
   // kreslí DOM a jeho hover dělá CSS.
   const morphName = (word: string, shown: boolean) =>
     editing ? word : <TextMorph words={[word]} index={shown ? 0 : -1} measure={false} />;
+  const ctaLabel = textAt(items, LINES.cta, "label", FALLBACK.cta);
+
+  // Menu za tlačítkem s třemi čarami — jen tam, kde se navigace do hlavičky
+  // nevejde (CSS schová .nav a ukáže .menuButton).
+  const [menuOpen, setMenuOpen] = useState(false);
+  const closeMenu = useCallback(() => setMenuOpen(false), [setMenuOpen]);
 
   return (
     // `data-motion-hold`: přechod mezi stránkami hlavičku schová celou. Pod
@@ -175,7 +183,7 @@ export default function Header({ onContactClick, copy = null }: HeaderProps) {
         data-intro="cta"
       >
         <span className={styles.ctaLabel} data-intro-label="" {...edit(`items.${LINES.cta}.label`)}>
-          {textAt(items, LINES.cta, "label", FALLBACK.cta)}
+          {ctaLabel}
         </span>
         {/* Šipka dvakrát: při hoveru jedna odletí doprava, druhá přiletí zleva. */}
         <span className={styles.ctaArrow} aria-hidden="true" data-intro-ring="">
@@ -188,6 +196,29 @@ export default function Header({ onContactClick, copy = null }: HeaderProps) {
         </span>
       </button>
       </MeasureText>
+
+      <button
+        type="button"
+        className={styles.menuButton}
+        onClick={() => setMenuOpen(true)}
+        aria-label="Otevřít menu"
+        aria-expanded={menuOpen}
+        aria-controls="site-menu"
+      >
+        <span className={styles.menuLines} aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+      </button>
+
+      <Menu
+        id="site-menu"
+        open={menuOpen}
+        onClose={closeMenu}
+        onContact={onContactClick}
+        ctaLabel={ctaLabel}
+      />
     </header>
   );
 }
