@@ -1,9 +1,10 @@
 @use "../../../styles/system/_shortcuts.scss" as *;
 
-// Posuvník stránky (index.tsx) — lišta čárek hned pod výzvou v hlavičce
-// (na telefonu pod tlačítkem menu), zarovnaná k jeho pravé hraně.
-// Podklad lišty tmavý a průsvitný, projetá část zelená (0,5), na její hraně
-// zelený jezdec. Čárky sněhově bílé: projeté plně, zbytek tlumeně.
+// Posuvník stránky (index.tsx) — lišta čárek pod výzvou v hlavičce (na
+// telefonu pod tlačítkem menu). V klidu u pravého okraje a stažená na
+// polovinu (scaleX 0,5); najetím myši, dotykem nebo tahem se roztáhne
+// (scaleX 1) a odsune na 2,5 % od kraje. Zelený jezdec (kde právě jsem) je
+// vidět jen během tahu. Čárky sněhové: projeté plně, zbytek tlumeně.
 
 $accent: var(--green);
 $ink: var(--charcoal);
@@ -15,18 +16,16 @@ $ink: var(--charcoal);
   // Polohu dopočítá index.tsx z tlačítka v hlavičce; tohle je jen záloha
   // do prvního měření.
   top: var(--rail-top, calc(var(--frame-y, 0px) + 7.5rem));
-  right: var(--rail-right, calc(var(--frame-x, 0px) + 3vh));
+  right: 0;
   display: flex;
   justify-content: flex-end;
   color: var(--snow);
   pointer-events: none;
-  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: right 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 
-  // Sbalená: přilepená k pravému okraji rámu (posun o odsazení pod
-  // tlačítkem), čárky poloviční (--line-k), podklad slabší. Rozbalí se
-  // najetím myši, dotykem nebo tahem (data-open, index.tsx).
-  &:not([data-open]) {
-    transform: translateX(calc(var(--rail-right, 3vh) - var(--frame-x, 0px)));
+  // Aktivní (data-open, index.tsx): 2,5 % od pravého kraje.
+  &[data-open] {
+    right: 2.5%;
   }
 }
 
@@ -43,23 +42,15 @@ $ink: var(--charcoal);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   box-shadow: 0 0.6rem 1.6rem rgba(0, 0, 0, 0.22);
-  --line-k: 1;
-  transition:
-    padding 0.5s cubic-bezier(0.22, 1, 0.36, 1),
-    border-radius 0.5s cubic-bezier(0.22, 1, 0.36, 1),
-    background-color 0.35s ease,
-    border-color 0.35s ease,
-    box-shadow 0.35s ease;
+  // V klidu stažená na polovinu k pravému kraji, aktivní v plné šířce.
+  transform: scaleX(0.5);
+  transform-origin: right center;
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
   cursor: grab;
   pointer-events: auto;
 
-  .sidebar:not([data-open]) & {
-    --line-k: 0.5;
-    padding-inline: 0.3rem 0.25rem;
-    border-right-color: transparent;
-    border-radius: 6px 0 0 6px;
-    background-color: rgba(var(--charcoal-rgb), 0.18);
-    box-shadow: none;
+  .sidebar[data-open] & {
+    transform: scaleX(1);
   }
   // Prst táhne lištu, ne stránku (tah je v index.tsx).
   touch-action: none;
@@ -71,19 +62,7 @@ $ink: var(--charcoal);
   }
 }
 
-// Projetá část — od vršku lišty po hranu (--fill, index.tsx).
-.fill {
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: var(--fill, 0px);
-  border-radius: 5px 5px 0 0;
-  background: rgba(var(--green-rgb), 0.5);
-  pointer-events: none;
-}
-
-// Jezdec na hraně výplně: plná zelená přes šířku lišty.
+// Jezdec — kde na stránce jsem (--fill, index.tsx); jen během tahu.
 .thumb {
   position: absolute;
   top: var(--fill, 0px);
@@ -94,7 +73,13 @@ $ink: var(--charcoal);
   border-radius: 2px;
   background: $accent;
   box-shadow: 0 0 0.6rem rgba(var(--green-rgb), 0.55);
+  opacity: 0;
   pointer-events: none;
+  transition: opacity 0.25s ease;
+
+  .rail[data-dragging] & {
+    opacity: 1;
+  }
 }
 
 .item {
@@ -152,14 +137,12 @@ $ink: var(--charcoal);
 }
 
 .lineTrack {
-  width: calc(clamp(1.875rem, 2.4vw, 2.75rem) * var(--line-k, 1));
+  width: clamp(1.875rem, 2.4vw, 2.75rem);
   transform-origin: right center;
-  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .minorTrack {
-  width: calc(clamp(0.7rem, 1vw, 1.05rem) * var(--line-k, 1));
-  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  width: clamp(0.7rem, 1vw, 1.05rem);
   margin-right: clamp(0.0625rem, 0.12vw, 0.125rem);
   padding: 0;
   border: 0;
@@ -209,11 +192,11 @@ $ink: var(--charcoal);
   }
 
   .lineTrack {
-    width: calc(1.7rem * var(--line-k, 1));
+    width: 1.7rem;
   }
 
   .minorTrack {
-    width: calc(0.85rem * var(--line-k, 1));
+    width: 0.85rem;
   }
 }
 

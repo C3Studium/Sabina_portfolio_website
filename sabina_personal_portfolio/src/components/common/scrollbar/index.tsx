@@ -14,10 +14,11 @@ import styles from "./styles.module.scss";
 
 // Vlastní posuvník stránky — lišta čárek pod výzvou v hlavičce (na telefonu
 // pod tlačítkem menu), převzatá z eshopu Keramická zahrada (verze před
-// 10. 11. 2026). Dlouhá čárka = sekce, krátké = díly mezi nimi. Projetá
-// část lišty je podbarvená zeleně a na její hraně stojí jezdec — za lištu
-// jde chytit a táhnout nahoru i dolů (myší i prstem), klik / ťuknutí na
-// čárku doskroluje na místo, hover ukáže názvy sekcí.
+// 10. 11. 2026). Dlouhá čárka = sekce, krátké = díly mezi nimi. V klidu je
+// u pravého kraje stažená na polovinu, najetím / dotykem / tahem se
+// roztáhne (styles). Za lištu jde chytit a táhnout nahoru i dolů (myší
+// i prstem) — během tahu ukazuje zelený jezdec, kde jsem; klik / ťuknutí
+// na čárku doskroluje na místo, hover ukáže názvy sekcí.
 // Sekce: `[data-scroll-section]`, jinak `main > section`; název z
 // `data-scroll-label` / `aria-label`.
 
@@ -208,7 +209,7 @@ export default function Scrollbar() {
     setActiveIndex((current) => (current === nextActive ? current : nextActive));
     setSectionProgress(progress);
 
-    // Výplň projeté části a jezdec — přímo do stylu, bez překreslení Reactu.
+    // Poloha jezdce (vidět při tahu) — přímo do stylu, bez překreslení Reactu.
     const rail = railRef.current;
     const scale = rail ? scaleOf(rail, sections) : null;
     if (rail && scale) rail.style.setProperty("--fill", `${railAt(scale, window.scrollY).toFixed(1)}px`);
@@ -243,7 +244,7 @@ export default function Scrollbar() {
   }, [asPath]);
 
   // Poloha lišty: hned pod výzvou v hlavičce, a kde je výzva schovaná
-  // (telefon na výšku), pod tlačítkem menu — zarovnaná k jeho pravé hraně.
+  // (telefon na výšku), pod tlačítkem menu. Vodorovně ji drží CSS (kraj / 2,5 %).
   // Hlavička se při přechodu stránek posouvá (transform) — odečte se.
   useEffect(() => {
     const nav = navRef.current;
@@ -260,7 +261,6 @@ export default function Scrollbar() {
       const header = document.querySelector("header");
       const shift = header ? new DOMMatrix(getComputedStyle(header).transform).m42 : 0;
       nav.style.setProperty("--rail-top", `${Math.round(box.bottom - shift + UNDER_BUTTON)}px`);
-      nav.style.setProperty("--rail-right", `${Math.round(window.innerWidth - box.right)}px`);
     };
     place();
     const header = document.querySelector("header");
@@ -469,8 +469,7 @@ export default function Scrollbar() {
         onClickCapture={handleClickCapture}
         onClick={handleRailClick}
       >
-        {/* Projetá část (zelená) a jezdec na její hraně — výška z --fill. */}
-        <span className={styles.fill} aria-hidden="true" />
+        {/* Jezdec — kde na stránce jsem (--fill); vidět jen během tahu. */}
         <span className={styles.thumb} aria-hidden="true" />
 
         {sections.map((section, index) => {
