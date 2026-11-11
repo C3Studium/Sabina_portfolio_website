@@ -138,7 +138,6 @@ export default function Info({ copy = null, stack = null, stats = null, services
   };
   const lead = text(copy?.lead, FALLBACK.lead);
   const toolsLabel = text(copy?.toolsLabel, FALLBACK.toolsLabel);
-  const cta = text(copy?.cta, FALLBACK.cta);
   const cardLabel = text(copy?.cardLabel, FALLBACK.cardLabel);
   const cardCta = text(copy?.cardCta, FALLBACK.cardCta);
   const portrait = picture(copy?.portrait, FALLBACK.portrait);
@@ -216,7 +215,6 @@ export default function Info({ copy = null, stack = null, stats = null, services
     enabled: !editing,
   });
   const { flow, typing } = designer;
-  const ctaOpacity = useTransform(stage, span(flow.cta, flow.cta + 0.04));
   // Karty: rámeček kreslí myš, po nakreslení ořezové značky a mřížka, pak
   // nastoupí balíček (CardSwap) a rámeček zhasne.
   const cardsDraw = useTransform(stage, (p) => {
@@ -240,7 +238,6 @@ export default function Info({ copy = null, stack = null, stats = null, services
   const exitStats = useRemoved(stage, flow.delBar.remove);
   const exitCards = useRemoved(stage, flow.delCards.remove);
   const exitLeft = useRemoved(stage, flow.marquee.remove);
-  const ctaShown = useTransform([ctaOpacity, exitLeft] as const, ([o, c]: number[]) => o * c);
   // Portrét v Info: vidět po přeletu z hera, schovaný, když ho myš nese
   // dál do Procesu (letící kopie).
   const infoPortraitOpacity = useTransform(
@@ -260,7 +257,7 @@ export default function Info({ copy = null, stack = null, stats = null, services
 
 
   return (
-    <section ref={sectionRef} className={styles.infoTrack} id="sluzby" data-cursor="user">
+    <section ref={sectionRef} className={styles.infoTrack} id="sluzby" data-cursor="user" data-scroll-label="Služby">
     <div className={styles.info}>
       {/* Obsah drží 90vw uprostřed */}
       <div className={styles.content}>
@@ -364,30 +361,6 @@ export default function Info({ copy = null, stack = null, stats = null, services
                 </>
               )}
             </p>
-
-            <motion.a
-              className={`${styles.cta} ${styles.exitHost}`}
-              href="#spoluprace"
-              style={editing ? undefined : { opacity: ctaShown }}
-            >
-              <SketchText
-                progress={stage}
-                from={0.38}
-                to={0.52}
-                still
-                style={editing ? undefined : { opacity: exitLeft }}
-                {...edit(`items.${AT.cta}.label`)}
-              >
-                {cta}
-              </SketchText>
-              <motion.span
-                className={styles.ctaArrow}
-                style={editing ? undefined : { opacity: exitLeft }}
-                aria-hidden="true"
-              >
-                <ArrowIcon />
-              </motion.span>
-            </motion.a>
           </div>
         </motion.div>
 

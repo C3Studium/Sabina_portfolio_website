@@ -36,6 +36,7 @@ import {
   type Settings,
 } from "./engine";
 import styles from "./styles.module.scss";
+import { SNOW_RGB } from "@/lib/palette";
 
 export type { OrbitCardsItem } from "./engine";
 
@@ -380,7 +381,7 @@ export const OrbitCards = forwardRef<OrbitCardsHandle, OrbitCardsProps>(
       const overlay =
         hoverPanel && fine && frameCanvas && panel
           ? createCardOverlay(root, frameCanvas, panel, {
-              markColor: "rgba(255, 255, 255, 0.9)",
+              markColor: `rgba(${SNOW_RGB}, 0.9)`,
               pad: 10,
               specks: 12,
               drawIn: 0.45,

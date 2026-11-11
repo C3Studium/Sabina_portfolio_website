@@ -30,7 +30,7 @@ $dot-rest: calc(#{$gap} + #{$dot} / 2);
 .track {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, white, rgba(255, 255, 255, 0.15));
+  background: linear-gradient(to bottom, var(--snow), rgba(var(--snow-rgb), 0.15));
 }
 
 // Ořez plnění na rozměr linky.
@@ -48,7 +48,7 @@ $dot-rest: calc(#{$gap} + #{$dot} / 2);
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), white);
+  background: linear-gradient(to bottom, rgba(var(--snow-rgb), 0.3), var(--snow));
   will-change: transform;
 }
 
@@ -71,7 +71,7 @@ $dot-rest: calc(#{$gap} + #{$dot} / 2);
   width: $dot;
   height: $dot;
   border-radius: 50%;
-  background: white;
+  background: var(--snow);
   transform: translate(-50%, -50%);
 }
 
@@ -86,7 +86,7 @@ $dot-rest: calc(#{$gap} + #{$dot} / 2);
   font-weight: 400;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: white;
+  color: var(--snow);
 }
 
 // Ostrý text nad plátnem. Neumisťovaný schválně: poloha písmen se měří
@@ -118,7 +118,7 @@ $h-dot-rest: calc(#{$h-gap} + #{$h-dot} / 2);
   }
 
   .track {
-    background: linear-gradient(to right, white, rgba(255, 255, 255, 0.15));
+    background: linear-gradient(to right, var(--snow), rgba(var(--snow-rgb), 0.15));
   }
 
   .fill,
@@ -130,7 +130,7 @@ $h-dot-rest: calc(#{$h-gap} + #{$h-dot} / 2);
   }
 
   .fill {
-    background: linear-gradient(to right, rgba(255, 255, 255, 0.3), white);
+    background: linear-gradient(to right, rgba(var(--snow-rgb), 0.3), var(--snow));
   }
 
   .dot {

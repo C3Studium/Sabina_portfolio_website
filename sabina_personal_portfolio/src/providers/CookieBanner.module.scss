@@ -16,8 +16,8 @@
     padding: 20px;
     border: 1px solid var(--cookies-line, rgba(0, 0, 0, 0.12));
     border-radius: 12px;
-    background: var(--cookies-bg, #fff);
-    color: var(--cookies-fg, #111);
+    background: var(--cookies-bg, var(--snow));
+    color: var(--cookies-fg, var(--charcoal));
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16);
     pointer-events: auto;
 }
@@ -49,7 +49,7 @@
 .primary {
     border-color: transparent;
     background: var(--cookies-fg, #111);
-    color: var(--cookies-bg, #fff);
+    color: var(--cookies-bg, var(--snow));
 }
 
 // Odkaz na podrobnosti není tlačítko na stejné úrovni: je to třetí volba,

@@ -21,6 +21,7 @@ import { motion, useSpring, useTransform, type MotionValue } from "framer-motion
 import TextMorph from "@/components/common/text-morph";
 import styles from "./styles.module.scss";
 import { fluidRatio, useLandscapeFluid } from "@/lib/fluid";
+import { ACCENT, INK, SNOW } from "@/lib/palette";
 
 /* ---------- Nastavení ---------- */
 
@@ -35,8 +36,8 @@ const LARGE = { scale: 1.9, offset: { x: 26, y: 26 } };
 const BIG = { scale: 1.35, offset: { x: 21, y: 29 } };
 // Barvy podle tónu a délka přechodu mezi podobami.
 const TONES = {
-  accent: { background: "#bec948", color: "#141414" },
-  light: { background: "#ffffff", color: "#141414" },
+  accent: { background: ACCENT, color: INK },
+  light: { background: SNOW, color: INK },
 };
 const CHANGE = { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const };
 

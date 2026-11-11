@@ -5,15 +5,17 @@
 // text pod ní, galerie a odkaz dál. Podklad je průhledný jako všude: dělá ho
 // globální shader v _app.tsx.
 
-$accent: #bec948;
+$accent: var(--green);
 // Sazba ve třech barvách: bílá, zelená a uhlově černá (žádné šedé).
-$ink: #141414;
+$ink: var(--charcoal);
+// Text na stránce (tmavý podklad); $ink jen na světlých plochách.
+$text: var(--snow);
 $ink-soft: $ink;
 
 .caseStudy {
   position: relative;
   padding: 18vh 10vw 12vh;
-  color: $ink;
+  color: $text;
   background: transparent;
 }
 
@@ -39,7 +41,7 @@ $ink-soft: $ink;
   font-weight: 400;
   letter-spacing: 0.32em;
   text-transform: uppercase;
-  color: $ink-soft;
+  color: $text;
 }
 
 .title {
@@ -91,7 +93,7 @@ $ink-soft: $ink;
   font-size: clamp(0.9rem, 1.8vh, 2rem);
   font-weight: 300;
   line-height: 1.65;
-  color: $ink-soft;
+  color: $text;
 
   p {
     margin: 0 0 1.4em;
@@ -142,7 +144,7 @@ $ink-soft: $ink;
   align-items: baseline;
   gap: 1.6vw;
   padding-bottom: 2vh;
-  border-bottom: 1px solid rgba(20, 20, 20, 0.2);
+  border-bottom: 1px solid rgba(var(--charcoal-rgb), 0.2);
   font-size: clamp(0.95rem, 2.1vh, 2.4rem);
   font-weight: 300;
   line-height: 1.45;
@@ -181,7 +183,7 @@ $ink-soft: $ink;
   gap: 1.6vh;
   margin-top: 14vh;
   padding-top: 4vh;
-  border-top: 1px solid rgba(46, 46, 46, 0.2);
+  border-top: 1px solid rgba(var(--charcoal-rgb), 0.2);
 }
 
 .nextLink {
@@ -189,7 +191,7 @@ $ink-soft: $ink;
   align-items: center;
   gap: 1.2vw;
   width: fit-content;
-  color: $ink;
+  color: $text;
   text-decoration: none;
 
   &:hover .nextArrow {
@@ -212,7 +214,7 @@ $ink-soft: $ink;
   width: clamp(2rem, 6.7vh, 8.8rem);
   height: clamp(2rem, 6.7vh, 8.8rem);
   flex-shrink: 0;
-  border: 1px solid rgba(46, 46, 46, 0.5);
+  border: 1px solid rgba(var(--charcoal-rgb), 0.5);
   border-radius: 50%;
   transition: background 0.24s ease, border-color 0.24s ease;
 

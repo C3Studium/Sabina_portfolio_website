@@ -29,24 +29,25 @@ import {
   type ReactNode,
 } from "react";
 import styles from "./styles.module.scss";
+import { INK, SNOW, SNOW_RGB } from "@/lib/palette";
 
 const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 const THEMES: Record<"dark" | "light", Record<string, string>> = {
   dark: {
     "--swap-tile": "linear-gradient(180deg, #3a3644 0%, #27242f 100%)",
-    "--swap-tile-edge": "rgba(255, 255, 255, 0.07)",
-    "--swap-tile-highlight": "rgba(255, 255, 255, 0.12)",
+    "--swap-tile-edge": `rgba(${SNOW_RGB}, 0.07)`,
+    "--swap-tile-highlight": `rgba(${SNOW_RGB}, 0.12)`,
     "--swap-shadow": "0 30px 60px -24px rgba(0, 0, 0, 0.8), 0 10px 24px -12px rgba(0, 0, 0, 0.55)",
-    "--swap-ink": "#ffffff",
+    "--swap-ink": SNOW,
     "--swap-shade": "#100e15",
   },
   light: {
-    "--swap-tile": "rgba(255, 255, 255, 0.92)",
-    "--swap-tile-edge": "rgba(255, 255, 255, 0.7)",
-    "--swap-tile-highlight": "rgba(255, 255, 255, 1)",
+    "--swap-tile": `rgba(${SNOW_RGB}, 0.92)`,
+    "--swap-tile-edge": `rgba(${SNOW_RGB}, 0.7)`,
+    "--swap-tile-highlight": `rgba(${SNOW_RGB}, 1)`,
     "--swap-shadow": "0 30px 60px -28px rgba(24, 24, 27, 0.35), 0 10px 24px -14px rgba(24, 24, 27, 0.2)",
-    "--swap-ink": "#141414",
+    "--swap-ink": INK,
     "--swap-shade": "#d9d9d9",
   },
 };
@@ -121,6 +122,11 @@ export const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement> & 
 Card.displayName = "Card";
 
 export type CardSwapHandle = { next: () => void; prev: () => void };
+
+// Dotyk (viz onTouchStart): jak dlouho držet prst, než se karta chytí (ms),
+// a o kolik px se prst pohne, než se rozhodne scroll / tah do strany.
+const HOLD_MS = 220;
+const TOUCH_SLOP = 8;
 
 type CardSwapProps = {
   width?: number;
@@ -602,6 +608,9 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
         const dy = (event.clientY - drag.startY) / state.scale;
         if (!drag.active) {
           if (Math.hypot(dx, dy) < 5) return;
+          // Prst táhne kartu, až když to dotyk rozhodl (onTouchMove níž):
+          // podržením nebo tahem do strany. Jinak je to scroll stránky.
+          if (event.pointerType === "touch" && touch?.mode !== "drag") return;
           drag.active = true;
           state.dragged = true;
           const card = deck[drag.index];
@@ -703,6 +712,60 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
 
       const onVisibility = () => schedule();
 
+      // Dotyk: prst na přední kartě ji po chvíli držení (HOLD_MS) „chytí" —
+      // stránka pak nescrolluje a karta jde táhnout kamkoli. Rychlý tah do
+      // strany ji chytí hned, rychlý tah nahoru/dolů je scroll stránky.
+      // Rozhoduje se v touchmove (jen tam jde scroll zastavit, pointer
+      // události to neumí — touch-action se mění až s dalším dotykem).
+      let touch: null | { x: number; y: number; timer: number; mode: "wait" | "drag" | "scroll" } = null;
+      const grab = () => {
+        if (!touch) return;
+        touch.mode = "drag";
+        root.setAttribute("data-holding", "");
+      };
+      const onTouchStart = (event: TouchEvent) => {
+        if (touch) window.clearTimeout(touch.timer);
+        touch = null;
+        const s = settingsRef.current;
+        if (event.touches.length !== 1 || !s.draggable || count < 2) return;
+        const target = (event.target as Element | null)?.closest?.("[data-swap-index]");
+        if (!target || Number(target.getAttribute("data-swap-index")) !== state.order[0]) return;
+        const point = event.touches[0];
+        touch = { x: point.clientX, y: point.clientY, mode: "wait", timer: 0 };
+        touch.timer = window.setTimeout(() => {
+          if (touch?.mode !== "wait") return;
+          grab();
+          navigator.vibrate?.(8);
+        }, HOLD_MS);
+      };
+      const onTouchMove = (event: TouchEvent) => {
+        if (!touch || touch.mode === "scroll") return;
+        if (touch.mode === "drag") {
+          if (event.cancelable) event.preventDefault();
+          return;
+        }
+        const point = event.touches[0];
+        const dx = point.clientX - touch.x;
+        const dy = point.clientY - touch.y;
+        if (Math.hypot(dx, dy) < TOUCH_SLOP) return;
+        window.clearTimeout(touch.timer);
+        if (Math.abs(dx) > Math.abs(dy)) {
+          grab();
+          if (event.cancelable) event.preventDefault();
+        } else {
+          touch.mode = "scroll";
+        }
+      };
+      const onTouchEnd = () => {
+        if (touch) window.clearTimeout(touch.timer);
+        touch = null;
+        root.removeAttribute("data-holding");
+      };
+      // Dlouhý stisk by jinak otevřel kontextovou nabídku.
+      const onContextMenu = (event: Event) => {
+        if (touch) event.preventDefault();
+      };
+
       apiRef.current = {
         next: () => shift(1),
         prev: () => shift(-1),
@@ -755,6 +818,11 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
       root.addEventListener("pointerup", onUp);
       root.addEventListener("pointercancel", onUp);
       root.addEventListener("click", onClick);
+      root.addEventListener("touchstart", onTouchStart, { passive: true });
+      root.addEventListener("touchmove", onTouchMove, { passive: false });
+      root.addEventListener("touchend", onTouchEnd);
+      root.addEventListener("touchcancel", onTouchEnd);
+      root.addEventListener("contextmenu", onContextMenu);
       document.addEventListener("visibilitychange", onVisibility);
       schedule();
 
@@ -770,6 +838,12 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
         root.removeEventListener("pointerup", onUp);
         root.removeEventListener("pointercancel", onUp);
         root.removeEventListener("click", onClick);
+        root.removeEventListener("touchstart", onTouchStart);
+        root.removeEventListener("touchmove", onTouchMove);
+        root.removeEventListener("touchend", onTouchEnd);
+        root.removeEventListener("touchcancel", onTouchEnd);
+        root.removeEventListener("contextmenu", onContextMenu);
+        if (touch) window.clearTimeout(touch.timer);
         document.removeEventListener("visibilitychange", onVisibility);
         apiRef.current = null;
       };

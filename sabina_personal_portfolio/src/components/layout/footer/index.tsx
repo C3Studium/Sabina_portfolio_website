@@ -181,7 +181,7 @@ export default function Footer({ copy = null, socials = null }: FooterProps) {
     // a horní hrana obalu ji postupně odkrývá — sekce nad ní po ní odjede.
     <div className={styles.reveal}>
     <div className={styles.revealTrack}>
-    <footer className={styles.footer} data-motion-hold="">
+    <footer className={styles.footer} data-motion-hold="" data-contact-zone="">
       <div className={styles.decor} aria-hidden="true" />
 
       <div className={styles.inner}>

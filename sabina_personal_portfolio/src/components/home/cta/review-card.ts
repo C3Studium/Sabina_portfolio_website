@@ -8,6 +8,7 @@
 // z výšky karty — karta vypadá stejně v každé velikosti okna.
 
 import type { MarkedLine } from "../lines";
+import { ACCENT, SNOW, SNOW_RGB } from "@/lib/palette";
 
 export type ReviewCardData = {
   text: MarkedLine;
@@ -23,10 +24,10 @@ export type ReviewCardData = {
 
 const COLOR = {
   card: "#232323",
-  text: "#ffffff",
-  muted: "#ffffff",
-  line: "rgba(255, 255, 255, 0.15)",
-  accent: "#bec948",
+  text: SNOW,
+  muted: SNOW,
+  line: `rgba(${SNOW_RGB}, 0.15)`,
+  accent: ACCENT,
 };
 
 // Uvozovky a hvězda — tytéž cesty jako ikony v DOM kartě. Path2D až
@@ -130,7 +131,7 @@ export function drawReviewCard(data: ReviewCardData, width: number, height: numb
   ctx.fillRect(padX, authorTop - u * 2.6, inner, 1);
   const avatar = u * 4.4;
   const ay = authorTop + avatar;
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+  ctx.strokeStyle = `rgba(${SNOW_RGB}, 0.35)`;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.arc(padX + avatar, ay, avatar, 0, Math.PI * 2);

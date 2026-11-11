@@ -72,7 +72,8 @@ html {
 
 body {
   font-family: var(--font-poppins), system-ui, -apple-system, "Segoe UI", sans-serif;
-  color: #141414;
+  /* Výchozí text: sněhová (stránka je tmavá); světlé plochy si nastaví uhlovou. */
+  color: var(--snow);
   background: transparent;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -109,7 +110,7 @@ footer {
 
 .page {
   --background: #fafafa;
-  --foreground: #fff;
+  --foreground: var(--snow);
 
   --text-primary: #000;
   --text-secondary: #666;

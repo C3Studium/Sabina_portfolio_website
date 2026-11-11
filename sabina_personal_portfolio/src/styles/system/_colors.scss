@@ -1,18 +1,22 @@
-// Barvy tohohle webu.
+// Barvy webu — jediné místo, kde stojí jejich hodnoty.
 //
-// Startovní sada, ne kánon — přepiš ji. Zbytek valescss na konkrétní hodnoty
-// nesahá, takže tenhle soubor můžeš vyprázdnit a nic se nerozbije.
+// Sazba ve třech barvách:
+//  - sněhová bílá (studená, do světle modré) — text na tmavém podkladu,
+//  - zelená — akcent (zvýraznění, aktivní stav, výzvy),
+//  - uhlová (černá do modro-šedé) — jen text na světlém podkladu
+//    (bílé karty, pilulky, zelená tlačítka).
+// Žádné šedé: méně důležité je menší, ne bledší.
+//
+// Moduly je používají přes var(--…), průhledné odstíny přes složky:
+// rgba(var(--snow-rgb), 0.5). Kód, který kreslí sám (plátno, WebGL), má
+// stejné hodnoty v src/lib/palette.ts — měnit obojí naráz.
 :root {
-  --bgWhite: #fff;
-  --bgBlack: #111213;
-  --bgPrimary: #f4f4f2;
+  --snow: #f2f7ff;
+  --snow-rgb: 242, 247, 255;
 
-  --whiteText: #fff;
-  --blackText: #111213;
+  --green: #bec948;
+  --green-rgb: 190, 201, 72;
 
-  --accent: #ff6a00;
-  --danger: #ae0202;
-  --disabled: #11121330;
-  --shadows: #11121399;
-  --placeholder: #ffffff6a;
+  --charcoal: #161b22;
+  --charcoal-rgb: 22, 27, 34;
 }

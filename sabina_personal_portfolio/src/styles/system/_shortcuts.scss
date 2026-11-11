@@ -100,16 +100,16 @@
         // Kept deliberately faint. This is a compliment to the page, not a
         // feature of it — the rule should read as a rule that happens to catch
         // the light, never as a rule with a light running down it.
-        filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.3 * $strength));
+        filter: drop-shadow(0 0 5px rgba(var(--snow-rgb), 0.3 * $strength));
 
         @if $axis == x {
             right: auto;
             width: $length * 1%;
             background-image: linear-gradient(
                 to right,
-                rgba(255, 255, 255, 0) 0%,
-                rgba(255, 255, 255, 0.18 * $strength) 62%,
-                rgba(255, 255, 255, 0.38 * $strength) 100%
+                rgba(var(--snow-rgb), 0) 0%,
+                rgba(var(--snow-rgb), 0.18 * $strength) 62%,
+                rgba(var(--snow-rgb), 0.38 * $strength) 100%
             );
             animation-name: lineSweepX;
         } @else {
@@ -117,9 +117,9 @@
             height: $length * 1%;
             background-image: linear-gradient(
                 to bottom,
-                rgba(255, 255, 255, 0) 0%,
-                rgba(255, 255, 255, 0.18 * $strength) 62%,
-                rgba(255, 255, 255, 0.38 * $strength) 100%
+                rgba(var(--snow-rgb), 0) 0%,
+                rgba(var(--snow-rgb), 0.18 * $strength) 62%,
+                rgba(var(--snow-rgb), 0.38 * $strength) 100%
             );
             animation-name: lineSweepY;
         }

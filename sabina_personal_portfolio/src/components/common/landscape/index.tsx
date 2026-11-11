@@ -12,6 +12,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import ParticleField from "./particles";
 import styles from "./styles.module.scss";
+import { ACCENT } from "@/lib/palette";
 
 // Originál bral `cn` z "@/lib/utils". Ten tu není a jedinou jeho úlohou
 // je slepit třídy, takže stačí tohle.
@@ -728,7 +729,7 @@ export const Landscape = ({
   // 0 = žádné částice, tedy původní chování.
   particles = 0,
   particleSize = 2.6,
-  particleColor = "#bec948",
+  particleColor = ACCENT,
   particleSpeed = 1,
   particleNoiseScale = 0.0016,
   particleNoiseStrength = 0.05,

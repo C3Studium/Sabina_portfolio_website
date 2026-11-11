@@ -15,11 +15,12 @@ import { frameData, motion, useMotionValue, useMotionValueEvent, type MotionValu
 import { usePerformance } from "@/providers/PerformanceProvider";
 import type { Smoke, SmokeConfig } from "@/components/common/scroll-placeholder/smoke";
 import styles from "./styles.module.scss";
+import { ACCENT } from "@/lib/palette";
 
 // Vzhled kouře — jako nápověda posunu, jen písmena přijíždějí kratší
 // cestou (text tu stojí v bloku, ne na volné ploše).
 const SMOKE: SmokeConfig = {
-  smokeColor: "#bec948",
+  smokeColor: ACCENT,
   drift: "down",
   rise: 0.2,
   turbulence: 1,

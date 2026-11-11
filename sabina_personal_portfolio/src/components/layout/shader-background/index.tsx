@@ -1,6 +1,7 @@
 import dynamic from "next/dynamic";
 import { usePerformance } from "@/providers/PerformanceProvider";
 import styles from "./styles.module.scss";
+import { ACCENT } from "@/lib/palette";
 
 // WebGL terén sahá na canvas a devicePixelRatio, takže se nesmí
 // renderovat na serveru.
@@ -89,7 +90,7 @@ export default function ShaderBackground() {
         /* ---------- Prstence ---------- */
         // Nižší ringWidth = ostřejší hrana prstence; tenký prstenec ale
         // zhasne, takže se to musí dorovnat přes ringStrength.
-        ringColor="#bec948"
+        ringColor={ACCENT}
         ringSpacing={0.5}
         ringSpeed={0.25}
         ringWidth={0.01}

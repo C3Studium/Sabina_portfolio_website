@@ -15,11 +15,12 @@
 import { useEffect, useRef, useSyncExternalStore, type CSSProperties } from "react";
 import { createTyper, type TypeCaret, type TypeSegment, type TypeSettings, type Typer } from "./engine";
 import styles from "./styles.module.scss";
+import { ACCENT } from "@/lib/palette";
 
 /* ---------- Nastavení ---------- */
 
 const settings = {
-  accentColor: "#bec948",
+  accentColor: ACCENT,
   typeSpeed: 38,
   selectDelay: 380,
   caretHold: 900,

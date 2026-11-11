@@ -13,14 +13,14 @@
 // zmáčknutí při rychlém pohybu jen roztáhne texturu, nepřekresluje.
 
 import type { FlexItem } from "./engine";
+import { ACCENT, SNOW, SNOW_RGB } from "@/lib/palette";
 
 /** Okraj plátna kolem karty v px — místo pro rámeček výzvy a drobky. */
 // Rámeček karty (odsazení 10 px) + drobky až ~18 px ven + popisek nad ním.
 export const MARGIN = 40;
 /** Odsazení rámečku karty od karty v px. */
 const CARD_PAD = 10;
-const MARK = "rgba(255, 255, 255, 0.9)";
-const ACCENT = "#bec948";
+const MARK = `rgba(${SNOW_RGB}, 0.9)`;
 
 // Stejný hash jako v MeasureText — drobky náhodné, ale stálé.
 const noise = (...values: number[]) => {
@@ -166,13 +166,13 @@ export function drawCardLayer(canvas: HTMLCanvasElement, d: CardLayerDraw) {
   }
   if (d.item.subtitle) {
     ctx.font = `400 ${textSize}px ${d.font}`;
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = SNOW;
     ctx.fillText(d.item.subtitle, left, base);
     base -= textSize * 1.75;
   }
   if (d.item.title) {
     ctx.font = `600 ${titleSize}px ${d.font}`;
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = SNOW;
     ctx.fillText(d.item.title, left, base);
   }
   ctx.globalAlpha = 1;

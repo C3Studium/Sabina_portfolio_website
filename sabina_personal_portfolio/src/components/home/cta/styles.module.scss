@@ -13,9 +13,11 @@
 // monitoru srazí zhruba na polovinu.
 
 // Sazba jen ve třech barvách: bílá, zelená a uhlově černá.
-$accent: #bec948;
-$ink: #141414;
-$white: #ffffff;
+$accent: var(--green);
+$ink: var(--charcoal);
+// Text na stránce (tmavý podklad); $ink jen na světlých plochách.
+$text: var(--snow);
+$white: var(--snow);
 $ink-soft: $ink;
 // Vedlejší texty (podtitul, stav, claim) — bílé, malé; důležitost dělá
 // velikost, ne šedá.
@@ -27,7 +29,7 @@ $backdrop: #9c9c9c;
 $card: #232323;
 $card-text: $white;
 $card-muted: $white;
-$card-line: rgba(255, 255, 255, 0.15);
+$card-line: rgba(var(--snow-rgb), 0.15);
 
 .cta {
   position: relative;
@@ -35,7 +37,7 @@ $card-line: rgba(255, 255, 255, 0.15);
   overflow: hidden;
   // Zaoblení okna, dokud CTA přijíždí (viz Portál níž).
   border-radius: calc(var(--portal-shape) * 16px / var(--dolly-scale, 1));
-  color: $ink;
+  color: $text;
   // Doslovná kopie podkladu z hero/styles.module.scss — sekce na sebe
   // musí navazovat bez viditelného švu.
   // Průhledné schválně — podklad celého webu dělá globální shader
@@ -80,7 +82,7 @@ $card-line: rgba(255, 255, 255, 0.15);
   position: absolute;
   inset: 0;
   z-index: 10;
-  border: calc(1.5px / var(--dolly-scale, 1)) solid rgba(190, 201, 72, 0.6);
+  border: calc(1.5px / var(--dolly-scale, 1)) solid rgba(var(--green-rgb), 0.6);
   border-radius: inherit;
   opacity: var(--portal-shape);
   pointer-events: none;
@@ -132,7 +134,7 @@ $card-line: rgba(255, 255, 255, 0.15);
   pointer-events: none;
 
   path:first-of-type {
-    stroke: rgba(46, 46, 46, 0.22);
+    stroke: rgba(var(--charcoal-rgb), 0.22);
   }
 }
 
@@ -188,7 +190,7 @@ $card-line: rgba(255, 255, 255, 0.15);
     bottom: 0.2vh;
     left: 0;
     width: 1px;
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(var(--snow-rgb), 0.3);
   }
 
   strong {
@@ -360,7 +362,7 @@ $card-line: rgba(255, 255, 255, 0.15);
   width: clamp(1.5rem, 5.4vh, 7.2rem);
   height: clamp(1.5rem, 5.4vh, 7.2rem);
   flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(var(--snow-rgb), 0.35);
   border-radius: 50%;
   font-size: clamp(0.42rem, 1.06vh, 1.4rem);
   font-weight: 500;
@@ -546,7 +548,7 @@ $card-line: rgba(255, 255, 255, 0.15);
   grid-area: 2 / 2;
   height: 1px;
   margin-bottom: 0.8vh;
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(var(--snow-rgb), 0.4);
   // Tečka jezdí v cqw (délka linky).
   container-type: inline-size;
 }

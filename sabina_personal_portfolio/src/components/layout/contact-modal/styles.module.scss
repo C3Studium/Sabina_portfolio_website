@@ -6,12 +6,12 @@
 // JEDNOTKY: rozvržení na vh/vw jako sekce, ALE blok značky a horní lišta
 // jedou v rem, protože kopírují hlavičku a musí s ní sedět na pixel.
 
-$accent: #bec948;
+$accent: var(--green);
 // Sazba ve třech barvách: bílá, zelená a uhlově černá (žádné šedé).
-$ink: #141414;
+$ink: var(--charcoal);
 $ink-soft: $ink;
 $ink-muted: $ink;
-$line: rgba(46, 46, 46, 0.14);
+$line: rgba(var(--charcoal-rgb), 0.14);
 
 // Lišta na šířku kopíruje hlavičku — proto v rem.
 $header-height: 5.75rem;
@@ -24,11 +24,11 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   position: relative;
 
   > svg > rect {
-    stroke: rgba(20, 20, 20, 0.7);
+    stroke: rgba(var(--charcoal-rgb), 0.7);
   }
 
   > svg > path {
-    stroke: rgba(20, 20, 20, 0.85);
+    stroke: rgba(var(--charcoal-rgb), 0.85);
   }
 
   // Štítek rámečku (poslední span je výplň).
@@ -76,8 +76,8 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   pointer-events: none;
   background: radial-gradient(
     34% 46% at 38% 52%,
-    rgba(255, 255, 255, 0.55),
-    rgba(255, 255, 255, 0.16) 58%,
+    rgba(var(--snow-rgb), 0.55),
+    rgba(var(--snow-rgb), 0.16) 58%,
     transparent 78%
   );
 }
@@ -91,7 +91,7 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.9) 0.9px, transparent 1px);
+  background-image: radial-gradient(rgba(var(--snow-rgb), 0.9) 0.9px, transparent 1px);
   background-size: 4px 4px;
   mask-image: radial-gradient(36% 50% at 34% 52%, transparent 50%, #000 68%, transparent 88%);
   -webkit-mask-image: radial-gradient(36% 50% at 34% 52%, transparent 50%, #000 68%, transparent 88%);
@@ -192,9 +192,9 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   height: 2.6rem;
   flex-shrink: 0;
   padding: 0;
-  border: 1px solid rgba(46, 46, 46, 0.22);
+  border: 1px solid rgba(var(--charcoal-rgb), 0.22);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.45);
+  background: rgba(var(--snow-rgb), 0.45);
   color: $ink;
   cursor: pointer;
   transition: background 0.24s ease, border-color 0.24s ease, transform 0.24s ease;
@@ -316,7 +316,7 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  border: 1px solid rgba(46, 46, 46, 0.28);
+  border: 1px solid rgba(var(--charcoal-rgb), 0.28);
   border-radius: 50%;
 
   svg {
@@ -395,7 +395,7 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   width: 2.2vw;
   height: 1px;
   margin: 2.4vh 0;
-  background: rgba(46, 46, 46, 0.3);
+  background: rgba(var(--charcoal-rgb), 0.3);
 }
 
 .formLead {
@@ -532,8 +532,8 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   .glow {
     background: radial-gradient(
       60% 46% at 50% 40%,
-      rgba(255, 255, 255, 0.55),
-      rgba(255, 255, 255, 0.16) 58%,
+      rgba(var(--snow-rgb), 0.55),
+      rgba(var(--snow-rgb), 0.16) 58%,
       transparent 78%
     );
   }
@@ -602,12 +602,12 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
     padding: 1.4vh 4vw 1.4vh 3vw;
     border: 1px solid $line;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.32);
+    background: rgba(var(--snow-rgb), 0.32);
   }
 
   a.channelLink:hover {
     border-color: $accent;
-    background: rgba(255, 255, 255, 0.6);
+    background: rgba(var(--snow-rgb), 0.6);
   }
 
   .channelIcon {
@@ -670,7 +670,7 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   padding: 1.8vh 1.1vw;
   border: 1px solid $line;
   border-radius: 0.3vw;
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(var(--snow-rgb), 0.55);
   color: $ink;
   font-family: inherit;
   font-size: clamp(0.68rem, 1.55vh, 2.05rem);
@@ -684,7 +684,7 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   &:focus {
     outline: none;
     border-color: $accent;
-    background: rgba(255, 255, 255, 0.78);
+    background: rgba(var(--snow-rgb), 0.78);
   }
 }
 
@@ -708,7 +708,7 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
 
   .select[data-open] & {
     border-color: $accent;
-    background: rgba(255, 255, 255, 0.78);
+    background: rgba(var(--snow-rgb), 0.78);
   }
 }
 
@@ -756,7 +756,7 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   align-items: center;
   gap: 0.8vw;
   padding: 1.5vh 1.2vw;
-  color: #fff;
+  color: var(--snow);
   font-size: clamp(0.68rem, 1.55vh, 2.05rem);
   font-weight: 300;
   cursor: pointer;
@@ -839,7 +839,7 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   border: 0;
   border-radius: 0.3vw;
   background: #1a1a1a;
-  color: #fff;
+  color: var(--snow);
   font-family: inherit;
   cursor: pointer;
   transition: background 0.24s ease;

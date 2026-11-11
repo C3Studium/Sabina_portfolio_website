@@ -99,15 +99,17 @@ const SCENE_DELETED = heroAt(424);
 const FLIGHT_FROM = heroAt(489);
 
 // Tablet na výšku: portrét při posunu tracku vyroste z 54 % výšky okna
-// (styles .portrait) na 79,2 % a k tomu ujede o 18,4vw doleva — skončí
-// kousek za levým okrajem okna.
+// (styles .portrait) na 79,2 % a k tomu ujede o 26vw doleva — skončí
+// za levým okrajem okna, ať má galerie vpravo víc místa.
 const TABLET_GROW = 79.2 / 54;
-const TABLET_SHIFT_VW = -18.4;
+const TABLET_SHIFT_VW = -26;
 // Telefon: vedle velkého portrétu se karta nevejde — portrét neroste
 // a jede jen s trackem (o 6vw míň): obličej u levého okraje, karta stojí
 // vpravo od obličeje, PŘED tělem.
 const PHONE_GROW = 1;
 const PHONE_SHIFT_VW = 6;
+// …a vyjede o 14vh nahoru (dole je lišta s výzvou, header/styles).
+const PHONE_LIFT_VH = 14;
 
 // Koncová interpunkce u slova z CMS patří mimo něj (tečku kreslí řádek).
 const TRAILING = /[.,;:!?…]+$/;
@@ -456,7 +458,8 @@ export default function Hero({
         : 0;
       const grow = 1 + ((phone ? PHONE_GROW : TABLET_GROW) - 1) * k;
       const baseX = ((phone ? PHONE_SHIFT_VW : TABLET_SHIFT_VW) / 100) * window.innerWidth * k;
-      const baseY = -(grow - 1) * (frame?.offsetHeight ?? 0);
+      const lift = phone ? (PHONE_LIFT_VH / 100) * window.innerHeight * k : 0;
+      const baseY = -(grow - 1) * (frame?.offsetHeight ?? 0) - lift;
       if (t <= 0 || !frame || !target) {
         flightX.set(baseX);
         flightY.set(baseY);
@@ -502,7 +505,12 @@ export default function Hero({
   const orbitEntry = useTransform(scrollYProgress, [heroAt(20), heroAt(200)], [0, 1]);
 
   return (
-    <section ref={containerRef} className={styles.container} data-cursor={sceneGone ? "user" : undefined}>
+    <section
+      ref={containerRef}
+      className={styles.container}
+      data-cursor={sceneGone ? "user" : undefined}
+      data-scroll-label="Úvod"
+    >
       <div className={styles.sticky}>
         <motion.div className={styles.track} style={{ x }}>
           {/* ---------- Panel 1: hero (100vw) ---------- */}
@@ -517,6 +525,12 @@ export default function Hero({
                 show={bannersStart && !scrolled}
                 delay={introRan ? 0 : PORTRAIT_DELAY - 0.1}
                 still={reducedMotion}
+                // Na výšku pozadí obrazovky: větší, přes celou šířku, spodky
+                // u spodní hrany — vršek pod textem zprůhlední maska (styles).
+                scale={tablet ? 1.15 : undefined}
+                across={tablet ? 0.96 : undefined}
+                baseline={tablet ? 1 : undefined}
+                fieldLeft={tablet ? 0.04 : undefined}
                 className={styles.introBanners}
               />
             )}
@@ -889,6 +903,9 @@ export default function Hero({
             </motion.div>
           </motion.div>
         </motion.div>
+        {/* Telefon: pruh u pravého okraje, kde palec scrolluje stránkou —
+            jinde si dotyk bere 3D galerie (táhne kartami). */}
+        <div className={styles.thumbLane} aria-hidden="true" />
       </div>
     </section>
   );

@@ -10,13 +10,17 @@
   height: 100%;
   overflow: hidden;
   cursor: grab;
+  // Dotyk: vodorovně táhne karty (engine.ts), svisle scrolluje stránku.
   touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
-  overscroll-behavior: contain;
+  // Jen do stran (gesto zpět v prohlížeči). Svisle NE: s overflow: hidden je
+  // .root scroll kontejner a `contain` by svislý tah prstem nepustil dál
+  // na stránku — scroll se přes galerii zasekl.
+  overscroll-behavior-x: contain;
   outline: none;
-  color: #fff;
+  color: var(--snow);
 
   &[data-hover="open"] {
     cursor: zoom-in;
@@ -157,7 +161,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  color: #fff;
+  color: var(--snow);
   pointer-events: none;
 
   &[data-align="center"] {

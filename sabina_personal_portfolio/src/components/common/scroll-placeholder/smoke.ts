@@ -16,6 +16,7 @@
 // až když kouř opravdu poběží, a server ho nevidí vůbec.
 
 import * as THREE from "three";
+import { SNOW } from "@/lib/palette";
 
 export type SmokeFrom = "top" | "bottom" | "center" | "edges";
 export type SmokeDrift = "up" | "down";
@@ -467,7 +468,7 @@ export function createSmoke(
     const context = ink.getContext("2d");
     if (!context) return;
 
-    context.fillStyle = "#ffffff";
+    context.fillStyle = SNOW;
     context.textBaseline = "alphabetic";
     context.font = `${style.fontStyle} ${style.fontWeight} ${em * pixelRatio}px ${style.fontFamily}`;
     const metrics = context.measureText("Hg");

@@ -12,17 +12,20 @@
 // podle scrollu (DOLLY v index.tsx). Obsah kroků je navržený ve vw/vh
 // jako dřív — dlaždice u kamery má skutečnou velikost.
 
-$accent: #bec948;
+$accent: var(--green);
 // Sazba ve třech barvách: bílá, zelená a uhlově černá (žádné šedé).
-$ink: #141414;
+$ink: var(--charcoal);
+// Text na stránce (tmavý podklad); $ink jen na světlých plochách.
+$text: var(--snow);
 $ink-soft: $ink;
 $backdrop: #9c9c9c;
-$ink-note: #6c5ce7;
+// Poznámky a popisky kompozic — zelené (text jen sněhový / zelený).
+$ink-note: $accent;
 
-$surface: #ffffff;
-$surface-soft: rgba(255, 255, 255, 0.9);
-$surface-border: rgba(255, 255, 255, 0.7);
-$line: rgba(46, 46, 46, 0.16);
+$surface: var(--snow);
+$surface-soft: rgba(var(--snow-rgb), 0.9);
+$surface-border: rgba(var(--snow-rgb), 0.7);
+$line: rgba(var(--charcoal-rgb), 0.16);
 
 /* ---------- Scroll rámec ---------- */
 
@@ -41,7 +44,7 @@ $line: rgba(46, 46, 46, 0.16);
   top: var(--frame-y);
   height: var(--frame-h);
   overflow: hidden;
-  color: $ink;
+  color: $text;
   // Stejný podklad jako hero a info.
   // Průhledné schválně — podklad celého webu dělá globální shader
   // v _app.tsx. Dřív tu byl sdílený gradient, který ho překrýval.
@@ -147,7 +150,7 @@ $line: rgba(46, 46, 46, 0.16);
 }
 
 .dot {
-  color: $ink;
+  color: $text;
 }
 
 .leadText {
@@ -157,7 +160,7 @@ $line: rgba(46, 46, 46, 0.16);
   font-weight: 300;
   line-height: 1.55;
   // Světlý — tmavý $ink-soft na šedém podkladu shaderu nebyl vidět.
-  color: #fff;
+  color: var(--snow);
 }
 
 /* ---------- Portrét (úvod) ---------- */
@@ -233,18 +236,18 @@ $line: rgba(46, 46, 46, 0.16);
   font-size: clamp(0.72rem, 1.75vh, 2.4rem);
   font-weight: 300;
   line-height: 1.4;
-  color: $ink-soft;
+  color: $text;
 
   strong {
     font-weight: 600;
-    color: $ink;
+    color: $text;
   }
 }
 
 // Tučná fráze v textu, který píše umělá myš (TypeText).
 .stepStrong {
   font-weight: 600;
-  color: $ink;
+  color: $text;
 }
 
 // Kontura stavby (SketchText z Info) je text jen obtažený — tučné fráze
@@ -335,6 +338,8 @@ $line: rgba(46, 46, 46, 0.16);
   border-radius: 0.5vw;
   background: rgba(232, 229, 222, 0.94);
   box-shadow: 0 2vh 4vh rgba(30, 30, 30, 0.16);
+  // Světlá karta — uhlová.
+  color: $ink;
 }
 
 .briefTitle {
@@ -380,7 +385,7 @@ $line: rgba(46, 46, 46, 0.16);
   left: 0;
   right: 0;
   height: 1px;
-  background: rgba(46, 46, 46, 0.14);
+  background: rgba(var(--charcoal-rgb), 0.14);
   transform-origin: 0 50%;
 }
 
@@ -421,6 +426,8 @@ $line: rgba(46, 46, 46, 0.16);
   padding: 1.2vh 0.7vw;
   background: $accent;
   box-shadow: 0 1.4vh 2.6vh rgba(30, 30, 30, 0.18);
+  // Na zelené — uhlová.
+  color: $ink;
 
   ul {
     display: flex;
@@ -473,6 +480,8 @@ $line: rgba(46, 46, 46, 0.16);
   padding: 2.4vh 1.2vw 3vh;
   background: $surface;
   box-shadow: 0 2vh 4vh rgba(30, 30, 30, 0.16);
+  // Světlá karta — uhlová.
+  color: $ink;
 }
 
 .typeCardLabel {
@@ -610,6 +619,8 @@ $line: rgba(46, 46, 46, 0.16);
   padding: 1.6vh 1vw 2vh;
   background: $surface;
   box-shadow: 0 1.8vh 3.4vh rgba(30, 30, 30, 0.18);
+  // Světlá bublina — uhlová.
+  color: $ink;
 
   p {
     margin: 1.4vh 0 0;
@@ -639,9 +650,10 @@ $line: rgba(46, 46, 46, 0.16);
   text-transform: uppercase;
 }
 
+// Štítky mluvčích: klient tmavý se sněhovým textem, já zelený s uhlovým.
 .tagClient {
-  background: $ink-note;
-  color: #fff;
+  background: $ink;
+  color: var(--snow);
 }
 
 .tagMe {
@@ -837,7 +849,7 @@ $line: rgba(46, 46, 46, 0.16);
   padding: 1vh 0.8vw;
   border-radius: 6px;
   background: rgba(28, 28, 28, 0.85);
-  color: #fff;
+  color: var(--snow);
   font-size: clamp(0.66rem, 1.5vh, 2rem);
   font-weight: 500;
   box-shadow: 0 1vh 2.4vh rgba(0, 0, 0, 0.25);
@@ -855,7 +867,7 @@ $line: rgba(46, 46, 46, 0.16);
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: rgba(190, 201, 72, 0.22);
+  background: rgba(var(--green-rgb), 0.22);
   box-shadow: inset 0 0 0 1px $accent;
 }
 
@@ -960,11 +972,11 @@ $line: rgba(46, 46, 46, 0.16);
   gap: 0.45rem;
   width: clamp(14rem, 15vw, 22rem);
   padding: 0.65rem 0.6rem 0.7rem;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(var(--snow-rgb), 0.14);
   border-radius: 10px;
   background: rgba(28, 28, 28, 0.78);
   backdrop-filter: blur(10px);
-  color: #fff;
+  color: var(--snow);
   box-shadow: 0 1.4vh 3vh rgba(0, 0, 0, 0.22);
   font-size: 13px;
   transform-origin: 0 100%;
@@ -977,7 +989,7 @@ $line: rgba(46, 46, 46, 0.16);
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #fff;
+  color: var(--snow);
 }
 
 .textPanelRow {
@@ -992,9 +1004,9 @@ $line: rgba(46, 46, 46, 0.16);
   justify-content: space-between;
   gap: 0.4rem;
   padding: 0.38rem 0.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--snow-rgb), 0.1);
   border-radius: 5px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--snow-rgb), 0.05);
   white-space: nowrap;
 
   // Pole, do kterého myš klikla (velikost písma).
@@ -1006,12 +1018,12 @@ $line: rgba(46, 46, 46, 0.16);
 
 .textPanelLabel {
   margin-right: 0.3rem;
-  color: #fff;
+  color: var(--snow);
 }
 
 .textPanelCaret {
   font-size: 9px;
-  color: #fff;
+  color: var(--snow);
 }
 
 /* ---------- 06: další projekty ---------- */
@@ -1051,7 +1063,7 @@ $line: rgba(46, 46, 46, 0.16);
   padding: 2.2vh 1.4vw;
   border-radius: 0.3vw;
   background: #232323;
-  color: #fff;
+  color: var(--snow);
   box-shadow: 0 2.4vh 4.6vh rgba(30, 30, 30, 0.24);
 }
 
@@ -1101,7 +1113,9 @@ $line: rgba(46, 46, 46, 0.16);
   display: flex;
   align-items: flex-end;
   gap: 0.6vw;
-  height: 55%;
+  // Pod dvouřádkovým nadpisem (ten končí kolem 45 % výšky snímku) —
+  // vyšší graf do nadpisu zajížděl.
+  height: 38%;
 }
 
 .slideBar {
@@ -1243,7 +1257,7 @@ $line: rgba(46, 46, 46, 0.16);
   line-height: 1.05;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #fff;
+  color: var(--snow);
 }
 
 .calloutLead {
@@ -1252,7 +1266,7 @@ $line: rgba(46, 46, 46, 0.16);
   font-size: clamp(0.9rem, 2.3vh, 3.1rem);
   font-weight: 300;
   line-height: 1.55;
-  color: #fff;
+  color: var(--snow);
 }
 
 /* ---------- Na výšku: tablet i telefon (xs-v, od 320px; základ je tablet 1128 × 1440) ---------- */
@@ -1293,12 +1307,29 @@ $line: rgba(46, 46, 46, 0.16);
     height: 74vh;
   }
 
+  // Kompozice kroku je tabletová (1128 px: --vw 16,02px, --vh 9,02px)
+  // zmenšená faktorem --comp-zoom (process/index.tsx) — CSS zoom zmenší i
+  // písmo, jehož spodní mez v rem by jinak přetekla z karet. Anotace (šipky
+  // s popisky) jsou vedle kompozice, zmenší se stejně. Krok sám (odsazení,
+  // výška) má jednotky tabletu × faktor, ať s kompozicí sedí.
   .step {
-    --vw: 1.42vw;
-    --vh: 0.8vw;
+    --vw: calc(16.02px * var(--comp-zoom, 1));
+    --vh: calc(9.02px * var(--comp-zoom, 1));
     // Blok (text + kompozice) zvednutý ode dna, ať stojí zhruba uprostřed
     // pod hlavičkou — anotace se měří od spodku kroku, jedou s ním.
     height: calc(100% - 12svh);
+  }
+
+  .briefComposition,
+  .conceptComposition,
+  .makeComposition,
+  .tuneComposition,
+  .deliverComposition,
+  .moreComposition,
+  .annotation {
+    --vw: 16.02px;
+    --vh: 9.02px;
+    zoom: var(--comp-zoom, 1);
   }
 
   .stepHead {
@@ -1345,8 +1376,11 @@ $line: rgba(46, 46, 46, 0.16);
     padding-left: 6vw;
   }
 
+  // Text nahoru pod hlavičku (ne na střed výšky) — o ~20vh výš.
   .lead {
     width: 88vw;
+    justify-content: flex-start;
+    padding-top: calc(5.75rem + 6vh);
   }
 
   .headline {
@@ -1357,14 +1391,12 @@ $line: rgba(46, 46, 46, 0.16);
     max-width: 80vw;
   }
 
+  // Portrét vpravo vedle „Objevujte posunutím" (hlava v jeho výšce),
+  // řez v pase za lištou s výzvou.
   .portrait {
-    right: -26vw;
-    height: 52vh;
-  }
-
-  .step {
-    --vw: 1.85vw;
-    --vh: 1.04vw;
+    right: -8vw;
+    bottom: 3vh;
+    height: 50vh;
   }
 
   .stepHead {

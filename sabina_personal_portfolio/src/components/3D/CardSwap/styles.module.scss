@@ -9,6 +9,10 @@
   height: 100%;
   outline: none;
   -webkit-tap-highlight-color: transparent;
+  // Dlouhý stisk karty ji chytí (index.tsx) — bez výběru textu a bublin.
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 // Scéna: přesně velká na balíček, uprostřed, zmenšená do kontejneru (fit).
@@ -71,8 +75,9 @@
   pointer-events: none;
 }
 
-.root:focus-visible .slot[data-front] {
-  outline: 2px solid #bec948;
+.root:focus-visible .slot[data-front],
+.root[data-holding] .slot[data-front] {
+  outline: 2px solid var(--green);
   outline-offset: 3px;
 }
 

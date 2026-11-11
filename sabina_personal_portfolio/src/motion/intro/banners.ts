@@ -32,6 +32,7 @@ import {
 import { createLayered, loadLayers, type Layered } from "./layered";
 import { BANNERS } from "./timeline";
 import { viewFrame } from "@/lib/fluid";
+import { SNOW } from "@/lib/palette";
 
 /* ---------- Nastavení ---------- */
 
@@ -100,7 +101,7 @@ const halftoneOf = (img: HTMLImageElement, box: Box, dpr: number) => {
   const octx = out.getContext("2d");
   if (!octx) return null;
   octx.scale(dpr, dpr);
-  octx.fillStyle = "#ffffff";
+  octx.fillStyle = SNOW;
   const sx = box.w / cols;
   const sy = box.h / rows;
   for (let y = 0; y < rows; y++) {
@@ -128,6 +129,13 @@ export type BannersOptions = {
   fieldLeft?: number;
   /** Společná spodní linka bannerů (část výšky okna). Bez ní 0,8 (hero). */
   baseline?: number;
+  /** Výšky bannerů × tohle (1 = SETTINGS.heights). */
+  scale?: number;
+  /**
+   * Bannery přes rám (část šířky okna), vystředěné v něm — místo šířky
+   * portrétu (×1,15) a středu na něm. Na výšku jako pozadí celé obrazovky.
+   */
+  across?: number;
 };
 
 export function createBanners(
@@ -212,18 +220,19 @@ export function createBanners(
     }
     const aspectOf = (i: number) =>
       aspects[i] ?? (images[i].naturalWidth ? images[i].naturalWidth / images[i].naturalHeight : 9 / 16);
-    let heights = images.map((_, i) => vh * SETTINGS.heights[i]);
+    let heights = images.map((_, i) => vh * SETTINGS.heights[i] * (options.scale ?? 1));
     let widths = heights.map((h, i) => h * aspectOf(i));
     const gaps = SETTINGS.gutter * (images.length - 1);
     const total = () => widths.reduce((a, b) => a + b, 0) + gaps;
-    const room = region.w * 1.15;
+    const frame = viewFrame();
+    const room = options.across !== undefined ? frame.w * options.across : region.w * 1.15;
     if (total() > room) {
       const k = (room - gaps) / (total() - gaps);
       heights = heights.map((h) => h * k);
       widths = widths.map((w) => w * k);
     }
     const base = vh * (options.baseline ?? 0.8);
-    let x = region.x + (region.w - total()) / 2;
+    let x = options.across !== undefined ? frame.x + (frame.w - total()) / 2 : region.x + (region.w - total()) / 2;
     const previous = banners;
     banners = images.map((image, i) => {
       const box = { x, y: base - heights[i], w: widths[i], h: heights[i] };

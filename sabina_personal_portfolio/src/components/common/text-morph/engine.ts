@@ -17,6 +17,7 @@
 
 import * as THREE from "three";
 import { animate } from "framer-motion";
+import { SNOW } from "@/lib/palette";
 
 export type MorphSettings = {
   /** "liquid" = písmena se slijí, "blur" = rozmazání a posun. */
@@ -552,7 +553,7 @@ export function createMorph(root: HTMLElement, settings: MorphSettings): Morph |
     mctx.clearRect(0, 0, cw, ch);
     mctx.setTransform(r, 0, 0, r, 0, 0);
     mctx.font = font;
-    mctx.fillStyle = "#fff";
+    mctx.fillStyle = SNOW;
     mctx.textBaseline = "alphabetic";
     for (const cell of cells) {
       for (const part of cell.parts) {

@@ -42,6 +42,7 @@ import { useGate } from "@/motion/LoadProvider";
 import { usePerformance } from "@/providers/PerformanceProvider";
 import type { Smoke, SmokeConfig, SmokeFrom } from "./smoke";
 import styles from "./styles.module.scss";
+import { ACCENT } from "@/lib/palette";
 
 /* ---------- Nastavení ---------- */
 
@@ -74,7 +75,7 @@ const settings = {
   // Ztenčení hran srazených WebGL písmen, aby při předávce seděla na ostrý
   // DOM text (1 = beze změny). Vyladěné měřením v prohlížeči.
   edge: 1.18,
-  smokeColor: "#bec948",
+  smokeColor: ACCENT,
   rise: 0.25,
   turbulence: 1,
   softness: 1,

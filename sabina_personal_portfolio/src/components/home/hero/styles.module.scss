@@ -3,9 +3,11 @@
 // Hero + horizontální galerie — statický prototyp.
 // Accent #BEC948 je vzorkovaný přímo z public/assets/rest/logo.png.
 
-$accent: #bec948;
+$accent: var(--green);
 // Sazba ve třech barvách: bílá, zelená a uhlově černá (žádné šedé).
-$ink: #141414;
+$ink: var(--charcoal);
+// Text na stránce (tmavý podklad); $ink jen na světlých plochách.
+$text: var(--snow);
 $ink-soft: $ink;
 $backdrop: #9c9c9c;
 
@@ -32,7 +34,7 @@ $track-width: 160vw;
   top: var(--frame-y);
   height: var(--frame-h);
   overflow: hidden;
-  color: $ink;
+  color: $text;
   // Průhledné schválně — podklad celého webu dělá globální shader
   // v _app.tsx. Dřív tu byl sdílený gradient, který ho překrýval.
   background: transparent;
@@ -91,7 +93,7 @@ $track-width: 160vw;
     .headlineRow {
       display: block;
       white-space: nowrap;
-      color: white;
+      color: var(--snow);
     }
 
     .accent {
@@ -99,7 +101,7 @@ $track-width: 160vw;
     }
 
     .dot {
-      color: white;
+      color: var(--snow);
       transition: opacity 0.5s ease 0.2s;
     }
 
@@ -232,7 +234,7 @@ $track-width: 160vw;
   overflow: hidden;
   border-radius: 25px;
   background: rgba(30, 30, 30, 0.2);
-  box-shadow: 0 2.4rem 3.6rem rgba(20, 20, 20, 0.42);
+  box-shadow: 0 2.4rem 3.6rem rgba(var(--charcoal-rgb), 0.42);
   transform: translateY(calc(var(--card-index) * -1.15rem));
   transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
 
@@ -265,7 +267,7 @@ $track-width: 160vw;
   align-items: center;
   justify-content: space-between;
   gap: 0.6rem;
-  color: #fff;
+  color: var(--snow);
 }
 
 .cardCtaLabel {
@@ -309,7 +311,7 @@ $track-width: 160vw;
   font-weight: 400;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: $ink-soft;
+  color: $text;
   white-space: nowrap;
 }
 
@@ -324,10 +326,10 @@ $track-width: 160vw;
   width: 2.55rem;
   height: 2.55rem;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(var(--snow-rgb), 0.45);
   border-radius: 50%;
   background: transparent;
-  color: #fff;
+  color: var(--snow);
   cursor: pointer;
   transition: border-color 0.22s ease, color 0.22s ease;
 
@@ -417,6 +419,11 @@ $track-width: 160vw;
   -webkit-mask-image: linear-gradient(90deg, transparent 0, transparent 6vw, #000 13vw);
 }
 
+// Pruh pro palec — jen telefon na výšku (blok níž).
+.thumbLane {
+  display: none;
+}
+
 /* ---------- Na výšku: tablet i telefon (xs-v, od 320px; základ je tablet 1128 × 1440) ---------- */
 // Základ pro zařízení na výšku. Titulek vlevo nahoře přes celou šířku,
 // portrét (a bannery za ním, měří se podle něj) menší vpravo dole —
@@ -442,6 +449,13 @@ $track-width: 160vw;
     margin-top: 4vh;
   }
 
+  // Bannery jako pozadí (velké, přes šířku — hero/index.tsx): odspodu plně,
+  // nahoru do textu vyblednou.
+  .introBanners {
+    mask-image: linear-gradient(180deg, transparent 0, transparent 42%, rgba(0, 0, 0, 0.5) 62%, #000 86%);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, transparent 42%, rgba(0, 0, 0, 0.5) 62%, #000 86%);
+  }
+
   // Portrét na první obrazovce: menší, vpravo pod řádkem „výsledky", za
   // titulkem (.content má z-index 2). Rovný řez v pase je těsně (1vh) pod
   // spodní hranou. Se scrollem vyroste na 79,2 % a ujede doleva
@@ -461,18 +475,19 @@ $track-width: 160vw;
   }
 
   // Scéna galerie přes celou výšku okna (ohnuté karty nenarazí na hranu
-  // boxu, spodní přesah ořízne okno): 100vw × 100vh posunutý o 6vh dolů
-  // a 31vw doleva — střed čočky na 67vw okna, ve volném pruhu vpravo od
-  // portrétu jedna velká karta ~50vh (cardHeight v hero/index.tsx). Levý
-  // okraj scény zprůhlední za portrétem (okno ~34–42vw), karty zajedou
-  // za něj.
+  // boxu, spodní přesah ořízne okno) a ŠIRŠÍ než okno: 140vw × 100vh, o 6vh
+  // dolů a 51vw doleva — střed čočky na 67vw okna, ve volném pruhu vpravo
+  // od portrétu jedna velká karta ~50vh (cardHeight v hero/index.tsx; karty
+  // se měří z výšky, ne šířky). Čočka roste se šířkou (lensWidth), takže
+  // natažené konce řady jsou za okrajem okna. Levý okraj scény zprůhlední
+  // za portrétem (okno ~34–42vw), karty zajedou za něj.
   .flex {
     top: 6vh;
-    left: -31vw;
-    width: 100vw;
+    left: -56vw;
+    width: 140vw;
     height: 100vh;
-    mask-image: linear-gradient(90deg, transparent 0, transparent 10vw, #000 18vw);
-    -webkit-mask-image: linear-gradient(90deg, transparent 0, transparent 10vw, #000 18vw);
+    mask-image: linear-gradient(90deg, transparent 0, transparent 27vw, #000 35vw);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, transparent 27vw, #000 35vw);
   }
 }
 
@@ -481,15 +496,38 @@ $track-width: 160vw;
 // portrét neroste a s trackem dojede k levému okraji (PHONE_GROW / PHONE_SHIFT_VW
 // v hero/index.tsx), karta (cardHeight 0,4) stojí vpravo od obličeje PŘED
 // tělem — střed čočky na 66vw okna (panel galerie končí na 48vw, scéna
-// o 32vw vlevo).
+// 140vw o 52vw vlevo).
 @media (max-width: 599.98px) and (orientation: portrait) {
+  // Pravých 50px okna patří scrollu: průhledný pruh nad galerií, dotyk
+  // v něm jde stránce (pan-y), ne scéně.
+  .thumbLane {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+    display: block;
+    width: 50px;
+    touch-action: pan-y;
+  }
+
+  // Portrét v galerii vyjede nahoru (PHONE_LIFT_VH) a rovný řez v pase by
+  // byl nad lištou s výzvou vidět — spodek fotky vybledne.
+  .portraitImage {
+    mask-image: linear-gradient(0deg, transparent 0, #000 16%);
+    -webkit-mask-image: linear-gradient(0deg, transparent 0, #000 16%);
+  }
+
   .flex {
-    left: -32vw;
+    left: -52vw;
     z-index: 2;
   }
 
+  // Nad lištou s výzvou (header/styles, 3,7rem + 4vw od spodku), vlevo
+  // od pruhu pro palec (.thumbLane).
   .galleryHint {
-    right: 12vw;
+    right: calc(50px + 3vw);
+    bottom: calc(4vw + 4.6rem);
     zoom: 1;
   }
 }

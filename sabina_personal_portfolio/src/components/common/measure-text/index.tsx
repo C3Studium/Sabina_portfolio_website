@@ -27,6 +27,7 @@ import { usePerformance } from "@/providers/PerformanceProvider";
 import { useRefRegistry } from "@/providers/RefContext";
 import { createMeasure, type MeasureSettings } from "./engine";
 import styles from "./styles.module.scss";
+import { ACCENT, SNOW, SNOW_RGB } from "@/lib/palette";
 
 /* ---------- Nastavení ---------- */
 
@@ -46,7 +47,7 @@ const headline: MeasureSettings = {
   // Vodítka účaří / střední výšky / verzálek přes slovo s výběrem.
   guides: false,
   // Barva rámečku, popisků a vodítek; písmena mají barvu svého slova.
-  markColor: "rgba(255, 255, 255, 0.9)",
+  markColor: `rgba(${SNOW_RGB}, 0.9)`,
 
   /* Pohyb */
   draggable: true,
@@ -109,8 +110,8 @@ const nav: MeasureSettings = {
   ...headline,
   // Písmena zůstávají plná — celý název odkazu naráz z bílé zezelená.
   letterOutline: false,
-  ink: "#ffffff",
-  hoverTint: "#bec948",
+  ink: SNOW,
+  hoverTint: ACCENT,
   specks: 9,
   markScale: 0.6,
   draggable: false,

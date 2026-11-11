@@ -17,12 +17,13 @@ import { animate, useMotionValue, useMotionValueEvent, type AnimationPlaybackCon
 import { createBanners, type BannerSource } from "./banners";
 import { loadLayers } from "./layered";
 import { BANNERS, BANNERS_END } from "./timeline";
+import { ACCENT, SNOW_RGB } from "@/lib/palette";
 
 /* ---------- Nastavení ---------- */
 
 const LOOK = {
-  accent: "#bec948",
-  mark: "rgba(255, 255, 255, 0.9)",
+  accent: ACCENT,
+  mark: `rgba(${SNOW_RGB}, 0.9)`,
 };
 
 // Bannery jdou přes optimalizaci obrázků — originály mají i 2560 px na výšku.
@@ -53,6 +54,10 @@ type IntroBannersProps = {
   fieldLeft?: number;
   /** Spodní linka bannerů (část výšky okna), viz banners.ts. */
   baseline?: number;
+  /** Výšky bannerů × tohle, viz banners.ts. */
+  scale?: number;
+  /** Bannery přes rám (část šířky okna) místo k portrétu, viz banners.ts. */
+  across?: number;
   className?: string;
 };
 
@@ -73,7 +78,7 @@ const pairAt = (order: string[], round: number): BannerSource[] =>
       })
     : [];
 
-export default function IntroBanners({ sources, area, show, delay = 0, still = false, pace = 1, fieldLeft, baseline, className }: IntroBannersProps) {
+export default function IntroBanners({ sources, area, show, delay = 0, still = false, pace = 1, fieldLeft, baseline, scale, across, className }: IntroBannersProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bannersRef = useRef<ReturnType<typeof createBanners>>(null);
   const firstRef = useRef(true);
@@ -96,7 +101,7 @@ export default function IntroBanners({ sources, area, show, delay = 0, still = f
     const el = area.current;
     if (!canvas || !el || !pairKey) return;
     const pair = pairKey.split("\n").map((src) => ({ src, url: optimized(src) }));
-    const banners = createBanners(canvas, el, pair, LOOK, { fieldLeft, baseline });
+    const banners = createBanners(canvas, el, pair, LOOK, { fieldLeft, baseline, scale, across });
     bannersRef.current = banners;
     let cancelled = false;
     banners?.whenReady.then(() => {
@@ -107,7 +112,7 @@ export default function IntroBanners({ sources, area, show, delay = 0, still = f
       banners?.destroy();
       bannersRef.current = null;
     };
-  }, [pairKey, area, round, fieldLeft, baseline]);
+  }, [pairKey, area, round, fieldLeft, baseline, scale, across]);
 
   useMotionValueEvent(clock, "change", (t) => bannersRef.current?.draw(t));
 

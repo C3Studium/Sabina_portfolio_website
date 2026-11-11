@@ -19,6 +19,7 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { motion, useTransform, type MotionValue } from "framer-motion";
 import styles from "./styles.module.scss";
+import { SNOW } from "@/lib/palette";
 
 /** 0–1 podle polohy `p` v okně [from, to]. */
 export const span = (from: number, to: number) => (p: number) =>
@@ -168,7 +169,7 @@ export function BuildFrame({ progress, from, to, tag, size, marks = false, round
                   height={h}
                   rx={rx}
                   fill="none"
-                  stroke="#fff"
+                  stroke={SNOW}
                   strokeWidth={3}
                   style={{ pathLength: trace }}
                 />

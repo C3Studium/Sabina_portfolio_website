@@ -1,6 +1,6 @@
 @use "../../../styles/system/_shortcuts.scss" as *;
 
-$accent: #bec948;
+$accent: var(--green);
 
 // Tečka kurzoru. Pozici i průhlednost píše framer-motion (viz index.tsx) —
 // top/left zůstávají na nule, aby se nikdy nepřepočítával layout.

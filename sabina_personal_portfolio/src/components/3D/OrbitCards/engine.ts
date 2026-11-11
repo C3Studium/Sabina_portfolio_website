@@ -13,6 +13,7 @@
 // jen okno přední části dráhy, zbytek zhasne do stínu.
 
 import * as THREE from "three";
+import { SNOW } from "@/lib/palette";
 
 export interface OrbitCardsItem {
   src: string;
@@ -721,7 +722,7 @@ export const createOrbit = (
       if (!found) {
         const ink = new THREE.Color();
         ink.setStyle(
-          view.getComputedStyle(root).color || "#fff",
+          view.getComputedStyle(root).color || SNOW,
           THREE.NoColorSpace,
         );
         background.setHex(

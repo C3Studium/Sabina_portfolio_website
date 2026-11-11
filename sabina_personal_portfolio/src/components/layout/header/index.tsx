@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { editableIn } from "@c3studium/valecms/edit";
@@ -9,6 +9,7 @@ import TextMorph from "@/components/common/text-morph";
 import { useGate } from "@/motion/LoadProvider";
 import { useIntroAt } from "@/motion/intro/useIntroAt";
 import { LOGO } from "@/motion/intro/timeline";
+import { PORTRAIT_PHONE, useMedia } from "@/lib/fluid";
 import { NAV_ITEMS } from "../nav-items";
 import Menu from "../menu";
 import styles from "./styles.module.scss";
@@ -74,6 +75,46 @@ const textAt = (
   return (typeof value === "string" && value.trim()) || zaloha;
 };
 
+// Lišta s výzvou (telefon) odjede, když je na obrazovce jiná výzva ke
+// kontaktu — prvek s `data-contact-zone` (výzva v CTA, patička) aspoň z půlky
+// viditelný: v okně a s krytím (i po předcích) nad 0,5. Sekce si krytí
+// animují samy (i chvíli po zastavení scrollu), proto se čte při scrollu
+// a navíc dvakrát za sekundu, ne přes IntersectionObserver.
+function useContactZone(active: boolean) {
+  const [away, setAway] = useState(false);
+  useEffect(() => {
+    if (!active) return;
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      const shown = Array.from(document.querySelectorAll<HTMLElement>("[data-contact-zone]")).some((el) => {
+        const r = el.getBoundingClientRect();
+        if (!r.height || r.bottom < 0 || r.top > window.innerHeight) return false;
+        let opacity = 1;
+        for (let node: HTMLElement | null = el; node && opacity > 0.5; node = node.parentElement) {
+          opacity *= Number(getComputedStyle(node).opacity);
+        }
+        return opacity > 0.5;
+      });
+      setAway(shown);
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(check);
+    };
+    check();
+    const timer = window.setInterval(onScroll, 500);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearInterval(timer);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [active]);
+  return active && away;
+}
+
 function ArrowIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -122,16 +163,18 @@ export default function Header({ onContactClick, copy = null }: HeaderProps) {
   // nevejde (CSS schová .nav a ukáže .menuButton).
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = useCallback(() => setMenuOpen(false), [setMenuOpen]);
+  const barAway = useContactZone(useMedia(PORTRAIT_PHONE));
 
   return (
     // `data-motion-hold`: přechod mezi stránkami hlavičku schová celou. Pod
     // oponou při načtení ne — tam naskakují prvky (`data-intro`) jeden po
     // druhém, jak je úvod postaví (src/motion/intro/header.ts).
+    <>
     <header className={styles.header} data-motion-hold="lift">
       {/* Logo i tlačítko mají hover jako odkazy menu (MeasureText): čárkovaný
           rámeček mezi tečkami kurzoru, rozměr a drobky. Text zůstává v DOMu
           (`data-measure-frame` bez měřeného textu), jeho hover dělá CSS. */}
-      <MeasureText variant="brand">
+      <MeasureText variant="brand" className={styles.brandSlot}>
       {/* `data-brand` / `data-brand-mark`: podle nich preloader najde, kde bude
           logo stát, a kreslí ho přesně tam (src/motion/intro/logo.ts). */}
       <Link ref={brandRef} className={styles.brand} href="/" data-measure-frame="" data-brand="" data-intro="brand">
@@ -165,7 +208,7 @@ export default function Header({ onContactClick, copy = null }: HeaderProps) {
           kontaktního modalu (../nav-items), ne texty bloku. */}
       {/* Hover odkazů je efekt nadpisu (MeasureText), jen zmenšený: odkaz
           dostane rámeček s rozměrem a drobky a celý název zezelená. */}
-      <MeasureText variant="nav">
+      <MeasureText variant="nav" className={styles.navSlot}>
         <nav className={styles.nav} aria-label="Hlavní navigace">
           {NAV_ITEMS.map((item) => (
             <NavLink key={item.href} href={item.href} label={item.label} />
@@ -173,7 +216,7 @@ export default function Header({ onContactClick, copy = null }: HeaderProps) {
         </nav>
       </MeasureText>
 
-      <MeasureText variant="cta">
+      <MeasureText variant="cta" className={styles.ctaSlot}>
       <button
         ref={ctaRef}
         type="button"
@@ -204,6 +247,7 @@ export default function Header({ onContactClick, copy = null }: HeaderProps) {
         aria-label="Otevřít menu"
         aria-expanded={menuOpen}
         aria-controls="site-menu"
+        data-intro="menu"
       >
         <span className={styles.menuLines} aria-hidden="true">
           <span />
@@ -220,5 +264,20 @@ export default function Header({ onContactClick, copy = null }: HeaderProps) {
         ctaLabel={ctaLabel}
       />
     </header>
+
+    {/* Telefon na výšku: výzva jako lišta dole přes šířku (v hlavičce se
+        schová, styles). Stojí vedle hlavičky, ne v ní — hlavička se při
+        přechodu posouvá (transform) a fixed prvek uvnitř by jel s ní. */}
+    <button type="button" className={styles.contactBar} onClick={onContactClick}
+      data-motion-hold=""
+      data-away={barAway ? "" : undefined}
+      tabIndex={barAway ? -1 : undefined}
+    >
+      <span className={styles.contactBarLabel}>{ctaLabel}</span>
+      <span className={styles.contactBarArrow} aria-hidden="true">
+        <ArrowIcon />
+      </span>
+    </button>
+    </>
   );
 }

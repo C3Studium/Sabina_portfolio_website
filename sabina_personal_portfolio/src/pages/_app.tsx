@@ -9,6 +9,7 @@ import ContactModal from "@/components/layout/contact-modal";
 import { CONTACT_OPEN_EVENT } from "@/components/layout/contact-modal/open";
 import ShaderBackground from "@/components/layout/shader-background";
 import Cursor from "@/components/common/cursor";
+import Scrollbar from "@/components/common/scrollbar";
 import { withStudio } from "@c3studium/valecms";
 import type { GlobalCopy } from "@/lib/site/globals";
 import Preloader from "@/motion/Preloader";
@@ -136,6 +137,8 @@ function App({ Component, pageProps }: AppProps) {
       <Cursor />
       <Header onContactClick={() => setContactOpen(true)} copy={globals?.header} />
       <Component {...pageProps} />
+      {/* Posuvník stránky (lišta čárek vpravo) — jen pro myš. */}
+      <Scrollbar />
       <Footer copy={globals?.footer} socials={globals?.socials ?? null} />
       <ContactModal
         open={contactOpen}

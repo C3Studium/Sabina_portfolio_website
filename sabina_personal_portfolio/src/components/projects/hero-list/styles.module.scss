@@ -8,27 +8,30 @@
 //
 // JEDNOTKY: vh/vw se štědrými stropy v clamp(), jako sekce na homepage.
 
-$accent: #bec948;
+$accent: var(--green);
 // Sazba ve třech barvách: bílá, zelená a uhlově černá (žádné šedé).
-$ink: #141414;
+$ink: var(--charcoal);
+// Text na stránce (tmavý podklad); $ink jen na světlých plochách.
+$text: var(--snow);
 $ink-soft: $ink;
 $backdrop: #9c9c9c;
-$violet: #6c5ce7;
+// Kategorie na světlé kartě — uhlová (text jen sněhový, zelený, na světlém uhlový).
+$violet: $ink;
 
 // Karty mají vlastní stupnici — jsou to samostatné plochy, tmavé i světlé.
-$card-dark: #141414;
-$card-dark-text: #ffffff;
-$card-dark-muted: #ffffff;
+$card-dark: var(--charcoal);
+$card-dark-text: var(--snow);
+$card-dark-muted: var(--snow);
 $card-light: #f2f1ee;
-$card-light-text: #141414;
-$card-light-muted: #141414;
+$card-light-text: var(--charcoal);
+$card-light-muted: var(--charcoal);
 
 
 .heroList {
   position: relative;
   height: var(--frame-h);
   overflow: hidden;
-  color: $ink;
+  color: $text;
   // Doslovná kopie podkladu ze sekcí na homepage — web má držet jeden tón.
   // Průhledné schválně — podklad celého webu dělá globální shader
   // v _app.tsx. Dřív tu byl sdílený gradient, který ho překrýval.
@@ -48,8 +51,8 @@ $card-light-muted: #141414;
   background:
     linear-gradient(
       118deg,
-      rgba(255, 255, 255, 0.26) 0%,
-      rgba(255, 255, 255, 0.05) 30%,
+      rgba(var(--snow-rgb), 0.26) 0%,
+      rgba(var(--snow-rgb), 0.05) 30%,
       transparent 52%
     ),
     radial-gradient(38% 44% at 106% 0%, rgba(10, 10, 10, 0.8), transparent 72%),
@@ -73,7 +76,7 @@ $card-light-muted: #141414;
   flex-direction: column;
   align-items: center;
   gap: 2vh;
-  color: $ink-soft;
+  color: $text;
 }
 
 .railDot {
@@ -88,7 +91,7 @@ $card-light-muted: #141414;
   flex: 1;
   width: 1px;
   min-height: 2vh;
-  background: rgba(46, 46, 46, 0.3);
+  background: rgba(var(--charcoal-rgb), 0.3);
 }
 
 .railIndex {
@@ -117,10 +120,10 @@ $card-light-muted: #141414;
   height: clamp(2rem, 6.7vh, 8.8rem);
   flex-shrink: 0;
   padding: 0;
-  border: 1px solid rgba(46, 46, 46, 0.5);
+  border: 1px solid rgba(var(--charcoal-rgb), 0.5);
   border-radius: 50%;
   background: transparent;
-  color: $ink;
+  color: $text;
   cursor: pointer;
   transition: background 0.24s ease, border-color 0.24s ease, color 0.24s ease;
 
@@ -181,7 +184,7 @@ $card-light-muted: #141414;
   font-weight: 400;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: $ink-soft;
+  color: $text;
 }
 
 /* ---------- Řada karet v perspektivě ---------- */
@@ -382,7 +385,7 @@ $card-light-muted: #141414;
   display: flex;
   align-items: center;
   gap: 1vw;
-  color: #fff;
+  color: var(--snow);
 }
 
 .pagerCount {
@@ -398,7 +401,7 @@ $card-light-muted: #141414;
   width: clamp(1.7rem, 4.7vh, 6.2rem);
   height: clamp(1.7rem, 4.7vh, 6.2rem);
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(var(--snow-rgb), 0.35);
   border-radius: 50%;
   background: transparent;
   color: inherit;
@@ -492,13 +495,13 @@ $card-light-muted: #141414;
     transform: none;
   }
 
-  // Na světlém podkladu potřebuje pager tmavé barvy.
+  // Pod kartami na tmavé stránce — sněhový jako zbytek textu.
   .pager {
     align-self: flex-end;
-    color: $ink-soft;
+    color: $text;
   }
 
   .pagerButton {
-    border-color: rgba(46, 46, 46, 0.4);
+    border-color: rgba(var(--snow-rgb), 0.4);
   }
 }

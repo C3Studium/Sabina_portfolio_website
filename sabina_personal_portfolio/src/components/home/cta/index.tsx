@@ -23,6 +23,7 @@ import Lines, {
   type MarkedLine,
 } from "../lines";
 import styles from "./styles.module.scss";
+import { ACCENT, SNOW_RGB } from "@/lib/palette";
 
 const PortraitParticles = dynamic(() => import("@/components/common/particle-image"), { ssr: false });
 
@@ -331,14 +332,14 @@ function Swoosh({ draw }: { draw?: MotionValue<number> }) {
     >
       <g
         fill="none"
-        stroke="rgba(255, 255, 255, 0.42)"
+        stroke={`rgba(${SNOW_RGB}, 0.42)`}
         strokeWidth="1"
         vectorEffect="non-scaling-stroke"
       >
         <motion.path d="M306 349c-15 104 45 186 180 225" style={draw ? { pathLength: draw } : undefined} />
         <motion.path d="M686 286c56 44 76 82 91 118 23 58 79 82 144 90" style={draw ? { pathLength: draw } : undefined} />
       </g>
-      <motion.circle cx="777" cy="404" r="4.5" fill="#bec948" style={draw ? { opacity: draw } : undefined} />
+      <motion.circle cx="777" cy="404" r="4.5" fill={ACCENT} style={draw ? { opacity: draw } : undefined} />
     </svg>
   );
 }
@@ -605,7 +606,7 @@ export default function Cta({
           {/* Výzva: zelená slova a tlačítko v jednom obalu MeasureText —
               rámeček s rozměry přejíždí po písmenech i kolem kroužku, jako
               nadpis hera, a ukazuje, kam kliknout. Klik otevře modal. */}
-          <div className={styles.actionHit} onPointerDown={onActionDown} onPointerUp={onActionUp}>
+          <div className={styles.actionHit} onPointerDown={onActionDown} onPointerUp={onActionUp} data-contact-zone="">
           <MeasureText enabled={built && !editing} sweep={built} className={styles.actionMeasure}>
             <button type="button" className={styles.action} onClick={onActionKey}>
               <SketchText

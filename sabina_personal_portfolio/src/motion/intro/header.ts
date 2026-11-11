@@ -38,7 +38,8 @@ import { HEADER, LOGO, headerOut } from "./timeline";
 type Item = { el: HTMLElement; box: Box; glyphs: Glyphs | null; start: number };
 
 export function createHeader(look: Look, logoFrame: LogoFrame | null): Layer | null {
-  const linkEls = Array.from(document.querySelectorAll<HTMLElement>('[data-intro="link"]'));
+  // Tlačítko menu (kde se navigace nevejde) se staví jako odkaz.
+  const linkEls = Array.from(document.querySelectorAll<HTMLElement>('[data-intro="link"], [data-intro="menu"]'));
   const ctaEl = document.querySelector<HTMLElement>('[data-intro="cta"]');
   if (!linkEls.length && !ctaEl) return null;
   const measure = document.createElement("canvas").getContext("2d");

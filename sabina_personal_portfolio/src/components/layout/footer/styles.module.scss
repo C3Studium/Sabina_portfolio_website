@@ -7,10 +7,12 @@
 // z hlavičky (ta je taky rem, má pevnou výšku) a footer s ní má sedět
 // na svislici i velikosti písma.
 
-// Sazba ve třech barvách: bílá, zelená a uhlově černá.
-$accent: #bec948;
-$ink: #141414;
-$ink-soft: $ink;
+// Sazba ve třech barvách: sněhově bílá, zelená a uhlově černá. Text paty
+// je sněhový (na tmavém podkladu shaderu), uhlová jen na zelené.
+$accent: var(--green);
+$ink: var(--charcoal);
+$text: var(--snow);
+$ink-soft: $text;
 $backdrop: #9c9c9c;
 
 // Stejný gutter jako hlavička — díky němu je logo v patě přesně pod
@@ -45,7 +47,7 @@ $height: max(40vh, 21rem);
   top: calc(100lvh - #{$height});
   height: $height;
   overflow: hidden;
-  color: $ink;
+  color: $text;
   // Identický gradient jako sekce, ale vykreslený na viewport-velkém
   // boxu (background-size) — footer je jen 40vh vysoký, takže z něj
   // ukazuje horní výsek a tón i sklon zůstávají stejné jako v sekcích.
@@ -65,13 +67,13 @@ $height: max(40vh, 21rem);
     linear-gradient(
       118deg,
       transparent 56%,
-      rgba(255, 255, 255, 0.1) 72%,
+      rgba(var(--snow-rgb), 0.1) 72%,
       transparent 88%
     ),
     radial-gradient(
       circle 22vh at 12vw 16vh,
-      rgba(255, 255, 255, 0.09),
-      rgba(255, 255, 255, 0.045) 62%,
+      rgba(var(--snow-rgb), 0.09),
+      rgba(var(--snow-rgb), 0.045) 62%,
       transparent 78%
     );
 }
@@ -166,7 +168,7 @@ $height: max(40vh, 21rem);
     bottom: 0.4vh;
     left: 0;
     width: 1px;
-    background: rgba(20, 20, 20, 0.4);
+    background: rgba(var(--charcoal-rgb), 0.4);
   }
 
   &::after {
@@ -205,7 +207,7 @@ $height: max(40vh, 21rem);
   font-weight: 400;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: $ink;
+  color: $text;
 }
 
 /* ---------- Právní odkazy ---------- */
@@ -260,9 +262,9 @@ $height: max(40vh, 21rem);
   place-items: center;
   width: clamp(2rem, 5.6vh, 7.4rem);
   height: clamp(2rem, 5.6vh, 7.4rem);
-  border: 1px solid rgba(20, 20, 20, 0.5);
+  border: 1px solid rgba(242, 247, 255, 0.5);
   border-radius: 50%;
-  color: $ink;
+  color: $text;
   transition: background 0.24s ease, border-color 0.24s ease, color 0.24s ease;
 
   svg {
@@ -273,7 +275,7 @@ $height: max(40vh, 21rem);
   &:hover {
     background: $accent;
     border-color: $accent;
-    color: #ffffff;
+    color: $text;
   }
 }
 
@@ -297,7 +299,7 @@ $height: max(40vh, 21rem);
   right: 0;
   left: 0;
   height: 1px;
-  background: rgba(20, 20, 20, 0.35);
+  background: rgba(242, 247, 255, 0.35);
 
   &::before,
   &::after {

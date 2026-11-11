@@ -600,7 +600,6 @@ export function useDesigner({ stage, names, refs, cardsPad, enabled }: Options) 
       }),
       { t: 1 + flow.toHeading[1], until: leftGone, row: { id: "heading", kind: "text", name: "Nadpis" } },
       { t: 1 + flow.toLead[1], until: leftGone, row: { id: "lead", kind: "text", name: "Text" } },
-      { t: 1 + flow.cta, until: leftGone, row: { id: "cta", kind: "pill", name: "Výzva" } },
       { t: 1 + flow.draw[0], until: 1 + flow.delCards.remove, row: { id: "cards", kind: "frame", name: "Karty služeb" } },
       { t: 1 + flow.barDrag[0], until: 1 + flow.delBar.remove, row: { id: "stats", kind: "bar", name: "Statistiky" } },
       { t: 2 + PROCESS.toHeadline[1], row: { id: "p-headline", kind: "text", name: "Nadpis procesu" } },

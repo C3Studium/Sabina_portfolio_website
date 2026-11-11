@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, useSyncExternalStore, type ReactNode, type Ref } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode, type Ref } from "react";
 import { useRefRegistry } from "@/providers/RefContext";
 import Image from "next/image";
 import { motion, useMotionValueEvent, useScroll, useTransform, type MotionValue } from "framer-motion";
@@ -43,6 +43,7 @@ import type { ProcessDetail, ProcessStep } from "@/lib/site/home";
 import Lines, { hasLines, picture, text, type MarkedLine } from "../lines";
 import styles from "./styles.module.scss";
 import { cvw, cvh, PORTRAIT_TABLET, useMedia } from "@/lib/fluid";
+import { ACCENT } from "@/lib/palette";
 
 // Úvod, kroky 01–06, výzva a CTA jako dlaždice DollyGallery (components/3D):
 // kamera jimi projíždí do hloubky podle scrollu. Dlaždice nese celý krok,
@@ -87,6 +88,11 @@ const DOLLY = {
 // Tablet na výšku: úvod přes celou šířku, kroky skoro přes celou (text nad
 // kompozicí, ta je zmenšená celá — styles, blok xs-v), žádné střídání do
 // stran. Výzva a CTA jako na šířku.
+// Kompozice kroků na výšku (viz --comp-zoom): šířka okna, pro kterou jsou
+// navržené (tablet), a o kolik větší smí být na telefonu.
+const COMP_REF_WIDTH = 1128;
+const COMP_PHONE_BOOST = 1.1;
+
 const DOLLY_TABLET = {
   /** Dlaždice stojí na výšku za sebou uprostřed — další z dálky jen
    *  naznačená, jinak by (hlavně velký text výzvy) prosvítala přes krok. */
@@ -264,7 +270,7 @@ const FALLBACK = {
       bars: [38, 62, 88],
       image: { src: "/assets/banners/bruzek_banner1.png", alt: "Kampaň Bruzek na snímku", width: 973, height: 1216 },
     },
-    brand: { mark: "N", name: "NOVA", tagline: "studio interiérů", colors: ["#bec948", "#2e2e2e", "#e8e5de", "#6c5ce7"] },
+    brand: { mark: "N", name: "NOVA", tagline: "studio interiérů", colors: [ACCENT, "#2e2e2e", "#e8e5de", "#6c5ce7"] },
     captions: ["bannery do kampaní", "prezentace", "identita značky"],
   },
   // 07 Výzva před CTA (bez čísla).
@@ -917,6 +923,23 @@ export default function Process({
   const tablet = useMedia(PORTRAIT_TABLET);
   const dollyLayout = tablet ? DOLLY_TABLET : DOLLY;
 
+  // Na výšku se kompozice kroků kreslí jako na tabletu 1128 a celé se
+  // zmenší (CSS zoom, styles blok xs-v) — i s písmem, takže nic nepřeteče
+  // z karet. Faktor podle šířky okna; telefon o kus větší (kompozice má
+  // vlevo menší okraj, vejde se).
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const apply = () => {
+      const w = window.innerWidth;
+      const k = (w / COMP_REF_WIDTH) * (w < 600 ? COMP_PHONE_BOOST : 1);
+      el.style.setProperty("--comp-zoom", k.toFixed(4));
+    };
+    apply();
+    window.addEventListener("resize", apply);
+    return () => window.removeEventListener("resize", apply);
+  }, []);
+
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start start", "end end"],
@@ -1053,7 +1076,7 @@ export default function Process({
   ]);
 
   return (
-    <section ref={containerRef} className={styles.container} id="proces" data-cursor="user">
+    <section ref={containerRef} className={styles.container} id="proces" data-cursor="user" data-scroll-label="Spolupráce">
       {/* Odkaz „Spolupráce" v menu: místo ve scrollu, kde dorazí CTA. */}
       {cta ? (
         <span

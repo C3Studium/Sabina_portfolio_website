@@ -23,7 +23,7 @@
   }
 
   &:focus-visible {
-    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6);
+    box-shadow: inset 0 0 0 2px rgba(var(--snow-rgb), 0.6);
   }
 }
 

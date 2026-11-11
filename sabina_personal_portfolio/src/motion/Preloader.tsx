@@ -21,12 +21,13 @@ import type { LogoLook } from "./intro/logo";
 import { CLOCK, END, GO, real } from "./intro/timeline";
 
 import styles from "./Preloader.module.scss";
+import { ACCENT, SNOW_RGB } from "@/lib/palette";
 
 /* ---------- Nastavení ---------- */
 
 const LOOK: LogoLook = {
-  accent: "#bec948",
-  mark: "rgba(255, 255, 255, 0.9)",
+  accent: ACCENT,
+  mark: `rgba(${SNOW_RGB}, 0.9)`,
   // Okraj rámečku kolem „S".
   pad: 8,
   // Jako rámeček loga při hoveru (MeasureText "brand").

@@ -22,6 +22,7 @@ import { animate, motionValue } from "framer-motion";
 import { usePerformance } from "@/providers/PerformanceProvider";
 import { createOutline, type OutlineSettings } from "./engine";
 import styles from "./styles.module.scss";
+import { SNOW } from "@/lib/palette";
 
 /* ---------- Nastavení ---------- */
 
@@ -33,7 +34,7 @@ const settings: OutlineSettings & { duration: number } = {
   // Okraj plný, ne rozsekaný na tečky ([tečka, mezera] v px by ho tečkoval).
   imageDots: null,
   // Text loga: bílý plný obrys (mezera 0 = plná linka, > 0 = tečky).
-  textColor: "#ffffff",
+  textColor: SNOW,
   textDot: 1,
   textGap: 0,
   // Přesah plátna kolem loga (px), aby obrys na hranách neuřízl.

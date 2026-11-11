@@ -22,6 +22,7 @@ import { useEffect, useImperativeHandle, useMemo, useRef, type ReactNode, type R
 import type { MotionValue } from "framer-motion";
 import type { DollyFrame } from "./index";
 import styles from "./styles.module.scss";
+import { ACCENT } from "@/lib/palette";
 
 export type DollyAnchor = {
   /** Pořadí dlaždice v galerii. */
@@ -119,7 +120,7 @@ function sampleCurve(points: P3[], samples: number): P3[] {
 export default function DollyLine({
   ref,
   anchors,
-  color = "#bec948",
+  color = ACCENT,
   width = 2.5,
   samples = 24,
   fade = [0.6, 2.6],

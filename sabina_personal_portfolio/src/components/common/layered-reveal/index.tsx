@@ -19,11 +19,12 @@ import { useEffect, useRef, type ReactNode } from "react";
 import type { MotionValue } from "framer-motion";
 import { createLayered, loadLayers, type Layered, type LayersData } from "@/motion/intro/layered";
 import styles from "./styles.module.scss";
+import { ACCENT, SNOW_RGB } from "@/lib/palette";
 
 /* ---------- Nastavení ---------- */
 
 // Barvy stavby — stejné jako u bannerů v heru (IntroBanners).
-const LOOK = { accent: "#bec948", mark: "rgba(255, 255, 255, 0.9)" };
+const LOOK = { accent: ACCENT, mark: `rgba(${SNOW_RGB}, 0.9)` };
 // Kde v „životě" banneru (layered.ts) je stavba hotová.
 const BUILT = 0.38;
 // Poslední část průběhu: plátno se prolne do skutečného obrázku.

@@ -14,24 +14,26 @@
 //
 // JEDNOTKY: vh/vw se štědrými stropy v clamp(), jako zbytek webu.
 
-$accent: #bec948;
+$accent: var(--green);
 // Sazba ve třech barvách: bílá, zelená a uhlově černá (žádné šedé).
-$ink: #141414;
+$ink: var(--charcoal);
+// Text na stránce (tmavý podklad); $ink jen na světlých plochách.
+$text: var(--snow);
 $ink-soft: $ink;
 $ink-muted: $ink;
 $backdrop: #9c9c9c;
 
 // Karty jsou jediné tmavé plochy na stránce, mají vlastní stupnici.
 $card: #1b1b1b;
-$card-text: #ffffff;
-$card-muted: #ffffff;
-$card-line: rgba(255, 255, 255, 0.12);
+$card-text: var(--snow);
+$card-muted: var(--snow);
+$card-line: rgba(var(--snow-rgb), 0.12);
 
 .about {
   position: relative;
   height: 170vh;
   overflow: hidden;
-  color: $ink;
+  color: $text;
   // Gradient sekcí, ale roztažený přes celých 200vh místo opakování —
   // opakováním by v polovině stránky vznikl viditelný šev.
   // Průhledné schválně — podklad celého webu dělá globální shader
@@ -49,8 +51,8 @@ $card-line: rgba(255, 255, 255, 0.12);
   background:
     radial-gradient(
       27vw 49vh at 74vw 50vh,
-      rgba(255, 255, 255, 0.5),
-      rgba(255, 255, 255, 0.2) 62%,
+      rgba(var(--snow-rgb), 0.5),
+      rgba(var(--snow-rgb), 0.2) 62%,
       transparent 78%
     ),
     radial-gradient(58% 46% at 88% 104%, rgba(12, 12, 12, 0.55), transparent 72%);
@@ -70,7 +72,7 @@ $card-line: rgba(255, 255, 255, 0.12);
   flex-direction: column;
   align-items: center;
   gap: 1.6vh;
-  color: $ink-soft;
+  color: $text;
 }
 
 // Tečka v prstenci, jak ji má návrh nahoře.
@@ -80,7 +82,7 @@ $card-line: rgba(255, 255, 255, 0.12);
   width: clamp(0.7rem, 1.5vw, 1.9rem);
   height: clamp(0.7rem, 1.5vw, 1.9rem);
   flex-shrink: 0;
-  border: 1px solid rgba(190, 201, 72, 0.55);
+  border: 1px solid rgba(var(--green-rgb), 0.55);
   border-radius: 50%;
 
   &::after {
@@ -96,7 +98,7 @@ $card-line: rgba(255, 255, 255, 0.12);
   flex: 1;
   width: 1px;
   min-height: 2vh;
-  background: rgba(46, 46, 46, 0.28);
+  background: rgba(var(--charcoal-rgb), 0.28);
 }
 
 .railIndex {
@@ -142,7 +144,7 @@ $card-line: rgba(255, 255, 255, 0.12);
   font-weight: 400;
   letter-spacing: 0.26em;
   text-transform: uppercase;
-  color: $ink-soft;
+  color: $text;
 }
 
 // V návrhu je nadpis ~68 px vysoký, což při měřítku 200vh dává 15,4vh.
@@ -173,7 +175,7 @@ $card-line: rgba(255, 255, 255, 0.12);
   width: 2.9vw;
   height: 1px;
   margin-bottom: 1.1vh;
-  background: rgba(46, 46, 46, 0.45);
+  background: rgba(var(--charcoal-rgb), 0.45);
 }
 
 // Odstup ke kartám je zapsaný jako margin-bottom, ne jen jako prázdné
@@ -255,7 +257,7 @@ $card-line: rgba(255, 255, 255, 0.12);
   flex-direction: column;
   overflow: hidden;
   padding: 2.08vh 1.12vw;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(var(--snow-rgb), 0.06);
   border-radius: 0.6vw;
   background: $card;
   color: $card-text;
@@ -268,7 +270,7 @@ $card-line: rgba(255, 255, 255, 0.12);
   top: -2vh;
   right: -1.6vw;
   width: 9.6vw;
-  color: rgba(255, 255, 255, 0.07);
+  color: rgba(242, 247, 255, 0.07);
   pointer-events: none;
 
   svg {
@@ -285,9 +287,9 @@ $card-line: rgba(255, 255, 255, 0.12);
   height: clamp(1.28rem, 4.48vh, 5.6rem);
   flex-shrink: 0;
   margin-bottom: 1.92vh;
-  border: 1px solid rgba(190, 201, 72, 0.35);
+  border: 1px solid rgba(var(--green-rgb), 0.35);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--snow-rgb), 0.04);
   color: $accent;
 
   svg {
@@ -372,7 +374,7 @@ $card-line: rgba(255, 255, 255, 0.12);
   padding: 0.88vh 0.62vw;
   border: 1px solid $card-line;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--snow-rgb), 0.05);
   font-size: clamp(0.35rem, 1.37vh, 1.82rem);
   font-weight: 300;
   white-space: nowrap;

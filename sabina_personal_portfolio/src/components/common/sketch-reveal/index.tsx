@@ -20,11 +20,12 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { animate, useMotionValue, useMotionValueEvent } from "framer-motion";
 import { createSketch, fillAt, type Sketch, type SketchSettings } from "./engine";
 import styles from "./styles.module.scss";
+import { ACCENT } from "@/lib/palette";
 
 /* ---------- Nastavení ---------- */
 
 const settings: SketchSettings = {
-  accent: "#bec948",
+  accent: ACCENT,
   // Části průběhu: skica do 30 %, výplň od 15 % do konce — linky jsou vidět
   // jen krátce, barvy je hned přebírají.
   sketch: [0, 0.3],

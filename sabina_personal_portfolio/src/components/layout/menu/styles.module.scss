@@ -4,8 +4,8 @@
 // modal na výšku: rozmazané pozadí a světlá karta uprostřed.
 // Sazba ve třech barvách: bílá, zelená a uhlově černá (žádné šedé).
 
-$accent: #bec948;
-$ink: #141414;
+$accent: var(--green);
+$ink: var(--charcoal);
 
 .backdrop {
   position: fixed;
@@ -41,8 +41,8 @@ $ink: #141414;
   pointer-events: none;
   background: radial-gradient(
     60% 46% at 50% 40%,
-    rgba(255, 255, 255, 0.55),
-    rgba(255, 255, 255, 0.16) 58%,
+    rgba(var(--snow-rgb), 0.55),
+    rgba(var(--snow-rgb), 0.16) 58%,
     transparent 78%
   );
 }
@@ -57,9 +57,9 @@ $ink: #141414;
   width: 2.6rem;
   height: 2.6rem;
   padding: 0;
-  border: 1px solid rgba(46, 46, 46, 0.22);
+  border: 1px solid rgba(var(--charcoal-rgb), 0.22);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.45);
+  background: rgba(var(--snow-rgb), 0.45);
   color: $ink;
   cursor: pointer;
   transition: background 0.24s ease, border-color 0.24s ease;
@@ -88,7 +88,7 @@ $ink: #141414;
   align-items: baseline;
   gap: 1.1rem;
   padding: clamp(0.7rem, 1.6vh, 1.1rem) 0;
-  border-bottom: 1px solid rgba(20, 20, 20, 0.14);
+  border-bottom: 1px solid rgba(var(--charcoal-rgb), 0.14);
   color: $ink;
   text-decoration: none;
 
