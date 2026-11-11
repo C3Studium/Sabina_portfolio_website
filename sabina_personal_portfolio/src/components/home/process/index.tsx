@@ -1076,11 +1076,15 @@ export default function Process({
   ]);
 
   return (
-    <section ref={containerRef} className={styles.container} id="proces" data-cursor="user" data-scroll-label="Spolupráce">
-      {/* Odkaz „Spolupráce" v menu: místo ve scrollu, kde dorazí CTA. */}
+    <section ref={containerRef} className={styles.container} id="proces" data-cursor="user" data-scroll-label="Proces">
+      {/* Odkaz „Spolupráce" v menu: místo ve scrollu, kde dorazí CTA. Pro
+          posuvník stránky je to samostatná sekce (CTA je jen animačně
+          poslední dlaždice dolly, obsahově vlastní sekce). */}
       {cta ? (
         <span
           id="spoluprace"
+          data-scroll-section=""
+          data-scroll-label="Spolupráce"
           className={styles.ctaAnchor}
           style={{ top: cvh(PROCESS.dollyEnd * PROCESS_PINNED) }}
           aria-hidden="true"

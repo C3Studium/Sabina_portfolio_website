@@ -1,10 +1,16 @@
 @use "../../../styles/system/_shortcuts.scss" as *;
 
 // Posuvník stránky (index.tsx) — lišta čárek pod výzvou v hlavičce (na
-// telefonu pod tlačítkem menu). V klidu u pravého okraje a stažená na
-// polovinu (scaleX 0,5); najetím myši, dotykem nebo tahem se roztáhne
-// (scaleX 1) a odsune na 2,5 % od kraje. Zelený jezdec (kde právě jsem) je
-// vidět jen během tahu. Čárky sněhové: projeté plně, zbytek tlumeně.
+// telefonu pod tlačítkem menu), u pravé hrany rámu 16 : 9. V klidu stažená
+// na polovinu (scaleX 0,5); najetím myši, dotykem nebo tahem se roztáhne
+// (scaleX 1), odjetím / puštěním se hned stáhne. Zelený jezdec (kde právě
+// jsem) je vidět jen během tahu. Čárky sněhové: projeté plně, zbytek
+// tlumeně.
+//
+// PLYNULOST: animuje se jen scaleX na .rail (pružina v index.tsx, běží na
+// kompozitoru bez přepočtu rozvržení) — žádné animované right / width ani
+// posun a žádný backdrop-filter (rozmazání pod škálovanou plochou se
+// překreslovalo každý snímek).
 
 $accent: var(--green);
 $ink: var(--charcoal);
@@ -16,17 +22,13 @@ $ink: var(--charcoal);
   // Polohu dopočítá index.tsx z tlačítka v hlavičce; tohle je jen záloha
   // do prvního měření.
   top: var(--rail-top, calc(var(--frame-y, 0px) + 7.5rem));
-  right: 0;
+  // U pravé hrany rámu obsahu 16 : 9 (na širokém monitoru je obsah
+  // uprostřed a po stranách pozadí — globals.scss), ne u kraje okna.
+  right: var(--frame-x);
   display: flex;
   justify-content: flex-end;
   color: var(--snow);
-  pointer-events: none;
-  transition: right 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-
-  // Aktivní (data-open, index.tsx): 2,5 % od pravého kraje.
-  &[data-open] {
-    right: 2.5%;
-  }
+  pointer-events: auto;
 }
 
 .rail {
@@ -38,20 +40,15 @@ $ink: var(--charcoal);
   padding: 0.7rem 0.55rem;
   border: 1px solid rgba(242, 247, 255, 0.16);
   border-radius: 6px;
-  background: rgba(var(--charcoal-rgb), 0.38);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(var(--charcoal-rgb), 0.5);
   box-shadow: 0 0.6rem 1.6rem rgba(0, 0, 0, 0.22);
-  // V klidu stažená na polovinu k pravému kraji, aktivní v plné šířce.
+  // V klidu stažená na polovinu k pravé hraně, aktivní v plné šířce —
+  // scaleX píše pružina (index.tsx); tohle je stav do jejího prvního snímku.
   transform: scaleX(0.5);
   transform-origin: right center;
-  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+  backface-visibility: hidden;
   cursor: grab;
-  pointer-events: auto;
-
-  .sidebar[data-open] & {
-    transform: scaleX(1);
-  }
   // Prst táhne lištu, ne stránku (tah je v index.tsx).
   touch-action: none;
   user-select: none;

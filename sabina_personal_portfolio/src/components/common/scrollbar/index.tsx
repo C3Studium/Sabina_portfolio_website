@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, useSpring, useTransform } from "framer-motion";
 import { useRouter } from "next/router";
 import {
   type CSSProperties,
@@ -19,8 +19,10 @@ import styles from "./styles.module.scss";
 // roztáhne (styles). Za lištu jde chytit a táhnout nahoru i dolů (myší
 // i prstem) — během tahu ukazuje zelený jezdec, kde jsem; klik / ťuknutí
 // na čárku doskroluje na místo, hover ukáže názvy sekcí.
-// Sekce: `[data-scroll-section]`, jinak `main > section`; název z
-// `data-scroll-label` / `aria-label`.
+// Sekce: `main > section` a k nim značky `[data-scroll-section]` — místo ve
+// scrollu, kde začíná sekce, která není samostatný prvek (CTA v dolly
+// galerii Procesu); seřazené podle polohy. Název z `data-scroll-label` /
+// `aria-label`.
 
 type ScrollSection = {
   element: HTMLElement;
@@ -33,9 +35,6 @@ type ScrollSection = {
 const DRAG_SLOP = 3;
 // Mezera mezi tlačítkem v hlavičce a lištou (px).
 const UNDER_BUTTON = 12;
-// Za jak dlouho se lišta po odchodu myši / puštění prstu zase sbalí (ms).
-const CLOSE_AFTER_MOUSE = 700;
-const CLOSE_AFTER_TOUCH = 1800;
 
 const clamp = (value: number) => Math.min(1, Math.max(0, value));
 
@@ -59,6 +58,14 @@ const charAnim = {
 
 const markerSpring = { type: "spring", stiffness: 165, damping: 25, mass: 0.72 } as const;
 
+// Roztažení / stažení lišty (scaleX): pružina s malým překmitem.
+const OPEN_SPRING = { stiffness: 340, damping: 24, mass: 0.85 };
+// Vlna čárek při otevření: zpoždění na čárku od aktivní (s), strop.
+const WAVE_STEP = 0.014;
+const WAVE_MAX = 0.32;
+// Čárky ve sbalené liště (× k šířce v rozbalené) — při otevření se dotáhnou.
+const CLOSED_LINES = 0.7;
+
 /** Scroll přes Lenis (plynule; `immediate` při tahu), bez něj nativně. */
 const scrollToTarget = (target: number | HTMLElement, immediate = false) => {
   const lenis = window.lenisInstance;
@@ -74,26 +81,35 @@ const maxScroll = () => Math.max(0, document.documentElement.scrollHeight - wind
 const pageTop = (element: HTMLElement) => element.getBoundingClientRect().top + window.scrollY;
 
 const getPageSections = (): ScrollSection[] => {
-  const explicit = Array.from(document.querySelectorAll<HTMLElement>("[data-scroll-section]"));
-  const candidates = explicit.length
-    ? explicit
-    : Array.from(document.querySelectorAll<HTMLElement>("main > section, main > [role='region']"));
+  const blocks = Array.from(document.querySelectorAll<HTMLElement>("main > section, main > [role='region']")).filter(
+    (element) => element.offsetHeight > 1,
+  );
+  // Značky sekcí uvnitř jiných (CTA v Procesu) — stačí jim poloha, výšku nemají.
+  const marks = Array.from(document.querySelectorAll<HTMLElement>("[data-scroll-section]"));
+  const candidates = [...new Set([...blocks, ...marks])].filter(
+    (element) => window.getComputedStyle(element).display !== "none",
+  );
 
   if (!candidates.length) {
     const main = document.querySelector<HTMLElement>("main");
     if (main) candidates.push(main);
   }
 
-  return candidates
-    .filter((element) => window.getComputedStyle(element).display !== "none" && element.offsetHeight > 1)
-    .map((element, index) => {
-      const id = element.id || `page-section-${index + 1}`;
-      const label = element.dataset.scrollLabel || element.getAttribute("aria-label") || `Sekce ${index + 1}`;
-      if (!element.id) element.id = id;
-      const sectionViewports = element.offsetHeight / Math.max(window.innerHeight, 1);
-      const subdivisions = Math.min(16, Math.max(5, Math.round(sectionViewports * 4)));
-      return { element, id, label, subdivisions };
-    });
+  const tops = new Map(candidates.map((element) => [element, pageTop(element)]));
+  candidates.sort((a, b) => (tops.get(a) ?? 0) - (tops.get(b) ?? 0));
+
+  return candidates.map((element, index) => {
+    const id = element.id || `page-section-${index + 1}`;
+    const label = element.dataset.scrollLabel || element.getAttribute("aria-label") || `Sekce ${index + 1}`;
+    if (!element.id) element.id = id;
+    // Díly podle délky úseku do další sekce (ne výšky prvku — Proces končí
+    // tam, kde začíná CTA uvnitř něj).
+    const next = candidates[index + 1];
+    const span = next ? (tops.get(next) ?? 0) - (tops.get(element) ?? 0) : element.offsetHeight;
+    const sectionViewports = span / Math.max(window.innerHeight, 1);
+    const subdivisions = Math.min(16, Math.max(5, Math.round(sectionViewports * 4)));
+    return { element, id, label, subdivisions };
+  });
 };
 
 // Stejné sekce jako minule? Stránka se hýbe pořád (psaní textu, animace)
@@ -186,7 +202,16 @@ export default function Scrollbar() {
   const [dragging, setDragging] = useState(false);
   // Sbalená (úzká, u pravého okraje) / rozbalená (pod tlačítkem, celé čárky).
   const [open, setOpen] = useState(false);
-  const closeTimer = useRef(0);
+  // Vlna čárek běží jen chvíli po otevření (jinak hover bez zpoždění).
+  const [wave, setWave] = useState(false);
+  const waveTimer = useRef(0);
+  const expanded = open || dragging;
+  // 0 = sbalená (poloviční šířka), 1 = rozbalená — jen scaleX k pravé hraně.
+  const openness = useSpring(0, OPEN_SPRING);
+  const railScale = useTransform(openness, (v) => 0.5 + 0.5 * v);
+  useEffect(() => {
+    openness.set(expanded ? 1 : 0);
+  }, [expanded, openness]);
   const navRef = useRef<HTMLElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
   const frame = useRef<number | null>(null);
@@ -244,7 +269,7 @@ export default function Scrollbar() {
   }, [asPath]);
 
   // Poloha lišty: hned pod výzvou v hlavičce, a kde je výzva schovaná
-  // (telefon na výšku), pod tlačítkem menu. Vodorovně ji drží CSS (kraj / 2,5 %).
+  // (telefon na výšku), pod tlačítkem menu. Vodorovně ji drží CSS (hrana rámu).
   // Hlavička se při přechodu stránek posouvá (transform) — odečte se.
   useEffect(() => {
     const nav = navRef.current;
@@ -298,7 +323,7 @@ export default function Scrollbar() {
     };
   }, [measure, sections.length]);
 
-  useEffect(() => () => window.clearTimeout(closeTimer.current), []);
+  useEffect(() => () => window.clearTimeout(waveTimer.current), []);
 
   const scrollToSection = (event: MouseEvent<HTMLAnchorElement>, section: ScrollSection) => {
     event.preventDefault();
@@ -383,19 +408,30 @@ export default function Scrollbar() {
     scrollToTarget(Math.min(Math.max(dragTarget(d, event.clientY), 0), maxScroll()), true);
   };
 
+  const startWave = () => {
+    setWave(true);
+    window.clearTimeout(waveTimer.current);
+    waveTimer.current = window.setTimeout(() => setWave(false), (WAVE_MAX + 0.4) * 1000);
+  };
   const openNow = () => {
-    window.clearTimeout(closeTimer.current);
+    if (!open) startWave();
     setOpen(true);
   };
-  const closeLater = (ms: number) => {
-    window.clearTimeout(closeTimer.current);
-    closeTimer.current = window.setTimeout(() => {
-      if (!drag.current?.active) setOpen(false);
-    }, ms);
+  // Sbalit hned — bez prodlevy (stažení i čárky naráz, žádná vlna).
+  const close = () => {
+    if (drag.current?.active) return;
+    window.clearTimeout(waveTimer.current);
+    setWave(false);
+    setOpen(false);
   };
+  // Čárka se roztáhne / stáhne se zpožděním podle vzdálenosti od aktivní.
+  const activePosition = markerOffsets[activeIndex] ?? 0;
+  const lineTransition = (position: number) =>
+    wave ? { ...markerSpring, delay: Math.min(Math.abs(position - activePosition) * WAVE_STEP, WAVE_MAX) } : markerSpring;
+  const lineK = expanded ? 1 : CLOSED_LINES;
 
   const endDrag = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType !== "mouse") closeLater(CLOSE_AFTER_TOUCH);
+    if (event.pointerType !== "mouse") window.setTimeout(close, 0);
     const d = drag.current;
     if (!d || d.id !== event.pointerId) return;
     drag.current = null;
@@ -437,34 +473,36 @@ export default function Scrollbar() {
       data-open={open || dragging || undefined}
       // Klávesnicí: fokus na čárce lištu rozbalí.
       onFocus={openNow}
-      onBlur={() => closeLater(CLOSE_AFTER_MOUSE)}
+      onBlur={close}
+      // Myš: najetí roztáhne, odjetí hned stáhne.
+      onPointerEnter={(event) => {
+        if (event.pointerType === "mouse") openNow();
+      }}
+      onPointerLeave={(event) => {
+        if (event.pointerType === "mouse") close();
+      }}
     >
-      <div
+      <motion.div
         ref={railRef}
         className={styles.rail}
+        style={{ scaleX: railScale, originX: 1 }}
         data-dragging={dragging || undefined}
-        onPointerEnter={(event) => {
-          if (event.pointerType === "mouse") openNow();
-        }}
         onPointerDown={(event) => {
-          // Prstem: první ťuknutí na sbalenou lištu ji jen rozbalí, nikam
-          // neskroluje. Tah funguje hned (rozbalí se s ním).
-          suppressClick.current = !open && event.pointerType !== "mouse";
+          // Prstem se lišta roztáhne, dokud je dole (tah i ťuknutí).
+          suppressClick.current = false;
           openNow();
           startDrag(event);
         }}
         onPointerMove={handleRailPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        onPointerLeave={(event) => {
-          if (drag.current?.active) return;
-          setHoveredMarker(null);
-          if (event.pointerType === "mouse") closeLater(CLOSE_AFTER_MOUSE);
+        onPointerLeave={() => {
+          if (!drag.current?.active) setHoveredMarker(null);
         }}
         onLostPointerCapture={(event) => {
           setHoveredMarker(null);
-          // Tah myší skončil mimo lištu — sbalit (nad lištou ji drží hover).
-          if (event.pointerType === "mouse" && !event.currentTarget.matches(":hover")) closeLater(CLOSE_AFTER_MOUSE);
+          // Tah myší skončil mimo navigaci — sbalit (nad ní ji drží hover).
+          if (event.pointerType === "mouse" && !navRef.current?.matches(":hover")) window.setTimeout(close, 0);
         }}
         onClickCapture={handleClickCapture}
         onClick={handleRailClick}
@@ -475,7 +513,7 @@ export default function Scrollbar() {
         {sections.map((section, index) => {
           const position = markerOffsets[index];
           const active = index === activeIndex;
-          const lineScale = markerScale(position, active ? 1 : 0.56);
+          const lineScale = markerScale(position, active ? 1 : 0.56) * lineK;
           const lineProgress = index < activeIndex ? 1 : active ? sectionProgress : 0;
           const labelVisible = (hoveredMarker !== null || dragging) && (active || index === hoveredSectionIndex);
           const itemStyle = { "--line-progress": lineProgress } as CSSProperties;
@@ -513,7 +551,7 @@ export default function Scrollbar() {
                   className={styles.lineTrack}
                   initial={false}
                   animate={{ scaleX: lineScale }}
-                  transition={markerSpring}
+                  transition={lineTransition(position)}
                   aria-hidden="true"
                 >
                   <i className={styles.lineBase} />
@@ -527,7 +565,7 @@ export default function Scrollbar() {
                   const stepStart = subdivision * stepSize;
                   const visualScale = 0.58 + ((subdivision * 7 + index * 3) % 5) * 0.05;
                   const minorPosition = markerOffsets[index] + subdivision + 1;
-                  const scale = markerScale(minorPosition, visualScale, 1.14);
+                  const scale = markerScale(minorPosition, visualScale, 1.14) * lineK;
                   const progress = index < activeIndex ? 1 : active ? clamp((sectionProgress - stepStart) / stepSize) : 0;
 
                   return (
@@ -537,7 +575,7 @@ export default function Scrollbar() {
                       style={{ "--line-progress": progress } as CSSProperties}
                       initial={false}
                       animate={{ scaleX: scale }}
-                      transition={markerSpring}
+                      transition={lineTransition(minorPosition)}
                       aria-label={`${section.label}, ${Math.round(((subdivision + 1) / (section.subdivisions + 1)) * 100)} %`}
                       data-rail-marker={minorPosition}
                       key={`${section.id}-step-${subdivision}`}
@@ -553,7 +591,7 @@ export default function Scrollbar() {
             </Fragment>
           );
         })}
-      </div>
+      </motion.div>
     </nav>
   );
 }
