@@ -165,6 +165,43 @@ const where = (x: number) => {
   return { i, act: span(f, 0, DWELL), travel: span(f, DWELL, 1), end: 0 };
 };
 
+/** Kamera v bodě cesty x (0…TOTAL) — přesně jako apply(), bez náletu a zaokrouhlení. */
+const cameraAt = (cams: Cam[], W: number, H: number, x: number, reduce: boolean) => {
+  const { i, travel } = where(Math.min(Math.max(x, 0), TOTAL));
+  const e = easeInOut(travel);
+  const m = reduce ? 0 : Math.sin(Math.PI * e);
+  const a = cams[i];
+  const b = cams[Math.min(i + 1, END)];
+  const s = Math.exp(Math.log(a.s) * (1 - e) + Math.log(b.s) * e) * (1 - ISO.pull * m);
+  const cx = a.cx + (b.cx - a.cx) * e;
+  const cy = a.cy + (b.cy - a.cy) * e;
+  return { tx: W * (a.fx + (b.fx - a.fx) * e) - cx * s, ty: H * (a.fy + (b.fy - a.fy) * e) - cy * s, s };
+};
+const camTransform = ({ tx, ty, s }: { tx: number; ty: number; s: number }) =>
+  `translate(${tx.toFixed(2)}px, ${ty.toFixed(2)}px) scale(${s.toFixed(5)})`;
+
+// Safari na dotyku (iPhone, iPad): kameru jede nativní časová osa scrollu.
+// framer-motion ji použije sám, když `useTransform(scrollYProgress, časy,
+// snímky)` míří rovnou do `style.transform` (useScroll s cílem a offsetem
+// „start start / end end"). Safari pak plátno posouvá ve stejném snímku
+// jako scroll — kamera v JS (scroll událost → pružina → transform) na
+// iPhonu ~každý 8. snímek nestihla a scéna se „cukala". Cesta kamery je
+// navzorkovaná: stání 2 body, přejezd CAM_SAMPLES bodů (mezi nimi lineárně).
+const NATIVE_CAMERA = "(hover: none) and (pointer: coarse)";
+const CAM_SAMPLES = 24;
+const IDENTITY = "translate(0px, 0px) scale(1)";
+type CamFrames = { key: string; times: number[]; frames: string[] };
+
+const cameraFrames = (cams: Cam[], W: number, H: number, reduce: boolean, key: string): CamFrames => {
+  const xs: number[] = [];
+  for (let i = 0; i < END; i++) {
+    xs.push(i, i + DWELL);
+    for (let k = 1; k < CAM_SAMPLES; k++) xs.push(i + DWELL + ((1 - DWELL) * k) / CAM_SAMPLES);
+  }
+  xs.push(END, TOTAL);
+  return { key, times: xs.map((x) => x / TOTAL), frames: xs.map((x) => camTransform(cameraAt(cams, W, H, x, reduce))) };
+};
+
 /* ---------- Výzva na konci ---------- */
 
 // Obměna CTA z homepage (home/cta): stejná řeč — tenké zelené verzálky,
@@ -281,6 +318,21 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start start", "end end"] });
   const target = useTransform(scrollYProgress, (v) => v * TOTAL);
   const pos = useSpring(target, { stiffness: 70, damping: 22, mass: 1 });
+  // Dotyk: díla v artboardu (JS) za tuhou, kriticky tlumenou pružinou. Na
+  // iPhonu přijde hodnota scrollu ~každý 8. snímek pozdě — bez pružiny dílo
+  // ten snímek stojí a pak skočí (klepání); pružina z toho udělá plynulý
+  // pohyb se zpožděním pár desítek ms (kamera stojí, není to vidět).
+  const posTouch = useSpring(target, { stiffness: 380, damping: 42, mass: 0.6 });
+  // Safari na dotyku: kamera na nativní ose scrollu (viz cameraFrames) a vše
+  // ostatní (stavba artboardů, pravítka, zvednutí vrstev) jede přímo za
+  // scrollem, ne za pružinou — jinak by se rozešlo s kamerou.
+  const native = useMedia(NATIVE_CAMERA);
+  const nativeRef = useRef(native);
+  useIsoLayoutEffect(() => {
+    nativeRef.current = native;
+  }, [native]);
+  const [camFrames, setCamFrames] = useState<CamFrames | null>(null);
+  const camera = useTransform(scrollYProgress, camFrames?.times ?? [0, 1], camFrames?.frames ?? [IDENTITY, IDENTITY]);
 
   // Průběh každé zastávky (0–1) — artboard za námi stojí na 1, před námi na 0.
   const actCover = useMotionValue(0);
@@ -305,6 +357,12 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
   const [arrived, setArrived] = useState(reduce);
   useEffect(() => {
     if (!go || reduce) return;
+    // Nativní kamera (dotyk): bez náletu — transform plátna patří ose scrollu.
+    if (native) {
+      flyIn.set(1);
+      const timer = window.setTimeout(() => setArrived(true), FLY_IN.delay * 1000);
+      return () => window.clearTimeout(timer);
+    }
     const controls = animate(flyIn, 1, {
       duration: FLY_IN.duration,
       delay: FLY_IN.delay,
@@ -312,7 +370,7 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
       onComplete: () => setArrived(true),
     });
     return () => controls.stop();
-  }, [go, reduce, flyIn]);
+  }, [go, reduce, flyIn, native]);
 
   // Náběh pravítek po oponě.
   const rulerIn = useMotionValue(reduce ? 1 : 0);
@@ -327,6 +385,8 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
 
   const cams = useRef<Cam[]>([]);
   const live = useRef({ W: 0, H: 0, m: 0, x: 0, active: "cover" as StudyBoard | null, hover: -1 });
+  // Co je na pravítkách nakreslené (klíč vstupů) — kreslí se jen při změně.
+  const drawn = useRef({ left: "", chapters: "" });
 
   const apply = () => {
     const world = worldRef.current;
@@ -335,7 +395,8 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
     if (!world || !lens || !frame || !cams.current.length) return;
     const L = live.current;
     const { W, H } = L;
-    const x = Math.min(Math.max(pos.get(), 0), TOTAL);
+    const isNative = nativeRef.current;
+    const x = Math.min(Math.max((isNative ? posTouch : pos).get(), 0), TOTAL);
     const { i, act, travel, end } = where(x);
     const e = easeInOut(travel);
     const m = reduce ? 0 : Math.sin(Math.PI * e);
@@ -363,7 +424,8 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
       ty = H * fy - oy * sNow;
     }
     Object.assign(L, { m, x });
-    world.style.transform = `translate(${tx.toFixed(2)}px, ${ty.toFixed(2)}px) scale(${sNow.toFixed(5)})`;
+    // Na dotyku transform světa píše nativní osa scrollu (style.transform = camera).
+    if (!isNative) world.style.transform = `translate(${tx.toFixed(2)}px, ${ty.toFixed(2)}px) scale(${sNow.toFixed(5)})`;
     // --cam-s = měřítko pro písmo a drobné prvky (`X / var(--cam-s)`): měřítko
     // zastávek, ne skutečné — při oddálení na celé plátno se text nezvětší
     // přes artboardy, ale zmenší se s nimi (přehled drží měřítko Výstupů).
@@ -385,9 +447,16 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
       world.style.setProperty("--m", mText);
       frame.style.setProperty("--m", mText);
     }
-    const grid = 50 * sNow;
-    frame.style.backgroundSize = `${grid.toFixed(2)}px ${grid.toFixed(2)}px`;
-    frame.style.backgroundPosition = `${tx.toFixed(2)}px ${ty.toFixed(2)}px`;
+    // Tečkovaná mřížka jede s kamerou. Na dotyku (nativní kamera) stojí jako
+    // podklad — mřížka uvnitř zvětšovaného světa by byla obří GPU vrstva.
+    if (!isNative) {
+      const grid = 50 * sNow;
+      frame.style.backgroundSize = `${grid.toFixed(2)}px ${grid.toFixed(2)}px`;
+      frame.style.backgroundPosition = `${tx.toFixed(2)}px ${ty.toFixed(2)}px`;
+    } else if (frame.style.backgroundSize) {
+      frame.style.backgroundSize = "";
+      frame.style.backgroundPosition = "";
+    }
     if (zoomRef.current) zoomRef.current.textContent = `${Math.round(sNow * 100)} %`;
 
     BOARDS.forEach((board, k) => acts[board].set(k < i ? 1 : k > i ? 0 : act));
@@ -400,14 +469,26 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
     const reveal = rulerIn.get();
     const r = i <= LAST ? layout[BOARDS[i]] : bounds;
     const band = `rgba(${ACCENT_RGB}, ${0.9 * (1 - m)})`;
-    drawRuler(rulerLeft.current, true, ty, s, [{ from: r.y * s + ty, to: (r.y + r.h) * s + ty, color: band }], [], reveal, true);
-    drawChapters(rulerBottom.current, CHAPTERS, TOTAL, x, L.hover, reveal);
+    // Pravítka (plátno 2D) kreslit jen při změně — při stání kamery levé
+    // pravítko stojí, dřív se překreslovalo každý snímek scrollu.
+    const leftKey = `${ty.toFixed(1)}|${s.toFixed(5)}|${m.toFixed(3)}|${reveal.toFixed(3)}|${i}`;
+    if (leftKey !== drawn.current.left) {
+      drawn.current.left = leftKey;
+      drawRuler(rulerLeft.current, true, ty, s, [{ from: r.y * s + ty, to: (r.y + r.h) * s + ty, color: band }], [], reveal, true);
+    }
+    const chaptersKey = `${x.toFixed(4)}|${L.hover}|${reveal.toFixed(3)}`;
+    if (chaptersKey !== drawn.current.chapters) {
+      drawn.current.chapters = chaptersKey;
+      drawChapters(rulerBottom.current, CHAPTERS, TOTAL, x, L.hover, reveal);
+    }
   };
 
   useIsoLayoutEffect(() => {
     const frame = frameRef.current;
     if (!frame) return;
     const measure = () => {
+      // Nové rozměry = nová plátna pravítek → nakreslit znovu.
+      drawn.current = { left: "", chapters: "" };
       const W = frame.clientWidth;
       const H = frame.clientHeight;
       Object.assign(live.current, { W, H });
@@ -420,6 +501,11 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
       // Hodně malý artboard (telefon na šířku): styly schovají vedlejší
       // popisky, které by se do něj nevešly.
       frame.toggleAttribute("data-small", cams.current[0].s < UI.from + 0.05);
+      // Nativní kamera: cesta navzorkovaná pro tenhle rozměr (klíč přemountuje svět).
+      if (nativeRef.current) {
+        const key = `${W}x${H}:${Math.round(f.fy * 1000)}:${Math.round(f.fh * 1000)}`;
+        setCamFrames((prev) => (prev?.key === key ? prev : cameraFrames(cams.current, W, H, reduce, key)));
+      }
       // Štítek zoomu vpravo dole ustoupí, když by ležel přes artboard
       // (úzké okno — artboard zabere skoro celou šířku).
       const badge = zoomRef.current?.parentElement;
@@ -438,8 +524,13 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
     const observer = new ResizeObserver(measure);
     observer.observe(frame);
     return () => observer.disconnect();
-  }, [tall, phone]);
-  useMotionValueEvent(pos, "change", apply);
+  }, [tall, phone, native]);
+  useMotionValueEvent(pos, "change", () => {
+    if (!nativeRef.current) apply();
+  });
+  useMotionValueEvent(posTouch, "change", () => {
+    if (nativeRef.current) apply();
+  });
   useMotionValueEvent(rulerIn, "change", apply);
   useMotionValueEvent(flyIn, "change", apply);
 
@@ -540,11 +631,34 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
           transition={{ duration: 0.6, ease: ENTRANCE }}
         >
           <div ref={lensRef} className={styles.lens}>
-            <div ref={worldRef} className={styles.world} style={{ width: bounds.w, height: bounds.h }}>
+            {/* Na dotyku `style.transform` = nativní osa scrollu (framer-motion);
+                klíč přemountuje svět, když se cesta kamery přepočítá (rozměr). */}
+            <motion.div
+              key={native ? camFrames?.key ?? "native" : "js"}
+              ref={worldRef}
+              className={styles.world}
+              data-native={native || undefined}
+              style={native && camFrames ? { width: bounds.w, height: bounds.h, transform: camera } : { width: bounds.w, height: bounds.h }}
+            >
               {BOARDS.map((board, k) => {
                 const r = layout[board];
                 // Obsah se staví až po příletu kamery (FLY_IN).
-                const props: BoardProps = { c, act: acts[board], rect: r, go: go && arrived, reduce, seen: k <= index };
+                const props: BoardProps = {
+                  c,
+                  act: acts[board],
+                  rect: r,
+                  go: go && arrived,
+                  reduce,
+                  seen: k <= index,
+                  progress: scrollYProgress,
+                  // Stání artboardu k: x od k do k + DWELL (where), x = p · TOTAL.
+                  range: [k / TOTAL, (k + DWELL) / TOTAL],
+                  // Díla uvnitř zvětšeného světa NEJEDOU nativně: každý nativně
+                  // animovaný prvek je na iPhonu GPU vrstva v plném rozlišení
+                  // (bez ohledu na zoom kamery) a stránka spadla do 1,5 s.
+                  // Nativně jede jen kamera (jedna vrstva), díla motion hodnotami.
+                  native: false,
+                };
                 return (
                   <div
                     key={board}
@@ -576,7 +690,7 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
                   </div>
                 );
               })}
-            </div>
+            </motion.div>
           </div>
         </motion.div>
 

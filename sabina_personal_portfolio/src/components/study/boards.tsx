@@ -25,7 +25,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Image from "next/image";
-import { useMotionValueEvent, type MotionValue } from "framer-motion";
+import { motion, useMotionValueEvent, useTransform, type MotionStyle, type MotionValue } from "framer-motion";
 import type { StudyContent, StudyPart, StudyWork } from "./content";
 import { useInspect } from "./inspector";
 import MeasureText from "@/components/common/measure-text";
@@ -49,7 +49,42 @@ export type BoardProps = {
   reduce: boolean;
   /** Kamera už k artboardu dojela (nebo je za ním). */
   seen: boolean;
+  /** Průběh scrollu celé studie (useScroll) — vstup pro nativní osu scrollu. */
+  progress: MotionValue<number>;
+  /** Kde v `progress` stání artboardu leží: act 0 → range[0], act 1 → range[1]. */
+  range: [number, number];
+  /** Safari na dotyku: pohyby děl jedou na nativní ose scrollu (viz useBoardMotion). */
+  native: boolean;
 };
+
+/**
+ * Plynulý pohyb ze scrollu stání artboardu jako `transform` řetězec.
+ * Na dotyku (`native`) z nativní osy scrollu: `useTransform(progress, časy,
+ * snímky)` → framer-motion ho předá Safari a ten dílo posouvá ve stejném
+ * snímku jako scroll. Jinak motion hodnota z `act` (JS, plynule s pružinou
+ * kamery na počítači). Snímky navzorkované přes stání (SAMPLES bodů).
+ */
+const SAMPLES = 24;
+function useBoardMotion({ act, progress, range, native }: Pick<BoardProps, "act" | "progress" | "range" | "native">, fn: (v: number) => string) {
+  const js = useTransform(act, fn);
+  const [p0, p1] = range;
+  const times: number[] = [];
+  const frames: string[] = [];
+  if (p0 > 0) {
+    times.push(0);
+    frames.push(fn(0));
+  }
+  for (let i = 0; i <= SAMPLES; i++) {
+    times.push(p0 + ((p1 - p0) * i) / SAMPLES);
+    frames.push(fn(i / SAMPLES));
+  }
+  if (p1 < 1) {
+    times.push(1);
+    frames.push(fn(1));
+  }
+  const nat = useTransform(progress, times, frames);
+  return native ? nat : js;
+}
 
 export function Parts({ parts }: { parts: StudyPart[] }) {
   return parts.map(([text, marked], i) => (
@@ -60,11 +95,20 @@ export function Parts({ parts }: { parts: StudyPart[] }) {
   ));
 }
 
-/** Průběh zastávky jako stav (pro rozvržení řízené scrollem). */
-function useAct(act: MotionValue<number>) {
-  const [v, setV] = useState(() => act.get());
-  useMotionValueEvent(act, "change", setV);
-  return v;
+/**
+ * Z průběhu zastávky jen DISKRÉTNÍ stav (index díla vpředu, prahy). React
+ * se překreslí, až se hodnota změní — ne v každém snímku scrollu. Plynulé
+ * posuny jedou přes motion hodnoty (`useTransform(act, …)` → style), bez
+ * Reactu. Dřív se celý artboard překresloval každý snímek a na iPhonu se
+ * díla při scrollu „klepala" (React nestíhal, posuny dorážely pozdě).
+ */
+function useActState<T extends string | number | boolean | null>(act: MotionValue<number>, fn: (v: number) => T): T {
+  const [state, setState] = useState(() => fn(act.get()));
+  useMotionValueEvent(act, "change", (v) => {
+    const next = fn(v);
+    setState((prev) => (Object.is(prev, next) ? prev : next));
+  });
+  return state;
 }
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -203,7 +247,8 @@ function Work({
   work: StudyWork;
   w: number;
   h: number;
-  style?: CSSProperties;
+  /** Může nést motion hodnoty (posun, rozměr) — mění se bez překreslení Reactu. */
+  style?: MotionStyle;
   priority?: boolean;
   className?: string;
   picked?: boolean;
@@ -214,7 +259,7 @@ function Work({
   const inspect = useInspect();
   const pick = onPick && !picked;
   return (
-    <button
+    <motion.button
       type="button"
       className={className ? `${styles.work} ${className}` : styles.work}
       style={{ width: w, height: h, ...style }}
@@ -231,7 +276,7 @@ function Work({
           {work.name} <i>{work.image.width} × {work.image.height}</i>
         </span>
       ) : null}
-    </button>
+    </motion.button>
   );
 }
 
@@ -246,10 +291,10 @@ const underWork = (y: number, H: number) => `min(${y}px, calc(${(H * 0.985).toFi
  * Viditelná cesta k detailu (klik na dílo není hned zřejmý): otevře kartu
  * detailu u díla vpředu na tomto artboardu.
  */
-function DetailButton({ work, style }: { work: StudyWork; style: CSSProperties }) {
+function DetailButton({ work, style }: { work: StudyWork; style: MotionStyle }) {
   const inspect = useInspect();
   return (
-    <button
+    <motion.button
       type="button"
       className={styles.detailButton}
       data-z="2"
@@ -264,7 +309,7 @@ function DetailButton({ work, style }: { work: StudyWork; style: CSSProperties }
       </svg>
       Zobrazit detail
       <span>náhled · vrstvy · pixely</span>
-    </button>
+    </motion.button>
   );
 }
 
@@ -482,8 +527,7 @@ function Construct({ style }: { style: CSSProperties }) {
 
 const DRIFT = [30, 70, 130];
 
-export function CoverBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
-  const v = useAct(act);
+export function CoverBoard({ c, act, rect, go, reduce, seen, progress, range, native }: BoardProps) {
   const ch = c.chapters.cover;
   const { w: W, h: H } = rect;
   const portrait = H > W;
@@ -517,7 +561,16 @@ export function CoverBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
       p.x = frontX - (frontX - p.x) * k;
     });
   }
-  const drift = (s: number) => (0.5 - v) * DRIFT[s] * (portrait ? 0.7 : 1);
+  // Paralaxa děl při scrollu: `transform` z useBoardMotion (na dotyku nativní
+  // osa scrollu, jinak motion hodnota) — bez překreslení Reactu.
+  const driftK = portrait ? 0.7 : 1;
+  const motionArgs = { act, progress, range, native };
+  const drifts = [
+    useBoardMotion(motionArgs, (v) => `translateY(${((0.5 - v) * DRIFT[0] * driftK).toFixed(1)}px)`),
+    useBoardMotion(motionArgs, (v) => `translateY(${((0.5 - v) * DRIFT[1] * driftK).toFixed(1)}px)`),
+    useBoardMotion(motionArgs, (v) => `translateY(${((0.5 - v) * DRIFT[2] * driftK).toFixed(1)}px)`),
+  ];
+  const drift = (s: number) => drifts[Math.min(s, drifts.length - 1)];
   const f = placed[current];
   const noteAt: NoteAt = portrait ? { x: W * 0.08, y: f.y + f.h * 0.6, w: W * 0.56, tilt: -1.8 } : { x: f.x - W * 0.06, y: f.y + f.h * 0.7, w: W * 0.12, tilt: -2.4 };
   const orbitX = portrait ? W * 0.62 : W * 0.68;
@@ -564,11 +617,11 @@ export function CoverBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
             picked={picked === k}
             front={k === current}
             onPick={() => choose(k)}
-            style={{ left: p.x, top: p.y, translate: `0 ${drift(s).toFixed(1)}px`, "--dim": (1 - DEPTH[s]) * 1.4, zIndex: s } as CSSProperties}
+            style={{ left: p.x, top: p.y, transform: drift(s), "--dim": (1 - DEPTH[s]) * 1.4, zIndex: s } as MotionStyle}
           />
         );
       })}
-      <DetailButton work={works[current]} style={{ left: f.x, top: underWork(f.y + f.h + H * 0.022, H), translate: `0 ${drift(n - 1).toFixed(1)}px` }} />
+      <DetailButton work={works[current]} style={{ left: f.x, top: underWork(f.y + f.h + H * 0.022, H), transform: drift(n - 1) }} />
       <div className={styles.controls} data-z="2" style={portrait ? { right: M, top: H * 0.33 } : { right: M, top: M * 0.45 }}>
         <span className={styles.controlsNo}>
           <b>{pad2(current + 1)}</b> / {pad2(n)}
@@ -589,14 +642,16 @@ export function CoverBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
 const STACK = { dx: 0.03, dy: -0.036, scale: 0.05 };
 
 export function PlayBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
-  const v = useAct(act);
   const ch = c.chapters.play;
   const { w: W, h: H } = rect;
   const portrait = H > W;
   const M = marginOf(W, H);
   const works = ch.works;
   const n = works.length;
-  const { current: front, picked, choose, step } = usePick(Math.min(n - 1, Math.floor(span(v, 0.12, 0.92) * n)), n);
+  const scrolledFront = useActState(act, (v) => Math.min(n - 1, Math.floor(span(v, 0.12, 0.92) * n)));
+  const noteIn = useActState(act, (v) => v > 0.05);
+  const note2In = useActState(act, (v) => v > 0.4);
+  const { current: front, picked, choose, step } = usePick(scrolledFront, n);
   const ch0 = portrait ? H * 0.34 : H * 0.68;
   const cw = ch0 * aspectOf(works[0]);
   const base = portrait ? { x: M, y: H * 0.26 } : { x: M * 1.3, y: H * 0.24 };
@@ -636,13 +691,13 @@ export function PlayBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
         parts={portrait ? ch.text[0] : ch.asides[0]}
         small={!portrait}
         at={portrait ? { x: 0, r: M * 0.5, y: H * 0.24, w: W * 0.5, tilt: 1.6 } : { x: base.x + cw * 0.86, y: H * 0.2, w: W * 0.12, tilt: 2.2 }}
-        on={v > 0.05}
+        on={noteIn}
       />
       <Note
         parts={portrait ? ch.text[1] : ch.asides[1]}
         small={!portrait}
         at={portrait ? { x: M * 0.5, y: H * 0.56, w: W * 0.6, tilt: -1.4 } : { x: M * 0.5, y: H * 0.76, w: W * 0.12, tilt: -2.6 }}
-        on={v > 0.4}
+        on={note2In}
       />
       {/* Na výšku dole naproti počítadlu — pod díly ho kryje poznámka. */}
       <DetailButton work={works[front]} style={portrait ? { left: M, bottom: M } : { left: base.x, top: underWork(base.y + ch0 + H * 0.022, H) }} />
@@ -661,8 +716,7 @@ export function PlayBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
  *  na menší obrazovce je větší díl artboardu, mapa mu uhne. */
 const MAP_CONTROLS = 360;
 
-export function CampaignsBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
-  const v = useAct(act);
+export function CampaignsBoard({ c, act, rect, go, reduce, seen, progress, range, native }: BoardProps) {
   const ch = c.chapters.campaigns;
   const { w: W, h: H } = rect;
   const portrait = H > W;
@@ -680,11 +734,21 @@ export function CampaignsBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
   });
   const total = acc - gap + pad;
   const max = Math.max(0, total - win.w);
-  const scrolledShift = max * easeInOut(span(v, 0.08, 0.92));
+  const shiftAt = (v: number) => max * easeInOut(span(v, 0.08, 0.92));
   const centreOf = (i: number) => xs[i] + items[i].w / 2;
   const nearest = (x: number) => items.reduce((best, _, i) => (Math.abs(centreOf(i) - x) < Math.abs(centreOf(best) - x) ? i : best), 0);
-  const { current, picked, choose, step } = usePick(nearest(scrolledShift + win.w / 2), items.length);
-  const shift = picked === null ? scrolledShift : Math.min(max, Math.max(0, centreOf(picked) - win.w / 2));
+  const scrolledCurrent = useActState(act, (v) => nearest(shiftAt(v) + win.w / 2));
+  const noteIn = useActState(act, (v) => v > 0.05);
+  const { current, picked, choose, step } = usePick(scrolledCurrent, items.length);
+  // Posun pásu: scrollem plynule přes motion hodnotu (bez Reactu), vybrané
+  // dílo pevně doprostřed (přechod `translate` dělá CSS, data-glide).
+  const pickedShift = picked === null ? 0 : Math.min(max, Math.max(0, centreOf(picked) - win.w / 2));
+  const stripShift = useTransform(act, (v) => `${(-(picked === null ? shiftAt(v) : pickedShift)).toFixed(1)}px 0`);
+  // Na dotyku pás jede po nativní ose scrollu (transform); vybrané dílo pevně.
+  const stripNative = useBoardMotion({ act, progress, range, native: true }, (v) => `translateX(${(-shiftAt(v)).toFixed(1)}px)`);
+  const stripStyle: MotionStyle = native
+    ? { transform: picked === null ? stripNative : `translateX(${(-pickedShift).toFixed(1)}px)` }
+    : { translate: stripShift };
   // Mapa: úseky stejného druhu za sebou.
   const groups: { tag: string; from: number; to: number }[] = [];
   items.forEach((it, i) => {
@@ -699,7 +763,7 @@ export function CampaignsBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
       <Heading no="03" label={ch.label} sweep={go && seen} parts={ch.heading} style={portrait ? { left: M, top: M, right: M } : { left: M, top: M, width: W * 0.5 }} />
       {!portrait ? <Typed text={ch.text} on={go && seen} reduce={reduce} style={{ position: "absolute", left: W * 0.58, top: M * 1.55, width: W * 0.34, marginTop: 0 }} /> : null}
       <div className={styles.strip} data-z="2" style={{ left: win.x, top: win.y, width: win.w, height: win.h + H * 0.07 }}>
-        <div className={styles.stripTrack} data-glide={picked !== null || undefined} style={{ translate: `${(-shift).toFixed(1)}px 0` }}>
+        <motion.div className={styles.stripTrack} data-glide={picked !== null || undefined} style={stripStyle}>
           {items.map((it, i) => (
             <figure key={it.work.name + i} className={styles.stripItem} data-picked={picked === i || undefined} style={{ left: xs[i], width: it.w }}>
               <Work work={it.work} w={it.w} h={win.h} picked={picked === i} front={i === current} onPick={() => choose(i)} />
@@ -708,7 +772,7 @@ export function CampaignsBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
               </figcaption>
             </figure>
           ))}
-        </div>
+        </motion.div>
       </div>
       <div className={styles.map} data-z="1" style={{ left: win.x, top: win.y + win.h + H * 0.1, width: portrait ? win.w : `calc(${win.w}px - max(${W * 0.24}px, ${MAP_CONTROLS}px / var(--cam-s)))` }}>
         {groups.map((g, i) => (
@@ -733,7 +797,7 @@ export function CampaignsBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
         parts={portrait ? ch.text[0] : ch.asides[0]}
         small={!portrait}
         at={portrait ? { x: 0, r: M * 0.5, y: H * 0.23, w: W * 0.6, tilt: 1.4 } : { x: W * 0.4, y: H * 0.31, w: W * 0.13, tilt: 1.8 }}
-        on={v > 0.05}
+        on={noteIn}
       />
     </div>
   );
@@ -746,17 +810,109 @@ export function CampaignsBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
 // klik nebo šipky natočí vybraný banner dopředu.
 // Kolotoč je promítnutý do roviny (x, měřítko) — text na plátně zůstane ostrý.
 
-export function TrustBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
-  const v = useAct(act);
+/** Karta kolotoče: poloha, velikost a hloubka z otočení (motion hodnota) — bez Reactu. */
+function RingCard({
+  work,
+  k,
+  n,
+  turn,
+  turnAt,
+  pickedTurn,
+  motionArgs,
+  centre,
+  R,
+  cardH,
+  H,
+  picked,
+  front,
+  onPick,
+}: {
+  work: StudyWork;
+  k: number;
+  n: number;
+  turn: MotionValue<number>;
+  /** Otočení z průběhu stání (scroll). */
+  turnAt: (v: number) => number;
+  /** Vybraná karta (klik / šipky) — kolotoč stojí na ní. */
+  pickedTurn: number | null;
+  motionArgs: Pick<BoardProps, "act" | "progress" | "range" | "native">;
+  centre: { x: number; y: number };
+  R: number;
+  cardH: number;
+  H: number;
+  picked: boolean;
+  front: boolean;
+  onPick: () => void;
+}) {
+  const aspect = aspectOf(work);
+  const angle = (t: number) => ((k - t) / n) * Math.PI * 2;
+  const depthOf = (t: number) => (Math.cos(angle(t)) + 1) / 2;
+  const hOf = (t: number) => cardH * (0.62 + 0.38 * depthOf(t));
+  const width = useTransform(turn, (t) => hOf(t) * aspect);
+  const height = useTransform(turn, hOf);
+  const left = useTransform(turn, (t) => centre.x + Math.sin(angle(t)) * R - (hOf(t) * aspect) / 2);
+  const top = useTransform(turn, (t) => centre.y - hOf(t) / 2 - (1 - depthOf(t)) * H * 0.04);
+  const zIndex = useTransform(turn, (t) => Math.round(depthOf(t) * 10));
+  const dim = useTransform(turn, (t) => (1 - depthOf(t)) * 0.7);
+  // Na dotyku: pevný box v plné velikosti, pohyb a zmenšení jen `transform`
+  // na nativní ose scrollu (Safari ho posouvá se scrollem). Pořadí vrstev
+  // se mění jen při křížení karet — diskrétně.
+  const transformOf = (t: number) =>
+    `translate(${(Math.sin(angle(t)) * R).toFixed(1)}px, ${(-(1 - depthOf(t)) * H * 0.04).toFixed(1)}px) scale(${(0.62 + 0.38 * depthOf(t)).toFixed(4)})`;
+  const nativeTransform = useBoardMotion(motionArgs, (v) => transformOf(turnAt(v)));
+  const nativeZ = useActState(motionArgs.act, (v) => Math.round(depthOf(pickedTurn ?? turnAt(v)) * 10));
+  if (motionArgs.native) {
+    const maxW = cardH * aspect;
+    return (
+      <Work
+        work={work}
+        w={maxW}
+        h={cardH}
+        className={styles.ringCard}
+        picked={picked}
+        front={front}
+        onPick={onPick}
+        style={
+          {
+            left: centre.x - maxW / 2,
+            top: centre.y - cardH / 2,
+            width: maxW,
+            height: cardH,
+            transform: pickedTurn === null ? nativeTransform : transformOf(pickedTurn),
+            zIndex: nativeZ,
+            "--dim": dim,
+          } as MotionStyle
+        }
+      />
+    );
+  }
+  return (
+    <Work
+      work={work}
+      w={cardH * aspect}
+      h={cardH}
+      className={styles.ringCard}
+      picked={picked}
+      front={front}
+      onPick={onPick}
+      style={{ left, top, width, height, zIndex, "--dim": dim } as MotionStyle}
+    />
+  );
+}
+
+export function TrustBoard({ c, act, rect, go, reduce, seen, progress, range, native }: BoardProps) {
   const ch = c.chapters.trust;
   const { w: W, h: H } = rect;
   const portrait = H > W;
   const M = marginOf(W, H);
   const works = ch.works;
   const n = works.length;
-  const scrolledTurn = easeInOut(span(v, 0.1, 0.92)) * (n - 1);
-  const { current: front, picked, choose, step } = usePick(Math.round(scrolledTurn) % n, n);
-  const turn = picked ?? scrolledTurn;
+  const turnAt = (v: number) => easeInOut(span(v, 0.1, 0.92)) * (n - 1);
+  const scrolledFront = useActState(act, (v) => Math.round(turnAt(v)) % n);
+  const noteIn = useActState(act, (v) => v > 0.05);
+  const { current: front, picked, choose, step } = usePick(scrolledFront, n);
+  // Otočení kolotoče: scrollem plynule (motion hodnota), výběr pevně.
+  const turn = useTransform(act, (v) => picked ?? turnAt(v));
   const centre = portrait ? { x: W * 0.5, y: H * 0.44 } : { x: W * 0.3, y: H * 0.52 };
   const R = portrait ? W * 0.3 : W * 0.17;
   const cardH = portrait ? H * 0.3 : H * 0.62;
@@ -775,32 +931,31 @@ export function TrustBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
         {!portrait ? <Typed text={ch.text} on={go && seen} reduce={reduce} /> : null}
       </Heading>
       <div className={styles.ring} data-z="2" data-glide={picked !== null || undefined}>
-        {works.map((work, k) => {
-          const a = ((k - turn) / n) * Math.PI * 2;
-          const depth = (Math.cos(a) + 1) / 2;
-          const s = 0.62 + 0.38 * depth;
-          const h = cardH * s;
-          const w = h * aspectOf(work);
-          return (
-            <Work
-              key={work.name + k}
-              work={work}
-              w={w}
-              h={h}
-              className={styles.ringCard}
-              picked={picked === k}
-              front={k === front}
-              onPick={() => choose(k)}
-              style={{ left: centre.x + Math.sin(a) * R - w / 2, top: centre.y - h / 2 - (1 - depth) * H * 0.04, zIndex: Math.round(depth * 10), "--dim": (1 - depth) * 0.7 } as CSSProperties}
-            />
-          );
-        })}
+        {works.map((work, k) => (
+          <RingCard
+            key={work.name + k}
+            work={work}
+            k={k}
+            n={n}
+            turn={turn}
+            turnAt={turnAt}
+            pickedTurn={picked}
+            motionArgs={{ act, progress, range, native }}
+            centre={centre}
+            R={R}
+            cardH={cardH}
+            H={H}
+            picked={picked === k}
+            front={k === front}
+            onPick={() => choose(k)}
+          />
+        ))}
       </div>
       <Note
         parts={portrait ? ch.text[0] : ch.asides[0]}
         small={!portrait}
         at={portrait ? { x: 0, r: M * 0.5, y: H * 0.56, w: W * 0.6, tilt: -1.6 } : { x: centre.x + W * 0.1, y: H * 0.68, w: W * 0.12, tilt: -2.2 }}
-        on={v > 0.05}
+        on={noteIn}
       />
       {/* Na výšku dole naproti počítadlu — pod díly ho kryje poznámka. */}
       <DetailButton work={works[front]} style={portrait ? { right: M, bottom: M } : { left: centre.x, top: underWork(centre.y + cardH / 2 + H * 0.025, H), translate: "-50% 0" }} />
@@ -878,7 +1033,6 @@ const ZOOM = { min: 0.4, max: 3 };
 export function OutputsBoard({ c, act, rect }: BoardProps) {
   const inspect = useInspect();
   const items = c.outputs;
-  const v = useAct(act);
   const { w: W, h: H } = rect;
   const portrait = H > W;
   const bar = H * EDITOR.bar;
@@ -905,10 +1059,13 @@ export function OutputsBoard({ c, act, rect }: BoardProps) {
   const [dragging, setDragging] = useState(-1);
   const lastClick = useRef({ t: 0, i: -1 });
   const n = items.length;
-  const scripted = v < 0.06 ? null : v < 0.38 ? Math.min(n - 1, Math.floor(((v - 0.06) / 0.32) * n)) : v > 0.8 ? 0 : null;
+  // Vše ze scrollu jen jako diskrétní stav (viz useActState) — EXPORT_AT roste
+  // s pořadím, takže hotové jsou prvních `done`.
+  const scripted = useActState(act, (v) => (v < 0.06 ? null : v < 0.38 ? Math.min(n - 1, Math.floor(((v - 0.06) / 0.32) * n)) : v > 0.8 ? 0 : null));
   const selected = took ? userSel : scripted;
-  const exported = items.map((_, i) => v >= EXPORT_AT(i, n) + 0.04);
-  const done = exported.filter(Boolean).length;
+  const done = useActState(act, (v) => items.filter((_, i) => v >= EXPORT_AT(i, n) + 0.04).length);
+  const exported = items.map((_, i) => i < done);
+  const busy = useActState(act, (v) => v > 0.4);
 
   /** Obrazovka → px artboardu (kamera plátna mění měřítko). */
   const ratio = () => {
@@ -1040,7 +1197,7 @@ export function OutputsBoard({ c, act, rect }: BoardProps) {
               +
             </button>
           </span>
-          <span className={styles.edExport} data-busy={(v > 0.4 && done < n) || undefined}>
+          <span className={styles.edExport} data-busy={(busy && done < n) || undefined}>
             {done >= n ? "Exportováno" : "Exportovat"}
             <i style={{ scale: `${done / n} 1` }} aria-hidden="true" />
           </span>
@@ -1091,10 +1248,9 @@ export function OutputsBoard({ c, act, rect }: BoardProps) {
         }}
         data-dragging={dragging >= 0 || undefined}
       >
-        <div className={styles.edPlane} style={{ transform: `translate(${cam.x}px, ${cam.y}px) scale(${cam.k})` }}>
+        <motion.div className={styles.edPlane} style={{ transform: `translate(${cam.x}px, ${cam.y}px) scale(${cam.k})`, "--v": act } as MotionStyle}>
           {placed.map((p, order) => {
             const item = items[p.i];
-            const enter = easeInOut(span(v, order * 0.01, order * 0.01 + 0.06));
             const off = moved[p.i] ?? { x: 0, y: 0 };
             const z = stack.indexOf(p.i);
             return (
@@ -1104,7 +1260,7 @@ export function OutputsBoard({ c, act, rect }: BoardProps) {
                 data-item={p.i}
                 data-selected={selected === p.i || undefined}
                 data-dragging={dragging === p.i || undefined}
-                style={{ left: p.x + off.x, top: p.y + off.y, width: p.w, opacity: 0.25 + 0.75 * enter, zIndex: z + 1, "--k": cam.k } as CSSProperties}
+                style={{ left: p.x + off.x, top: p.y + off.y, width: p.w, zIndex: z + 1, "--k": cam.k, "--o": order * 0.01 } as CSSProperties}
               >
                 <span className={styles.edImage} style={{ height: p.h }}>
                   <Image src={item.image.src} alt={item.image.alt} fill sizes="16vw" draggable={false} />
@@ -1126,7 +1282,7 @@ export function OutputsBoard({ c, act, rect }: BoardProps) {
               </figure>
             );
           })}
-        </div>
+        </motion.div>
         <p className={styles.edHint} data-hide={took || undefined}>
           Táhněte díly i plochou · klik vybere · dvojklik otevře detail
         </p>

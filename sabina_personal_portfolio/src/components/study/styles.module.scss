@@ -1277,6 +1277,9 @@ $chapters: 30px;
 .edItem {
   position: absolute;
   margin: 0;
+  // Nástup děl: průběh zastávky (--v na ploše, motion hodnota) proti pořadí
+  // díla (--o) — CSS, bez překreslení Reactu při scrollu.
+  opacity: calc(0.25 + 0.75 * clamp(0, (var(--v, 1) - var(--o, 0)) / 0.06, 1));
 
   figcaption {
     display: flex;
