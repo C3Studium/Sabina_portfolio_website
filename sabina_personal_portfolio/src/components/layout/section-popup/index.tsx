@@ -21,6 +21,8 @@ import { AnimatePresence, animate, motion, useMotionValue, type Variants } from 
 import Info from "@/components/home/info";
 import Process from "@/components/home/process";
 import Cta from "@/components/home/cta";
+import { InfoStacked, ProcessStacked } from "@/components/home/stacked";
+import { useStacked } from "@/lib/fluid";
 import type { HomeContent } from "@/lib/site/home-content";
 import { RefProvider } from "@/providers/RefContext";
 import { SECTION_OPEN_EVENT, type SectionKey } from "./open";
@@ -48,6 +50,13 @@ const PANELS: Record<SectionKey, Variants> = {
     shown: { clipPath: "circle(150% at 50% 50%)", transition: { duration: 1.05, ease: EASE } },
     exit: { clipPath: "circle(0% at 50% 50%)", transition: { duration: 0.6, ease: [0.65, 0, 0.35, 1] } },
   },
+};
+
+// Telefon: všechna okna stejně — krátký výjezd zespodu, bez ořezů a natáčení.
+const SIMPLE: Variants = {
+  hidden: { y: "6%", opacity: 0 },
+  shown: { y: "0%", opacity: 1, transition: { duration: 0.35, ease: EASE } },
+  exit: { y: "4%", opacity: 0, transition: { duration: 0.25, ease: [0.65, 0, 0.35, 1] } },
 };
 
 const LABELS: Record<SectionKey, string> = {
@@ -103,6 +112,7 @@ export default function SectionPopups({ content: pageContent = null }: { content
   const closeRef = useRef<HTMLButtonElement>(null);
   // Průběh nástupu CTA — v okně ho neřídí scroll, ale čas.
   const ctaProgress = useMotionValue(0);
+  const stacked = useStacked();
 
   useEffect(() => {
     const open = (event: Event) => {
@@ -115,25 +125,30 @@ export default function SectionPopups({ content: pageContent = null }: { content
     return () => window.removeEventListener(SECTION_OPEN_EVENT, open);
   }, []);
 
-  // CTA se po otevření postaví svým nástupem.
+  // CTA se po otevření postaví svým nástupem. Telefon bez nástupu: průběh
+  // skočí rovnou na konec (CTA reaguje na změnu hodnoty).
   useEffect(() => {
     if (active !== "references") return;
     ctaProgress.set(0);
+    if (stacked) {
+      ctaProgress.set(1);
+      return;
+    }
     const controls = animate(ctaProgress, 1, { duration: CTA_BUILD, ease: "linear", delay: 0.45 });
     return () => controls.stop();
-  }, [active, ctaProgress]);
+  }, [active, ctaProgress, stacked]);
 
   // Zavření: CTA se nejdřív rozebere pozpátku, Služby odscrollují zpět na
-  // začátek stavby (krátce) — pak odejde panel.
+  // začátek stavby (krátce) — pak odejde panel. Telefon rovnou.
   const close = useCallback(() => {
     if (!active || closing) return;
     setClosing(true);
-    if (active === "references") {
+    if (active === "references" && !stacked) {
       animate(ctaProgress, 0, { duration: CTA_UNBUILD, ease: [0.65, 0, 0.35, 1] }).then(() => setActive(null));
       return;
     }
     setActive(null);
-  }, [active, closing, ctaProgress]);
+  }, [active, closing, ctaProgress, stacked]);
 
   // Escape zavírá, scroll stránky stojí, fokus na křížek.
   useEffect(() => {
@@ -155,7 +170,17 @@ export default function SectionPopups({ content: pageContent = null }: { content
   }, [active, close]);
 
   let body: ReactNode = null;
-  if (active === "references") {
+  if (stacked && active !== "references") {
+    // Telefon: Služby a Proces ve zjednodušené verzi (home/stacked) — bez
+    // scén a dolly; okno jen vyjede zespodu. Reference zůstávají plné CTA
+    // (rozvržení pro telefon, recenze ve 3D).
+    body =
+      active === "services" ? (
+        <InfoStacked copy={content?.info} stack={content?.stack ?? null} stats={content?.stats ?? null} services={content?.services ?? null} />
+      ) : active === "process" ? (
+        <ProcessStacked copy={content?.process} steps={content?.steps ?? null} />
+      ) : null;
+  } else if (active === "references") {
     body = (
       <div className={styles.ctaStage}>
         <Cta
@@ -163,6 +188,7 @@ export default function SectionPopups({ content: pageContent = null }: { content
           references={content?.references ?? null}
           words={content?.heroWords?.filter((word) => word.place === "cta") ?? null}
           progress={ctaProgress}
+          instant={stacked}
         />
       </div>
     );
@@ -206,7 +232,7 @@ export default function SectionPopups({ content: pageContent = null }: { content
           role="dialog"
           aria-modal="true"
           aria-label={LABELS[active]}
-          variants={PANELS[active]}
+          variants={stacked ? SIMPLE : PANELS[active]}
           initial="hidden"
           animate="shown"
           exit="exit"

@@ -21,6 +21,8 @@ import Hero, { type HeroCopy } from "@/components/home/hero";
 import Info, { type InfoCopy } from "@/components/home/info";
 import Process, { type ProcessCopy } from "@/components/home/process";
 import Cta, { type CtaCopy } from "@/components/home/cta";
+import HomeStacked from "@/components/home/stacked";
+import { useStacked } from "@/lib/fluid";
 
 // ISR: texty se mění párkrát do měsíce a `revalidate` je to, čím se publikace
 // ze Studia dostane na web bez deploye.
@@ -70,6 +72,7 @@ export async function getStaticProps(context: GetStaticPropsContext) {
 }
 
 export default function HomePage({ content, globals }: HomeProps) {
+  const stacked = useStacked();
   return (
     <>
       <Seo
@@ -79,6 +82,13 @@ export default function HomePage({ content, globals }: HomeProps) {
         jsonLd={personJsonLd(globals?.seo ?? SEO_FALLBACK)}
       />
       <main>
+        {/* Telefon (na výšku i na šířku): zjednodušená verze bez scén řízených
+            scrollem — sekce pod sebou (home/stacked). Server kreslí plnou
+            verzi (úvod opony ji čte), telefon ji po hydrataci vymění. */}
+        {stacked ? (
+          <HomeStacked content={content} />
+        ) : (
+          <>
         {/* `content.<at>` je blok podle src/lib/cms/home.ts. `docId` v něm je
             jen v editačním rámu Studia; na webu chybí a anotace mlčí. */}
         <Hero
@@ -106,6 +116,8 @@ export default function HomePage({ content, globals }: HomeProps) {
             />
           )}
         />
+          </>
+        )}
       </main>
     </>
   );

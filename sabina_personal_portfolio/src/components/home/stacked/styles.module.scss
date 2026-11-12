@@ -1,0 +1,447 @@
+@use "../../../styles/system/_shortcuts.scss" as *;
+
+// Úvodní stránka ve zjednodušené verzi (home/stacked) — telefon na výšku
+// i na šířku. Stejná řeč jako sloupec případové studie (study/column):
+// paleta webu, písmo webu, sekce pod sebou, pásy obrázků do strany.
+
+$pad: 1.25rem;
+$text: var(--snow);
+$accent: var(--green);
+$dim: rgba(var(--snow-rgb), 0.62);
+$line: rgba(var(--snow-rgb), 0.14);
+
+.section {
+  position: relative;
+  padding: 3.25rem $pad 0;
+  color: $text;
+
+  & + & {
+    margin-top: 1.25rem;
+    border-top: 1px solid $line;
+  }
+
+  &:first-child {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 7rem);
+    border-top: 0;
+  }
+}
+
+.green {
+  color: $accent;
+}
+
+/* ---------- Nadpisy a text ---------- */
+
+.kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 1rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+
+  span:last-child {
+    color: $dim;
+  }
+}
+
+.bar {
+  width: 1.6rem;
+  height: 2px;
+  background: $accent;
+}
+
+.display {
+  margin: 0;
+  font-size: clamp(2.7rem, 14vw, 4.2rem);
+  font-weight: 300;
+  line-height: 1.02;
+  text-transform: uppercase;
+}
+
+.heading {
+  margin: 0 0 1rem;
+  font-size: clamp(1.8rem, 8.5vw, 2.5rem);
+  font-weight: 300;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.subhead {
+  margin: 2.5rem 0 0.9rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.lead {
+  margin: 0 0 1.5rem;
+  font-size: 1.08rem;
+  font-weight: 300;
+  line-height: 1.6;
+}
+
+.text {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 300;
+  line-height: 1.65;
+
+  b {
+    font-weight: 600;
+  }
+}
+
+.more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+  color: $accent;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-decoration: none;
+  text-transform: uppercase;
+
+  svg {
+    width: 1.1rem;
+    height: 1.1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+/* ---------- Obrázky ---------- */
+
+.picture {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: var(--ar);
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(var(--snow-rgb), 0.05);
+
+  img {
+    object-fit: cover;
+  }
+}
+
+.hero {
+  .portrait {
+    width: 78%;
+    margin: 2rem auto 0;
+    border-radius: 0;
+    background: none;
+    // Spodek portrétu se rozplyne do podkladu.
+    mask-image: linear-gradient(to bottom, #000 72%, transparent);
+
+    img {
+      object-fit: contain;
+      object-position: bottom;
+    }
+  }
+}
+
+.strip {
+  display: flex;
+  gap: 0.85rem;
+  margin: 1.25rem (-$pad) 0;
+  padding: 0 $pad 0.4rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: $pad;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.shot {
+  flex: none;
+  width: min(70vw, 17rem);
+  scroll-snap-align: start;
+
+  .picture {
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+  }
+}
+
+/* ---------- 3D galerie projektů ---------- */
+
+// Scéna přes celou šířku (bez okrajů sekce). Svislý tah prstem patří
+// stránce (FlexCarousel má touch-action: pan-y), vodorovný kartám.
+.galleryClip {
+  margin: 0.5rem (-$pad) 0;
+  overflow: hidden;
+}
+
+// Plátno jen přes šířku obrazovky (žádné pixely navíc mimo obraz); čočka
+// je širší než plátno (FLAT_LENS v index.tsx), takže se karty ohýbají až
+// za okrajem — na obrazovce jedou rovně přes celou šířku.
+.gallery {
+  position: relative;
+  width: 100%;
+  height: min(118vw, 62svh);
+}
+
+.galleryBar {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.galleryNav {
+  display: flex;
+  flex: none;
+  gap: 0.6rem;
+}
+
+.navButton {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 1px solid rgba(var(--snow-rgb), 0.45);
+  border-radius: 50%;
+  background: transparent;
+  color: $text;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  &:active {
+    border-color: $accent;
+    color: $accent;
+  }
+
+  &.isBack svg {
+    transform: scaleX(-1);
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Služby ---------- */
+
+.services {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.service {
+  padding: 1.25rem 1.2rem 1.35rem;
+  border: 1px solid $line;
+  border-radius: 10px;
+  background: rgba(var(--charcoal-rgb), 0.28);
+
+  h3 {
+    margin: 0.35rem 0 0.75rem;
+    font-size: 1.35rem;
+    font-weight: 500;
+  }
+
+  .more {
+    margin-top: 0.5rem;
+  }
+}
+
+.serviceTop {
+  margin: 0;
+  color: $dim;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+
+  b {
+    margin-right: 0.35rem;
+    color: $accent;
+    font-weight: 600;
+  }
+}
+
+.points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0 0 0.25rem;
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding: 0.35rem 0.75rem;
+    border: 1px solid $line;
+    border-radius: 999px;
+    font-size: 0.82rem;
+  }
+}
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 999px;
+    background: var(--snow);
+    color: var(--charcoal);
+    font-size: 0.9rem;
+  }
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem 1rem;
+  margin: 2.25rem 0 0;
+  padding: 1.25rem 0;
+  border-block: 1px solid $line;
+
+  dt {
+    color: $accent;
+    font-size: 1.8rem;
+    font-weight: 300;
+    line-height: 1.1;
+  }
+
+  dd {
+    margin: 0.2rem 0 0;
+    color: $dim;
+    font-size: 0.82rem;
+  }
+}
+
+/* ---------- Proces ---------- */
+
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  position: relative;
+  padding: 1.75rem 0 1.5rem 3.25rem;
+  border-top: 1px solid $line;
+
+  h3 {
+    margin: 0 0 0.6rem;
+    font-size: 1.35rem;
+    font-weight: 500;
+  }
+}
+
+.stepNo {
+  position: absolute;
+  top: 1.75rem;
+  left: 0;
+  margin: 0;
+  color: $accent;
+  font-size: 1.5rem;
+  font-weight: 300;
+  line-height: 1.1;
+}
+
+// Ručně psaná poznámka (jako fialové anotace v plné verzi).
+.handNote {
+  margin: 0.25rem 0 0.5rem;
+  color: $accent;
+  font-family: var(--font-caveat), cursive;
+  font-size: 1.45rem;
+  line-height: 1.2;
+}
+
+.brief {
+  display: grid;
+  gap: 0.6rem;
+  margin: 1rem 0 0;
+  padding: 1rem 1.1rem;
+  border-radius: 8px;
+  background: var(--snow);
+  color: var(--charcoal);
+
+  div {
+    display: grid;
+    gap: 0.1rem;
+  }
+
+  dt {
+    opacity: 0.6;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+}
+
+.step .strip {
+  margin-left: calc(-3.25rem - #{$pad});
+  padding-left: calc(3.25rem + #{$pad});
+  scroll-padding-inline: calc(3.25rem + #{$pad});
+}
+
+/* ---------- Reference a kontakt ---------- */
+
+// Plné CTA (CtaPhone) — jeviště na výšku obrazovky jako v okně z menu.
+.ctaFull {
+  position: relative;
+  height: 100svh;
+  margin-top: 2rem;
+}
+
+/* ---------- Detail obrázku ---------- */
+
+// Obrázek v pásu jako tlačítko (klepnutí otevře detail s vrstvami).
+.shotButton {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}

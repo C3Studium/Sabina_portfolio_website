@@ -662,3 +662,6 @@ export default function Info({
     </section>
   );
 }
+
+// Pro zjednodušenou verzi na telefonu (home/stacked) — stejné zálohy.
+export { FALLBACK as INFO_FALLBACK, FALLBACK_STACK, FALLBACK_SERVICES, FALLBACK_STATS, cardNumber, cardLabelOf, cardCtaOf };

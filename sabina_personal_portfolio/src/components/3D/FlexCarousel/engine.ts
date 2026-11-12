@@ -135,6 +135,10 @@ export type Preset = keyof typeof BEND_PRESETS;
 const FIT_ASPECT: Partial<Record<Fit, number>> = { portrait: 0.75, square: 1, landscape: 4 / 3 };
 const TAPS = 12;
 const PIXEL_BUDGET = 4.5e6;
+// Dotyk: strop DPR (iPhone má DPR 3 a sdílí GPU s celou stránkou). Platí
+// i při každém resize — dřív ho resize přepsal zpátky na 2.
+const TOUCH_DPR = 1.5;
+const PHONE_SCREEN = () => window.matchMedia("(max-width: 599.98px), (max-height: 520px)").matches;
 const INTRO_DURATION: Record<string, number> = { rise: 2.1, bloom: 1.6, spin: 2.2, deal: 1.5, fade: 0.35 };
 
 const wrap = (value: number, size: number) => ((((value + size / 2) % size) + size) % size) - size / 2;
@@ -373,7 +377,7 @@ export function createFlexCarousel(
 ): FlexEngine | null {
   const renderer = new Renderer({
     // Na dotyku nižší rozlišení plátna (iPhone má DPR 3; paměť GPU).
-    dpr: Math.min(window.devicePixelRatio || 1, isTouchDevice() ? 1.5 : 2),
+    dpr: Math.min(window.devicePixelRatio || 1, isTouchDevice() ? TOUCH_DPR : 2),
     alpha: true,
     premultipliedAlpha: true,
     antialias: false,
@@ -593,8 +597,9 @@ export function createFlexCarousel(
       layerKey: "",
       dispose: () => {},
     };
-    // Na dotyku obrázek přes optimalizátor Nextu (PNG bannerů má 3–6 MB).
-    const src = sceneImage(item.src, 750);
+    // Na dotyku obrázek přes optimalizátor Nextu (PNG bannerů má 3–6 MB);
+    // telefon nejmenší šířkou (karta má kolem 400 px zařízení), tablet 750.
+    const src = sceneImage(item.src, PHONE_SCREEN() ? 640 : 750);
     let bitmap: ImageBitmap | null = null;
     const live = () => alive && slots.includes(slot);
     const show = (source: ImageBitmap | HTMLImageElement, width: number, height: number, color: number[]) =>
@@ -846,7 +851,11 @@ export function createFlexCarousel(
   const resize = () => {
     width = Math.max(1, container.clientWidth);
     height = Math.max(1, container.clientHeight);
-    renderer.dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(PIXEL_BUDGET / (width * height)));
+    renderer.dpr = Math.min(
+      window.devicePixelRatio || 1,
+      isTouchDevice() ? TOUCH_DPR : 2,
+      Math.sqrt(PIXEL_BUDGET / (width * height)),
+    );
     renderer.setSize(width, height);
     target.setSize(Math.max(2, Math.round(width * renderer.dpr)), Math.max(2, Math.round(height * renderer.dpr)));
     lensUniforms.tScene.value = target.texture;
@@ -1129,11 +1138,14 @@ export function createFlexCarousel(
         // Textová vrstva karty (název, obor, výzva — vždy vidět). Kreslí
         // se v základní velikosti karty a překreslí jen při změně rozměru
         // nebo během hoveru (rámeček výzvy je živý).
+        // Karta bez textu (název, obor, odkaz — např. nakreslená recenze)
+        // vrstvu nemá: ani ztmavení spodku, ani kreslení a nahrávání plátna.
         const baseW = Math.round(m.widths[draw.i]);
         const baseH = Math.round(cardH);
+        const plain = !slot.item.title && !slot.item.subtitle && !slot.item.href;
         const live = slot.focus > 0.002;
         const key = `${baseW}x${baseH}@${dpr}${live ? "" : ":idle"}`;
-        if (live || key !== slot.layerKey) {
+        if (!plain && (live || key !== slot.layerKey)) {
           drawCardLayer(slot.layerCanvas, {
             item: slot.item,
             index: draw.i,
@@ -1158,7 +1170,7 @@ export function createFlexCarousel(
         hu.uRect.value = [draw.x, draw.y, (baseW + MARGIN * 2) * k, (baseH + MARGIN * 2) * k];
         hu.uSize.value = [(baseW + MARGIN * 2) * k, (baseH + MARGIN * 2) * k];
         hu.uAlpha.value = draw.alpha * slot.ready;
-        renderer.render({ scene: hoverMesh, target, clear: false });
+        if (!plain) renderer.render({ scene: hoverMesh, target, clear: false });
         instances.push({
           index: draw.i,
           rel: draw.rel,

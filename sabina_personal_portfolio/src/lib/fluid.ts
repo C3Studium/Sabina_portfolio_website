@@ -54,6 +54,19 @@ export const PORTRAIT_TABLET = "(min-width: 320px) and (orientation: portrait)";
 /** Telefon na výšku (pod 600px) — CSS bloky „Telefon na výšku" za blokem xs-v. */
 export const PORTRAIT_PHONE = "(max-width: 599.98px) and (orientation: portrait)";
 
+/**
+ * Zjednodušená verze webu („stacked", jako ProchazkaGroup): telefon na výšku
+ * i na šířku (nízké okno). Žádné scény řízené scrollem — sekce pod sebou,
+ * text a obrázky, pásy do strany. Dvojče v CSS: `@include stacked`
+ * (styles/system/_mixins.scss) — měnit obě najednou.
+ */
+export const STACKED = "(max-width: 599.98px) and (orientation: portrait), (max-height: 520px) and (orientation: landscape)";
+/** Opak STACKED (plná verze se scénami) — pro místa, kde server kreslí zjednodušenou. */
+export const FULL =
+  "(min-width: 600px) and (min-height: 520.02px), (min-width: 600px) and (orientation: portrait), (orientation: landscape) and (min-height: 520.02px)";
+/** Telefon (STACKED)? Na serveru a do hydratace false. */
+export const useStacked = () => useMedia(STACKED);
+
 /** Platí media query? Na serveru a do hydratace false. */
 export function useMedia(query: string): boolean {
   return useSyncExternalStore(

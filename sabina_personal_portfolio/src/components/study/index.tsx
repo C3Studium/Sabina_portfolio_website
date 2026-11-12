@@ -34,7 +34,7 @@ import {
   type MotionValue,
 } from "framer-motion";
 import { useGate } from "@/motion/LoadProvider";
-import { PORTRAIT_PHONE, PORTRAIT_TABLET, useMedia, viewportHeight } from "@/lib/fluid";
+import { FULL, PORTRAIT_PHONE, PORTRAIT_TABLET, useMedia, viewportHeight } from "@/lib/fluid";
 import { ACCENT_RGB } from "@/lib/palette";
 import { STUDY_TEMPLATE, type StudyBoard, type StudyContent, type StudyImage } from "./content";
 import { InspectContext, InspectorDock } from "./inspector";
@@ -45,6 +45,7 @@ import MeasureText from "@/components/common/measure-text";
 import { SketchText } from "@/components/home/info/reveal";
 import { openContact } from "@/components/layout/contact-modal/open";
 import { chapterAt, drawChapters, drawRuler, type Chapter } from "./rulers";
+import StudyColumn from "./column";
 import styles from "./styles.module.scss";
 
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -748,10 +749,18 @@ export default function Study({
   const [inspected, setInspected] = useState<{ image: StudyImage; anchor: HTMLElement | null } | null>(null);
   const close = useCallback(() => setInspected(null), []);
   const inspect = useCallback((image: StudyImage, anchor?: HTMLElement | null) => setInspected({ image, anchor: anchor ?? null }), []);
+  // Telefon na výšku: čtivá stránka v jednom sloupci (column.tsx), bez plátna
+  // a animací na scrollu. Server ji vykreslí pro všechny (text studie je
+  // v HTML), větší obrazovky ji po hydrataci vymění za plátno — pod oponou
+  // přechodu stránky, takže to není vidět.
+  const canvas = useMedia(CANVAS_SCREEN);
   return (
     <InspectContext.Provider value={inspect}>
-      <Canvas c={content} docId={docId} />
+      {canvas ? <Canvas c={content} docId={docId} /> : <StudyColumn c={content} />}
       <InspectorDock image={inspected?.image ?? null} anchor={inspected?.anchor} onClose={close} />
     </InspectContext.Provider>
   );
 }
+
+/** Plné plátno všude kromě zjednodušené verze (STACKED: telefon na výšku i na šířku). */
+const CANVAS_SCREEN = FULL;

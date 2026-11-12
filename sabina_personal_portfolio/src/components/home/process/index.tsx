@@ -2017,3 +2017,6 @@ export default function Process({
     </InspectRoot>
   );
 }
+
+// Pro zjednodušenou verzi na telefonu (home/stacked) — stejné zálohy.
+export { FALLBACK as PROCESS_FALLBACK };

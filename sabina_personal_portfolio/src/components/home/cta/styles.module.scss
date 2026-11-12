@@ -732,9 +732,12 @@ $card-line: rgba(var(--snow-rgb), 0.15);
     margin: 0 0 -34vh 14vw;
   }
 
+  // Pás přes celou šířku obrazovky (FlexCarousel, ohyb za okraji) —
+  // vystoupí z odsazení .inner (6vw).
   .reviewStrip {
-    width: 88vw;
+    width: 100vw;
     height: 34vh;
+    margin-left: -6vw;
   }
 
   .status {

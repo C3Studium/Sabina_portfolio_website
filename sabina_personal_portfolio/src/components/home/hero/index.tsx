@@ -913,3 +913,6 @@ export default function Hero({
     </section>
   );
 }
+
+// Pro zjednodušenou verzi na telefonu (home/stacked) — stejné zálohy.
+export { FALLBACK_ROWS, FALLBACK_PORTRAIT, FALLBACK_CARDS, CARD_COUNT, DEFAULT_CTA };

@@ -113,6 +113,12 @@ export interface FlexCarouselProps {
   /** Sem komponenta zapíše next/previous pro šipky mimo ni. */
   controlsRef?: MutableRefObject<FlexControls | null>;
   /**
+   * Klepnutí na aktivní kartu. Bez propu vede karta s `href` na odkaz;
+   * s ním rozhoduje volající (např. otevře detail obrázku). `anchor` je
+   * kontejner scény — k němu se detail může přilepit.
+   */
+  onSelect?: (index: number, anchor: HTMLElement | null) => void;
+  /**
    * Jen ve Studiu: atributy anotace pro kartu podle indexu položky (např.
    * `editableDoc(id, "project")`). Karty jsou pixely v plátně, takže nad
    * kartou pod myší stojí neviditelný box s touhle anotací — klik na kartu
@@ -157,6 +163,7 @@ export default function FlexCarousel({
   hoverPanel = false,
   onChange,
   controlsRef,
+  onSelect,
   drift,
   editTarget,
   className,
@@ -184,6 +191,7 @@ export default function FlexCarousel({
   const router = useRouter();
   const routerRef = useRef(router);
   const onChangeRef = useRef(onChange);
+  const onSelectRef = useRef(onSelect);
 
   const base = BEND_PRESETS[preset] ?? BEND_PRESETS.liquid;
   const list = items;
@@ -195,6 +203,7 @@ export default function FlexCarousel({
     itemsRef.current = list;
     routerRef.current = router;
     onChangeRef.current = onChange;
+    onSelectRef.current = onSelect;
     settingsRef.current = {
       intro,
       hold,
@@ -272,6 +281,10 @@ export default function FlexCarousel({
       // Kliknutí na aktivní kartu vede na projekt (bez přiblížení, když
       // je focusOnClick vypnuté).
       onSelect: (index) => {
+        if (onSelectRef.current) {
+          onSelectRef.current(index, containerRef.current);
+          return;
+        }
         const item = itemsRef.current[index];
         if (item?.href) void routerRef.current.push(item.href);
       },

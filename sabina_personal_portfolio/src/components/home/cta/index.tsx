@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { motion, useMotionValue, useMotionValueEvent, useTransform, type MotionValue } from "framer-motion";
 import ScrollBend, { type ScrollBendHandle, type ScrollBendItem } from "@/components/3D/ScrollBend";
+import type { FlexControls } from "@/components/3D/FlexCarousel";
+import { FLAT_LENS } from "../flat-lens";
 import IntroBanners from "@/motion/intro/IntroBanners";
 import { drawReviewCard } from "./review-card";
 import SketchReveal from "@/components/common/sketch-reveal";
@@ -13,7 +15,7 @@ import { BuildFrame, SketchText, softMask } from "@/components/home/info/reveal"
 import { ease, within, type Window } from "@/components/home/info/choreography";
 import { editableDoc, editableIn } from "@c3studium/valecms/edit";
 import type { HeroWord, Reference } from "@/lib/site/home";
-import { lerp, PORTRAIT_TABLET, useLandscapeFluid, useMedia } from "@/lib/fluid";
+import { lerp, PORTRAIT_PHONE, PORTRAIT_TABLET, useLandscapeFluid, useMedia } from "@/lib/fluid";
 import Lines, {
   hasLines,
   picture,
@@ -26,6 +28,9 @@ import styles from "./styles.module.scss";
 import { ACCENT, SNOW_RGB } from "@/lib/palette";
 
 const PortraitParticles = dynamic(() => import("@/components/common/particle-image"), { ssr: false });
+// Telefon: pás recenzí stejnou galerií jako úvod (home/stacked) — přes celou
+// šířku, ohyb za okraji (FLAT_LENS). WebGL a window — jen na klientovi.
+const FlexCarousel = dynamic(() => import("@/components/3D/FlexCarousel"), { ssr: false });
 // Za jak dlouho po načtení se částice portrétu připraví (pak ještě klid prohlížeče).
 const PARTICLES_WARM_MS = 3000;
 
@@ -360,6 +365,7 @@ export default function Cta({
   words = null,
   progress,
   still: forcedStill = false,
+  instant = false,
 }: {
   copy?: CtaCopy | null;
   references?: Reference[] | null;
@@ -369,6 +375,11 @@ export default function Cta({
   progress?: MotionValue<number>;
   /** Hotový stav bez nástupu (Studio, úzké okno). */
   still?: boolean;
+  /**
+   * Bez nástupových efektů, ale s živými částmi (3D pás recenzí) — telefon
+   * (home/stacked). Portrét stojí rovnou, nekreslí se skicou.
+   */
+  instant?: boolean;
 }) {
   const still = forcedStill || !progress;
   const done = useMotionValue(1);
@@ -386,6 +397,7 @@ export default function Cta({
   // blok xs-v) — karty zůstávají na výšku, jede jen pás.
   const portraitLayout = useMedia(PORTRAIT_TABLET);
   const stripOrientation = portraitLayout ? "horizontal" : "vertical";
+  const phoneLayout = useMedia(PORTRAIT_PHONE);
   // Zelené slovo nadpisu se po příjezdu dokola přelévá (TITLE_MORPH).
   const [titleWord, setTitleWord] = useState(0);
   useEffect(() => {
@@ -448,6 +460,7 @@ export default function Cta({
   // Pás recenzí: při nástupu ho scroll posouvá o kartu za každý úsek
   // (ENTRY.stripStep) — přichycení pás prohne.
   const strip = useRef<ScrollBendHandle>(null);
+  const flexStrip = useRef<FlexControls | null>(null);
   const stripStep = useRef<number | null>(null);
   useMotionValueEvent(p, "change", (v) => {
     if (still || v < ENTRY.strip[0] || v > ENTRY.strip[1]) {
@@ -456,8 +469,9 @@ export default function Cta({
     }
     const step = Math.floor((v - ENTRY.strip[0]) / ENTRY.stripStep);
     if (stripStep.current !== null && step !== stripStep.current) {
-      if (step > stripStep.current) strip.current?.next();
-      else strip.current?.previous();
+      const nav = strip.current ?? flexStrip.current;
+      if (step > stripStep.current) nav?.next();
+      else nav?.previous();
     }
     stripStep.current = step;
   });
@@ -491,6 +505,7 @@ export default function Cta({
   // recenzí, který se čte jako první číslo).
   const plain = (value: string) => value.replace(/\*/g, "").replace(/\s+/g, " ").trim();
   const quotes = new Set(reviews.map((r) => plain(r.text.map(([run]) => run).join(" "))));
+  // DOM karta (Studio) — pozice sedí s řádky bloku (anotace `items.N`).
   const stats = FALLBACK.stats.map((stat, index) => {
     const label = text(copy?.stats?.[index]?.label, stat.label);
     return {
@@ -498,13 +513,20 @@ export default function Cta({
       label: quotes.has(plain(label)) ? "" : label,
     };
   });
+  // Nakreslené karty: jen čísla ze Studia (řádek se starou recenzí —
+  // „Lucie K." + citace — vypadne), zbytek doplní zálohy.
+  const numbers = (copy?.stats ?? []).filter((stat) => stat?.value && /\d/.test(stat.value));
+  const cardStats = FALLBACK.stats.map((stat, index) => {
+    const own = numbers[index];
+    return own ? { value: own.value!, label: text(own.label, stat.label) } : stat;
+  });
   const claim = FALLBACK.claim.map((row, index) => line(AT.claim + index, row));
   const portrait = picture(copy?.portrait, FALLBACK.portrait);
   const gallery = pictures(copy?.gallery);
   const banners = FALLBACK.banners.map((banner, index) => picture(gallery[index], banner));
   const bannerSources = [...new Set([...banners.map((banner) => banner.src), ...BACKGROUND.banners])];
   const reviewsKey = reviews.map((r) => `${r.name}|${r.role}`).join("\n");
-  const statsKey = stats.map((st) => `${st.value}|${st.label}`).join("\n");
+  const statsKey = cardStats.map((st) => `${st.value}|${st.label}`).join("\n");
   const rootRef = useRef<HTMLDivElement>(null);
   const [cards, setCards] = useState<{ items: ScrollBendItem[]; aspect: number } | null>(null);
   // Karty se kreslí do plátna rozměrem DOM karty (.reviewFrame) a písmem
@@ -534,10 +556,13 @@ export default function Cta({
           src: `review-${i}-${version}`,
           alt: `${review.text.map(([run]) => run).join(" ")} — ${review.name}, ${review.role}`,
           canvas: drawReviewCard(
-            { text: review.text, name: review.name, role: review.role, stars: review.stars, monogram: monogram(review), stats },
+            { text: review.text, name: review.name, role: review.role, stars: review.stars, monogram: monogram(review), stats: cardStats },
             width,
             height,
             family,
+            // Telefon: ostřejší plátno a větší písmo (nízká karta).
+            phoneLayout ? 3 : 2,
+            phoneLayout ? 1.8 : 1,
           ),
         })),
       });
@@ -555,7 +580,17 @@ export default function Cta({
     };
     // Klíče místo polí — pole se tvoří každý render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [still, reviewsKey, statsKey]);
+  }, [still, reviewsKey, statsKey, phoneLayout]);
+
+  // Telefon: nakreslené karty jako obrázky pro FlexCarousel (bez textové
+  // vrstvy — položky nemají název ani odkaz).
+  const flexCards = useMemo(
+    () =>
+      phoneLayout && cards
+        ? cards.items.map((item) => ({ src: item.canvas ? item.canvas.toDataURL("image/png") : item.src, alt: item.alt ?? "" }))
+        : null,
+    [phoneLayout, cards],
+  );
 
   return (
     // Proces má kurzor „Vy" (data-cursor="user"); v CTA zpátky tečka, která
@@ -686,7 +721,25 @@ export default function Cta({
             data-cursor="drag"
             style={{ maskImage: reviewMask, WebkitMaskImage: reviewMask }}
           >
-            {cards ? (
+            {flexCards ? (
+              <FlexCarousel
+                items={flexCards}
+                intro="fade"
+                cardHeight={0.92}
+                gap={20}
+                squeeze={0.15}
+                focusOnClick={false}
+                captions={false}
+                controlsRef={flexStrip}
+                fit="natural"
+                radius={STRIP.radius}
+                autoplay
+                interval={STRIP.autoAdvance}
+                dim={0.5}
+                dimHover={0}
+                {...FLAT_LENS}
+              />
+            ) : cards ? (
               <ScrollBend
                 key={stripOrientation}
                 ref={strip}
@@ -780,7 +833,7 @@ export default function Cta({
         {/* ---------- Portrét ---------- */}
         <div className={styles.portrait} {...edit.image("image")}>
           {/* Nakreslí se jako portrét v heru: linky → klidné prolnutí barev. */}
-          <SketchReveal show={arrived} enabled={!still} className={styles.portraitLayer}>
+          <SketchReveal show={arrived} enabled={!still && !instant} className={styles.portraitLayer}>
             <Image
               ref={portraitRef}
               src={portrait.src}

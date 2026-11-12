@@ -6,6 +6,11 @@ import { NAV_ITEMS, currentNavIndex } from "../nav-items";
 import { openSection } from "../section-popup/open";
 import styles from "./styles.module.scss";
 
+// V menu navíc úvodní stránka jako první položka — logo v hlavičce samo
+// nestačí (na telefonu ho nikdo za odkaz nepovažuje). Hlavička na šířku ji
+// nemá, proto není v NAV_ITEMS.
+const ITEMS: (typeof NAV_ITEMS)[number][] = [{ label: "Úvod", href: "/" }, ...NAV_ITEMS];
+
 // Menu pro okna, kde se navigace do hlavičky nevejde (na výšku do 1180px,
 // na šířku pod 900px — header/styles). Tmavý list přes celé okno v jazyce
 // webu: tečková mřížka plátna, pravítko, a kolem položky, na které právě
@@ -81,10 +86,13 @@ type MenuProps = {
 function Sheet({ id, onClose, onContact, ctaLabel }: Omit<MenuProps, "open">) {
   const { pathname } = useRouter();
   // Kde návštěvník je — změří se jednou při otevření.
-  const [active] = useState(() => currentNavIndex(pathname));
+  const [active] = useState(() => {
+    const nav = currentNavIndex(pathname);
+    return nav >= 0 ? nav + 1 : pathname === "/" ? 0 : -1;
+  });
   const [hover, setHover] = useState<number | null>(null);
   const framed = hover ?? (active >= 0 ? active : null);
-  const where = active >= 0 ? NAV_ITEMS[active].label : "Úvod";
+  const where = active >= 0 ? ITEMS[active].label : "Úvod";
 
   return (
     <motion.div
@@ -102,7 +110,7 @@ function Sheet({ id, onClose, onContact, ctaLabel }: Omit<MenuProps, "open">) {
         <div className={styles.top}>
           <motion.p className={styles.eyebrow} variants={FADE}>
             <span className={styles.dot} aria-hidden="true" />
-            Menu · {String(NAV_ITEMS.length).padStart(2, "0")}
+            Menu · {String(ITEMS.length).padStart(2, "0")}
           </motion.p>
           <motion.button
             type="button"
@@ -119,7 +127,7 @@ function Sheet({ id, onClose, onContact, ctaLabel }: Omit<MenuProps, "open">) {
         <motion.span className={styles.ruler} variants={FADE} aria-hidden="true" />
 
         <nav className={styles.nav} aria-label="Hlavní navigace" onPointerLeave={() => setHover(null)}>
-          {NAV_ITEMS.map((item, index) => {
+          {ITEMS.map((item, index) => {
             const isActive = index === active;
             return (
               <a
@@ -136,6 +144,17 @@ function Sheet({ id, onClose, onContact, ctaLabel }: Omit<MenuProps, "open">) {
                 onBlur={() => setHover(null)}
                 onClick={(event) => {
                   onClose();
+                  // Úvod na úvodní stránce: jen nahoru — až menu pustí
+                  // scroll (zavření ho odemyká v efektu, Lenis na počítači).
+                  if (item.href === "/" && pathname === "/") {
+                    event.preventDefault();
+                    window.setTimeout(() => {
+                      const lenis = window.lenisInstance;
+                      if (lenis) lenis.scrollTo(0);
+                      else window.scrollTo({ top: 0, behavior: "smooth" });
+                    }, 60);
+                    return;
+                  }
                   if (!item.popup) return;
                   event.preventDefault();
                   openSection(item.popup, { fromMenu: true });

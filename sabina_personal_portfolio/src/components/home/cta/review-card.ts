@@ -67,8 +67,14 @@ function wrapRuns(ctx: Ctx, runs: MarkedLine, x: number, y: number, width: numbe
   return cy;
 }
 
-/** Nakreslí kartu do nového plátna (šířka × výška v CSS px). */
-export function drawReviewCard(data: ReviewCardData, width: number, height: number, family: string, dpr = 2) {
+/**
+ * Nakreslí kartu do nového plátna (šířka × výška v CSS px).
+ *
+ * `textScale`: písmo (a řádky textu) větší než v základním rozvržení, které
+ * počítá s vysokou kartou na šířku (pás na výšku). Telefon má kartu nízkou,
+ * písmo podle výšky by tam mělo pár pixelů.
+ */
+export function drawReviewCard(data: ReviewCardData, width: number, height: number, family: string, dpr = 2, textScale = 1) {
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(width * dpr);
   canvas.height = Math.round(height * dpr);
@@ -80,6 +86,7 @@ export function drawReviewCard(data: ReviewCardData, width: number, height: numb
   const STAR = new Path2D(STAR_PATH);
 
   const u = height / 100; // 1 % výšky karty
+  const t = u * textScale; // jednotka písma
   const padX = width * 0.07;
   const padY = u * 5.5;
   const inner = width - padX * 2;
@@ -98,8 +105,8 @@ export function drawReviewCard(data: ReviewCardData, width: number, height: numb
   ctx.restore();
 
   // Text recenze.
-  font(ctx, family, u * 2.65, 300);
-  wrapRuns(ctx, data.text, padX, padY + quote + u * 3.6, inner, u * 2.65 * 1.62);
+  font(ctx, family, t * 2.65, 300);
+  wrapRuns(ctx, data.text, padX, padY + quote + u * 3.6, inner, t * 2.65 * 1.62);
 
   // Čísla dole (dva sloupce s předělem).
   const statsTop = height - padY - u * 9.5;
@@ -114,7 +121,13 @@ export function drawReviewCard(data: ReviewCardData, width: number, height: numb
     ctx.fillText(stat.value, cx, statsTop);
     // Prázdný popisek (opakoval text recenze, cta/index.tsx) se nekreslí.
     if (stat.label) {
-      font(ctx, family, u * 1.7, 300, u * 0.27);
+      // Popisek se vejde do svého sloupce (větší písmo na telefonu).
+      font(ctx, family, t * 1.7, 300, t * 0.27);
+      const wide = ctx.measureText(stat.label.toUpperCase()).width;
+      if (wide > col * 0.9) {
+        const k = (col * 0.9) / wide;
+        font(ctx, family, t * 1.7 * k, 300, t * 0.27 * k);
+      }
       ctx.fillStyle = COLOR.muted;
       ctx.fillText(stat.label.toUpperCase(), cx, statsTop + u * 6.6);
     }
@@ -136,7 +149,7 @@ export function drawReviewCard(data: ReviewCardData, width: number, height: numb
   ctx.beginPath();
   ctx.arc(padX + avatar, ay, avatar, 0, Math.PI * 2);
   ctx.stroke();
-  font(ctx, family, u * 1.7, 500, u * 0.2);
+  font(ctx, family, t * 1.7, 500, t * 0.2);
   ctx.fillStyle = COLOR.text;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -144,12 +157,12 @@ export function drawReviewCard(data: ReviewCardData, width: number, height: numb
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
   const nx = padX + avatar * 2 + width * 0.035;
-  font(ctx, family, u * 2.1, 600, u * 0.17);
-  ctx.fillText(data.name.toUpperCase(), nx, ay - u * 2.6);
-  font(ctx, family, u * 2.1, 300);
+  font(ctx, family, t * 2.1, 600, t * 0.17);
+  ctx.fillText(data.name.toUpperCase(), nx, ay - t * 2.6);
+  font(ctx, family, t * 2.1, 300);
   ctx.fillStyle = COLOR.muted;
-  ctx.fillText(data.role, nx, ay + u * 0.5);
-  const star = u * 2.2;
+  ctx.fillText(data.role, nx, ay + t * 0.5);
+  const star = u * 2.2 * Math.sqrt(textScale);
   ctx.fillStyle = COLOR.accent;
   for (let i = 0; i < data.stars; i++) {
     ctx.save();

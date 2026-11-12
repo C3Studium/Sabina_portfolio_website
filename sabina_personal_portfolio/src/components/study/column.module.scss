@@ -1,0 +1,319 @@
+@use "../../styles/system/_shortcuts.scss" as *;
+
+// Případová studie na telefonu na výšku (column.tsx): čtivá stránka v jednom
+// sloupci. Barvy jen z palety webu (--snow / --green / --charcoal), písmo
+// webu. Nahoře místo pro hlavičku, dole pro zelenou lištu s výzvou.
+
+$pad: 1.25rem;
+$text: var(--snow);
+$accent: var(--green);
+$dim: rgba(var(--snow-rgb), 0.62);
+$line: rgba(var(--snow-rgb), 0.14);
+
+.section {
+  position: relative;
+  padding: 3.5rem $pad 0;
+  color: $text;
+
+  & + & {
+    margin-top: 1.5rem;
+    border-top: 1px solid $line;
+  }
+
+  // První sekce pod pevnou hlavičkou.
+  &:first-child {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 7.25rem);
+  }
+}
+
+/* ---------- Nadpisy ---------- */
+
+.head {
+  margin-bottom: 1.25rem;
+}
+
+.kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 0.9rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+
+  span:last-child {
+    color: $dim;
+  }
+}
+
+.bar {
+  width: 1.6rem;
+  height: 2px;
+  background: $accent;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(2.6rem, 13vw, 3.6rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.heading {
+  margin: 0;
+  font-size: clamp(1.7rem, 8vw, 2.3rem);
+  font-weight: 400;
+  line-height: 1.12;
+  text-transform: uppercase;
+
+  span {
+    display: block;
+  }
+}
+
+.green {
+  color: $accent;
+}
+
+.kind {
+  margin: -0.4rem 0 1.4rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* ---------- Text ---------- */
+
+.lead,
+.text {
+  margin: 0 0 1rem;
+  font-size: 1.02rem;
+  font-weight: 300;
+  line-height: 1.65;
+
+  b {
+    font-weight: 600;
+  }
+}
+
+.lead {
+  font-size: 1.08rem;
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem 1.25rem;
+  margin: 1.6rem 0 2rem;
+  padding: 1.1rem 0;
+  border-block: 1px solid $line;
+
+  dt {
+    margin-bottom: 0.25rem;
+    color: $dim;
+    font-size: 0.66rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+}
+
+.hint {
+  margin: 0.6rem 0 0;
+  color: $dim;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+/* ---------- Díla ---------- */
+
+// Tlačítko s obrázkem v poměru stran díla (--ar), klepnutí = detail.
+.shot {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: var(--ar);
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(var(--snow-rgb), 0.05);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+
+  img {
+    object-fit: cover;
+  }
+}
+
+// Pás do strany: nativní scroll se zachytáváním, přes celou šířku displeje.
+.strip {
+  display: flex;
+  gap: 0.85rem;
+  margin: 1.6rem (-$pad) 0;
+  padding: 0 $pad 0.4rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: $pad;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.stripItem {
+  flex: none;
+  margin: 0;
+  scroll-snap-align: start;
+
+  .shot {
+    width: auto;
+    height: min(52svh, 27rem);
+  }
+
+  figcaption {
+    margin-top: 0.6rem;
+    font-size: 0.85rem;
+
+    span {
+      margin-right: 0.35rem;
+      color: $accent;
+      font-size: 0.68rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+  }
+}
+
+// Poznámka jako lístek s páskou (jako na plátně).
+.note {
+  position: relative;
+  margin: 2rem 0.5rem 0.5rem;
+  padding: 1.35rem 1.2rem 1.1rem;
+  border-radius: 2px;
+  background: var(--snow);
+  color: var(--charcoal);
+  font-size: 0.98rem;
+  line-height: 1.55;
+  rotate: var(--tilt, -1deg);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.35);
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: -0.55rem;
+    left: 50%;
+    width: 5.5rem;
+    height: 1.1rem;
+    translate: -50% 0;
+    rotate: -2deg;
+    background: rgba(var(--green-rgb), 0.85);
+  }
+
+  b {
+    font-weight: 600;
+  }
+
+  & + & {
+    margin-top: 1.4rem;
+  }
+}
+
+/* ---------- Výstupy ---------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem 0.85rem;
+  margin-top: 1.5rem;
+  align-items: start;
+}
+
+.gridItem {
+  margin: 0;
+
+  figcaption {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    margin-top: 0.5rem;
+
+    b {
+      font-size: 0.82rem;
+      font-weight: 500;
+    }
+
+    span {
+      color: $dim;
+      font-size: 0.66rem;
+      letter-spacing: 0.08em;
+    }
+  }
+}
+
+/* ---------- Výzva ---------- */
+
+.cta {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 9rem);
+  text-align: left;
+}
+
+.ctaLead {
+  margin: 0 0 1.75rem;
+  font-size: clamp(1.7rem, 8vw, 2.2rem);
+  font-weight: 300;
+  line-height: 1.2;
+
+  > span {
+    display: block;
+  }
+}
+
+.ctaButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1rem 1.35rem 1rem 1.6rem;
+  border: 1px solid $accent;
+  border-radius: 999px;
+  background: transparent;
+  color: $accent;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+
+  svg {
+    width: 1.3rem;
+    height: 1.3rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 1.25rem 0 0;
+  color: $dim;
+  font-size: 0.85rem;
+}
+
+.dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: $accent;
+}

@@ -19,7 +19,7 @@ import CornerButton from "../corner-button";
 import { CookiesSections } from "../terms";
 import { CURTAIN, ENTERS, RISE, group } from "../entrance";
 import type { LegalBlock } from "../privacy";
-import { viewportHeight } from "@/lib/fluid";
+import { useStacked, viewportHeight } from "@/lib/fluid";
 import styles from "./styles.module.scss";
 
 const DRAW_X: Variants = {
@@ -70,6 +70,8 @@ export default function CookiesContent({ content }: { content?: CookiesCopy | nu
   // Levá linka je zároveň průběh čtení.
   const { scrollYProgress } = useScroll({ target: bodyRef, offset: ["start 0.7", "end 0.7"] });
   const railDraw = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
+  // Telefon: linka stojí celá, nekreslí se scrollem.
+  const stacked = useStacked();
 
   // Aktivní oddíl: poslední, jehož vršek přešel polovinu obrazovky.
   useEffect(() => {
@@ -148,7 +150,7 @@ export default function CookiesContent({ content }: { content?: CookiesCopy | nu
           </motion.nav>
 
           <div className={styles.CookiesContent__sections}>
-            <motion.span className={styles.CookiesContent__rail} style={{ scaleY: railDraw }} aria-hidden="true" />
+            <motion.span className={styles.CookiesContent__rail} style={{ scaleY: stacked ? 1 : railDraw }} aria-hidden="true" />
 
             {sections.map((section, i) => (
               <motion.article

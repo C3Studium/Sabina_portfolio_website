@@ -100,3 +100,11 @@
     will-change: auto;
   }
 }
+
+// Telefon (zjednodušená verze, lib/fluid STACKED): plný podklad — stránka pod oknem nesmí
+// prosvítat přes text.
+@media (max-width: 599.98px) and (orientation: portrait), (max-height: 520px) and (orientation: landscape) {
+  .popup {
+    background: rgb(22, 24, 28);
+  }
+}

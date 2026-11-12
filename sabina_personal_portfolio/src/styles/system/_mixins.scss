@@ -250,6 +250,14 @@ $layer-v: (
   }
 }
 
+/// Zjednodušená verze („stacked"): telefon na výšku i na šířku. Dvojče v JS:
+/// STACKED / useStacked() v src/lib/fluid.ts — měnit obě najednou.
+@mixin stacked {
+  @media (max-width: 599.98px) and (orientation: portrait), (max-height: 520px) and (orientation: landscape) {
+    @content;
+  }
+}
+
 /// The OS-level motion preference.
 @mixin reduced-motion {
   @media (prefers-reduced-motion: reduce) {

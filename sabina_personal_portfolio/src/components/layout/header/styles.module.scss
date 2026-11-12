@@ -35,6 +35,20 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   padding: 4.5vh 3vh;
   height: $header-height;
   color: var(--snow);
+
+  // Telefon na výšku: stránky se pod hlavičkou posouvají (sloupec případové
+  // studie, zjednodušené sekce) — krátký přechod v barvě podkladu (plochá
+  // šeď shader-background pod clonou), ať logo a menu nesplývají s obsahem.
+  @media (max-width: 599.98px) and (orientation: portrait) {
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 -1.75rem;
+      z-index: -1;
+      background: linear-gradient(to bottom, rgb(88 88 89 / 0.97) 62%, rgb(88 88 89 / 0));
+      pointer-events: none;
+    }
+  }
 }
 
 // Úvod při načtení (src/motion/intro/header.ts). Engine opony drží
