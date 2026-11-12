@@ -13,9 +13,10 @@ import { homepage } from './cms/home.ts'
 import { aboutPage } from './cms/about.ts'
 import { projectsPage, projectPages } from './cms/projects.ts'
 import { globals, surfaces } from './cms/layout.ts'
+import { legalPages } from './cms/legal.ts'
 
 export default defineSite({
-    pages: [homepage, aboutPage, projectsPage, ...projectPages],
+    pages: [homepage, aboutPage, projectsPage, ...projectPages, ...legalPages],
     globals,
     surfaces,
     // Knihovní modul recenzí je fronta ke schválení recenzí z formuláře. Tenhle

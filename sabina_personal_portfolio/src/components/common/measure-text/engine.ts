@@ -947,7 +947,15 @@ export function createMeasure(
       const glyph = glyphs[focus];
       const { x1: bx1, y1: by1, x2: bx2, y2: by2 } = targetBox(glyph);
       if (frame.index < 0 || frame.alpha < 0.02) {
-        Object.assign(frame, { x1: bx1, y1: by1, x2: bx2, y2: by2 });
+        if (resting) {
+          // Aktivní slovo bez myši (načtení stránky, odjezd myši): rámeček
+          // se rozevře ze středu slova, ne naskočí celý.
+          const cx = (bx1 + bx2) / 2;
+          const cy = (by1 + by2) / 2;
+          Object.assign(frame, { x1: cx, y1: cy, x2: cx, y2: cy, glide: 0.16 });
+        } else {
+          Object.assign(frame, { x1: bx1, y1: by1, x2: bx2, y2: by2 });
+        }
       } else if (focus !== frame.index) {
         // Nové písmeno: k sousedovi rámeček doklouže, do jiného slova přejede
         // pomaleji — je to delší cesta.

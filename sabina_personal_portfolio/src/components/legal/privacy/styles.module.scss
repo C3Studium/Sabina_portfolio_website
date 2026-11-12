@@ -1,0 +1,640 @@
+@use "../../../styles/system/_shortcuts.scss" as *;
+
+// /ochrana-soukromi (privacy/index.tsx) — převzaté doslova z webu Procházka Group a přebarvené do tónů
+// Sabiny: bílá → sněhová (--snow), tyrkysový akcent → zelená (--green),
+// bez vlastního písma (dědí Poppins webu). Podklad a posuvník jsou webu.
+
+
+// See index.jsx. A reading page in the site's open grammar: no boxes around
+// the text, hairlines that articulate the space, one accent rationed to the
+// index's active square and the mailto links inside the legal text. Legal
+// readability first — the measure never passes ~66ch and the body sits at
+// 1.6+ line-height well above the ground.
+
+// ── the stacking gate ───────────────────────────────────────────────────
+//
+// THE SCSS TWIN of STACKED_MQ in index.jsx. Both must be changed together.
+//
+// Two arms, because width alone is not enough. A 932×430 phone in landscape
+// is 932px wide — past every tablet stop — and 430px tall, which is less than
+// the index is; on a width-only gate it kept the desktop sidebar, the index
+// filled the screen and the legal text was squeezed into a 427px column. The
+// height arm catches every phone in landscape (and a very short desktop
+// window, which wants the same thing for the same reason).
+$stack-h: 560px;
+
+@mixin stacked {
+    @media (max-width: 899.98px), (max-height: #{$stack-h}) {
+        @content;
+    }
+}
+
+// Landscape phones and other very short viewports. Everything measured in vh
+// has already been floored by a clamp; this is for the things that have to
+// shrink outright rather than stop shrinking.
+@mixin short {
+    @media (max-height: #{$stack-h}) {
+        @content;
+    }
+}
+
+.TermsPage {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    min-height: 100vh;
+    // The fixed navigation is ~80px tall at every size, so the top of the page
+    // needs a floor that clears it: 22vh of a 390px-tall landscape phone is
+    // 86px and the eyebrow arrives underneath the bar.
+    padding: clamp(7rem, 22vh, 15rem) 8vw clamp(5rem, 18vh, 12rem);
+    color: var(--snow);
+}
+
+// ── the head ────────────────────────────────────────────────────────────
+
+.TermsPage__eyebrow {
+    margin: 0 0 1.6rem;
+    font-weight: 300;
+    font-size: 0.78rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(var(--snow-rgb), 0.55);
+
+    em {
+        font-style: normal;
+        color: var(--green);
+    }
+}
+
+.TermsPage__title {
+    margin: 0;
+    font-weight: 300;
+    font-size: clamp(2rem, 4.2vw, 4.4rem);
+    line-height: 1.06;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+
+    span {
+        display: block;
+    }
+
+    // The three lines are the composition; below this the longest of them
+    // ("POUŽITÍ VAŠICH ÚDAJŮ") no longer fits on one and the head reads as a
+    // ragged five-line block instead of three deliberate ones.
+    @include below-px(430) {
+        font-size: clamp(1.4rem, 6.8vw, 2rem);
+    }
+
+    // Landscape phones have the width and not the height. The lines fit; it is
+    // the stack of them that has to come down.
+    @include short {
+        font-size: clamp(1.5rem, 3.4vw, 2.4rem);
+    }
+}
+
+// The head's one rule, and the first of the page's two travelling lights.
+.TermsPage__rule {
+    position: relative;
+    display: block;
+    // 35rem is the 560px this cap has always been below 1921. The rule is cut
+    // to the three-line title above it and the title grows above 1920; held at
+    // 560px it would stop a third short of the head it belongs to.
+    width: min(38vw, 35rem);
+    height: 1px;
+    margin: clamp(1.4rem, 3.2vh, 2.6rem) 0 clamp(1.1rem, 2.4vh, 2rem);
+    transform-origin: left center;
+    background-color: rgba(var(--snow-rgb), 0.22);
+
+    @include lineSweep(x, -2.6s, 8s, 13, 0.5);
+}
+
+.TermsPage__lead {
+    margin: 0;
+    max-width: 44ch;
+    font-size: clamp(0.95rem, 1.1vw, 1.3rem);
+    line-height: 1.55;
+    color: rgba(var(--snow-rgb), 0.62);
+}
+
+// ── the two columns ─────────────────────────────────────────────────────
+
+.TermsPage__layout {
+    display: grid;
+    // 13.75rem and 18.75rem are the 220px and 300px this sidebar has always
+    // been below 1921. Both ends in rem: the track exists to hold nine section
+    // titles set in rem, and above 1920 those grow — a 300px cap that did not
+    // would wrap the longest of them onto a second line at exactly the width
+    // where there is more room than the page knows what to do with.
+    grid-template-columns: minmax(13.75rem, 18.75rem) minmax(0, 1fr);
+    column-gap: clamp(3rem, 6vw, 7rem);
+    margin-top: clamp(3.5rem, 14vh, 9rem);
+}
+
+// The nav stretches the row's whole height — that height is what the sticky
+// inner travels down. Left content-tall, it would pin for zero pixels.
+.TermsPage__index {
+    height: 100%;
+    // A tap on a row must not leave the browser's grey block behind on it.
+    -webkit-tap-highlight-color: transparent;
+}
+
+// ── the index ───────────────────────────────────────────────────────────
+//
+// Sticky beside the text. Rows are links, not boxes: a small square, the
+// section's number, its title. The square is the active light — the page's
+// one accent doing its one job.
+
+.TermsPage__index__inner {
+    position: sticky;
+    // Same floor as the page's top padding, and for the same reason: the
+    // navigation is fixed and ~80px tall, and 16vh of a short laptop is 115px
+    // but of a landscape phone is 62px.
+    top: clamp(6.75rem, 16vh, 10rem);
+}
+
+.TermsPage__index__label {
+    margin: 0 0 1.8rem;
+    font-weight: 300;
+    font-size: 0.72rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(var(--snow-rgb), 0.45);
+}
+
+// Beside the sidebar there is nothing to disclose — the list is simply there.
+.TermsPage__index__toggle {
+    display: none;
+}
+
+// The wrapper the disclosure animates; inert wherever the list is a sidebar.
+.TermsPage__index__reveal {
+    display: contents;
+}
+
+.TermsPage__index__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li + li {
+        margin-top: 0.9rem;
+    }
+
+    a {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        text-decoration: none;
+        font-weight: 300;
+        font-size: 0.85rem;
+        line-height: 1.4;
+        letter-spacing: 0.04em;
+        color: rgba(var(--snow-rgb), 0.55);
+        transition: color 0.3s ease;
+
+        // A tap fires pointerenter with no pointerleave after it, so a hover
+        // written for every pointer latches on the last row touched and stays
+        // lit for the rest of the session. Touch gets :active instead, below.
+        @include fine-pointer {
+            &:hover {
+                color: rgba(var(--snow-rgb), 0.85);
+            }
+        }
+
+        // A tap also fires focus before click, so this has to be
+        // :focus-visible — plain :focus would latch exactly like the hover.
+        &:focus-visible {
+            outline: 1px solid rgba(var(--green-rgb), 0.6);
+            outline-offset: 6px;
+        }
+
+        &:active {
+            color: rgba(var(--snow-rgb), 0.9);
+        }
+
+        &.is-active {
+            color: var(--snow);
+        }
+    }
+}
+
+.TermsPage__index__square {
+    flex: none;
+    // 0.4375rem is the 7px it has always been. The square is a glyph in a row
+    // of type — it is already offset by 0.32em to sit on that row's baseline —
+    // so it takes the row's scale and grows with it above 1920. Its 1px border
+    // stays a hairline, which is what keeps the mark an outline and not a blob.
+    width: 0.4375rem;
+    height: 0.4375rem;
+    margin-top: 0.32em;
+    border: 1px solid rgba(var(--snow-rgb), 0.28);
+    background-color: transparent;
+    transition:
+        background-color 0.3s ease,
+        border-color 0.3s ease;
+
+    a.is-active & {
+        border-color: var(--green);
+        background-color: var(--green);
+    }
+}
+
+.TermsPage__index__n {
+    flex: none;
+    min-width: 1.7em;
+    font-size: 0.72rem;
+    line-height: 1.65;
+    letter-spacing: 0.12em;
+    color: rgba(var(--snow-rgb), 0.35);
+
+    a.is-active & {
+        color: rgba(var(--snow-rgb), 0.7);
+    }
+}
+
+// The sidebar survives on a tablet in landscape, which is a touch device: the
+// rows have to be reachable by thumb there too. 0.85rem of text is a 24px
+// target. This sits BEFORE the stacked block on purpose — the phone's own,
+// larger rows are written there and must win.
+@include touch {
+    .TermsPage__index__list {
+        li + li {
+            margin-top: 0.35rem;
+        }
+
+        a {
+            align-items: center;
+            min-height: 44px;
+            padding: 0.3rem 0;
+        }
+    }
+
+    .TermsPage__index__square {
+        margin-top: 0;
+    }
+}
+
+// ── the sections ────────────────────────────────────────────────────────
+//
+// One vertical spine at the column's left edge; every section's baseline
+// grows out of it. The spine carries the page's second light, travelling
+// down where the head's travelled across.
+
+$spine-gap: clamp(2.2rem, 4vw, 4.5rem);
+$spine-gap-stacked: clamp(1.2rem, 5vw, 2.2rem);
+
+.TermsPage__sections {
+    position: relative;
+    padding-left: $spine-gap;
+}
+
+.TermsPage__spine {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 1px;
+    transform-origin: center top;
+    background-color: rgba(var(--snow-rgb), 0.14);
+
+    @include lineSweep(y, -4.5s, 9s, 13, 0.5);
+}
+
+.TermsPage__section {
+    position: relative;
+    padding: clamp(2.5rem, 8vh, 6rem) 0;
+
+    &:first-of-type {
+        padding-top: 0;
+    }
+
+    h2 {
+        margin: 1rem 0 clamp(1rem, 2.6vh, 2rem);
+        max-width: 30ch;
+        font-weight: 300;
+        font-size: clamp(1.25rem, 1.9vw, 2rem);
+        line-height: 1.18;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        // Room under the fixed navigation when an old #anchor lands here. The
+        // floor is what clears the bar on a landscape phone, where 18vh is 70px
+        // and the heading would arrive behind it.
+        scroll-margin-top: clamp(7rem, 18vh, 11rem);
+    }
+}
+
+// The ghost numeral — the section's mark, at the BenefitJourney scale:
+// light, big and half-there, the only large form beside the head's title.
+.TermsPage__ord {
+    display: block;
+    font-weight: 300;
+    font-size: clamp(4rem, 9vw, 9rem);
+    line-height: 0.88;
+    letter-spacing: 0.02em;
+    color: rgba(var(--snow-rgb), 0.5);
+}
+
+// The legal text, and the one measure on this page that must NOT be allowed to
+// grow into the room a 2560 monitor has. It is not allowed to, and no `xxl-h`
+// block is needed to stop it: `ch` is the element's own zero, so 66ch is
+// sixty-six characters at any root size. The type gets a third larger above
+// 1920 and the column gets a third wider with it — the line still breaks after
+// the same word, which is the whole of what a measure is for. Had this been
+// written in px or rem it would have needed capping here; in `ch` the cap is
+// already stated, and stated in the unit that means it.
+.TermsPage__body {
+    margin: 0;
+    max-width: 66ch;
+    font-size: clamp(0.95rem, 1.05vw, 1.15rem);
+    line-height: 1.65;
+    color: rgba(var(--snow-rgb), 0.75);
+
+    a {
+        color: var(--green);
+        text-decoration: none;
+        border-bottom: 1px solid rgba(var(--green-rgb), 0.35);
+        transition: border-color 0.3s ease;
+
+        // Gated for the same reason as the index rows: a tapped mailto would
+        // otherwise stay lit behind whatever the mail app opened.
+        @include fine-pointer {
+            &:hover {
+                border-color: var(--green);
+            }
+        }
+
+        &:active {
+            border-color: var(--green);
+        }
+
+        &:focus-visible {
+            outline: 1px solid rgba(var(--green-rgb), 0.6);
+            outline-offset: 4px;
+        }
+    }
+}
+
+// The section's one rule: its baseline, from the spine to the column's end.
+.TermsPage__baseline {
+    position: absolute;
+    bottom: 0;
+    left: calc(-1 * #{$spine-gap});
+    right: 0;
+    height: 1px;
+    transform-origin: left center;
+    background-color: rgba(var(--snow-rgb), 0.14);
+}
+
+.TermsPage__section:last-of-type .TermsPage__baseline {
+    background-color: rgba(var(--snow-rgb), 0.2);
+}
+
+// ── one column ──────────────────────────────────────────────────────────
+//
+// Under 900px wide, or on any viewport too short to stand a sidebar in.
+//
+// The index cannot stay a sidebar here, and laid out flat it was worse than
+// no index at all: nine rows at 0.85rem is a whole 390×844 screen spent
+// before the first word of the legal text, on a page whose entire job is the
+// legal text — and on a landscape phone it was two screens. So it folds into
+// a disclosure: one row that names the section the reader is in, which opens
+// onto all nine at a size a thumb can hit. Tracking survives the fold,
+// because the collapsed row is what tracks.
+
+@include stacked {
+    .TermsPage {
+        padding: clamp(7rem, 18vh, 12rem) 6vw clamp(4rem, 14vh, 9rem);
+    }
+
+    .TermsPage__rule {
+        width: min(62vw, 420px);
+    }
+
+    .TermsPage__layout {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: clamp(2.5rem, 8vh, 5rem);
+        margin-top: clamp(3rem, 10vh, 6rem);
+    }
+
+    .TermsPage__index {
+        height: auto;
+    }
+
+    .TermsPage__index__inner {
+        position: static;
+    }
+
+    // The toggle carries the word now.
+    .TermsPage__index__label {
+        display: none;
+    }
+
+    .TermsPage__index__toggle {
+        display: flex;
+        align-items: center;
+        gap: clamp(0.7rem, 3vw, 1.1rem);
+        width: 100%;
+        min-height: 56px;
+        padding: 0.9rem 0;
+        margin: 0;
+        border: 0;
+        border-top: 1px solid rgba(var(--snow-rgb), 0.18);
+        border-bottom: 1px solid rgba(var(--snow-rgb), 0.18);
+        background: none;
+        color: var(--snow);
+        font-family: inherit;
+        font-weight: 300;
+        text-align: left;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+
+        &:focus-visible {
+            outline: 1px solid rgba(var(--green-rgb), 0.6);
+            outline-offset: 4px;
+        }
+    }
+
+    .TermsPage__index__toggle__label {
+        flex: none;
+        font-size: 0.72rem;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: rgba(var(--snow-rgb), 0.45);
+    }
+
+    // The tracking, in its folded form: the section you are in, named. One
+    // line always — a title that would wrap is trimmed rather than allowed to
+    // change the height of the row under the reader as they scroll.
+    .TermsPage__index__toggle__now {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        font-size: 0.85rem;
+        letter-spacing: 0.04em;
+        color: rgba(var(--snow-rgb), 0.78);
+    }
+
+    // A plus that becomes a minus. Two hairlines, so it is the same mark the
+    // rest of the page is drawn with.
+    .TermsPage__index__toggle__mark {
+        position: relative;
+        flex: none;
+        width: 12px;
+        height: 12px;
+        color: rgba(var(--snow-rgb), 0.6);
+
+        &::before,
+        &::after {
+            content: "";
+            position: absolute;
+            background-color: currentColor;
+            transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        &::before {
+            top: 5.5px;
+            left: 0;
+            width: 12px;
+            height: 1px;
+        }
+
+        &::after {
+            left: 5.5px;
+            top: 0;
+            width: 1px;
+            height: 12px;
+        }
+    }
+
+    .TermsPage__index.is-open .TermsPage__index__toggle__mark {
+        color: var(--green);
+
+        &::after {
+            transform: scaleY(0);
+        }
+    }
+
+    // The disclosure itself. 0fr → 1fr needs no measured height, so nothing
+    // here can disagree with what the list actually is. `visibility` is what
+    // takes the collapsed links out of the tab order and the a11y tree; it is
+    // delayed on the way closed so the collapse is still seen happening.
+    .TermsPage__index__reveal {
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .TermsPage__index__list {
+        overflow: hidden;
+        min-height: 0;
+        visibility: hidden;
+        transition: visibility 0s linear 0.45s;
+    }
+
+    .TermsPage__index.is-open .TermsPage__index__reveal {
+        grid-template-rows: 1fr;
+    }
+
+    .TermsPage__index.is-open .TermsPage__index__list {
+        visibility: visible;
+        transition-delay: 0s;
+    }
+
+    // Rows a thumb can hit, separated by the page's own hairline rather than
+    // by air — at this size the list is a list, not a caption.
+    .TermsPage__index__list {
+        li + li {
+            margin-top: 0;
+        }
+
+        li:last-child a {
+            border-bottom: 1px solid rgba(var(--snow-rgb), 0.12);
+        }
+
+        a {
+            align-items: center;
+            min-height: 48px;
+            padding: 0.75rem 0;
+            font-size: 0.92rem;
+        }
+
+        li + li a {
+            border-top: 1px solid rgba(var(--snow-rgb), 0.12);
+        }
+    }
+
+    .TermsPage__index__square {
+        margin-top: 0;
+    }
+
+    .TermsPage__sections {
+        padding-left: $spine-gap-stacked;
+    }
+
+    .TermsPage__baseline {
+        left: calc(-1 * #{$spine-gap-stacked});
+    }
+
+    .TermsPage__section {
+        padding: clamp(2rem, 6vh, 4rem) 0;
+    }
+
+    .TermsPage__ord {
+        font-size: clamp(3.2rem, 16vw, 5.5rem);
+    }
+}
+
+// ── very short viewports ────────────────────────────────────────────────
+//
+// A landscape phone has width to spare and no height at all, so the two big
+// forms — the head's title and the ghost numerals — have to be sized off the
+// height instead. 16vw of a 932px phone is 149px of numeral on a 430px screen.
+@include short {
+    .TermsPage__ord {
+        font-size: clamp(2.4rem, 13vh, 4rem);
+    }
+
+    .TermsPage__section h2 {
+        margin-top: 0.6rem;
+    }
+
+    // The head has to leave the disclosure standing on the first screen —
+    // 390px of viewport is not enough to spend a whole one on a title. Every
+    // gap in the head comes in by the smallest amount that does that.
+    .TermsPage {
+        padding-top: clamp(6rem, 18vh, 12rem);
+    }
+
+    .TermsPage__eyebrow {
+        margin-bottom: 1rem;
+    }
+
+    .TermsPage__layout {
+        margin-top: clamp(1.75rem, 7vh, 3rem);
+    }
+}
+
+// The travelling lights are ornament; a reduced-motion reader loses nothing
+// but them.
+//
+// The disclosure is a different case and the site's rule for it is settled:
+// CALM, never killed. This is direct feedback to a tap — a list that appears
+// between one frame and the next does not read as considerate, it reads as a
+// fault, and a reader with the preference on sees only this branch. So it
+// keeps the house's short curtain instead of collapsing to nothing.
+@include reduced-motion {
+    .TermsPage__rule::after,
+    .TermsPage__spine::after {
+        animation: none;
+        opacity: 0;
+    }
+
+    .TermsPage__index__reveal,
+    .TermsPage__index__toggle__mark::before,
+    .TermsPage__index__toggle__mark::after {
+        transition-duration: 0.4s;
+        transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+}

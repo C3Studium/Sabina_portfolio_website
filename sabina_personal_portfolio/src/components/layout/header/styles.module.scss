@@ -63,7 +63,9 @@ $intro-in: 0.5s cubic-bezier(0.22, 1, 0.36, 1);
   transition: color 0.22s ease, opacity $intro-in;
 
   // Hover jako u odkazů menu: rámeček kreslí MeasureText, jméno zezelená.
-  &:hover {
+  // Totéž stojí na úvodní stránce nahoře (logo = aktivní položka).
+  &:hover,
+  &[data-measure-active] {
     color: $accent;
   }
 }

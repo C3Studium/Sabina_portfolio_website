@@ -254,7 +254,17 @@ export default function Header({ onContactClick, contactOpen = false, onContactC
       <MeasureText variant="brand" className={styles.brandSlot}>
       {/* `data-brand` / `data-brand-mark`: podle nich preloader najde, kde bude
           logo stát, a kreslí ho přesně tam (src/motion/intro/logo.ts). */}
-      <Link ref={brandRef} className={styles.brand} href="/" data-measure-frame="" data-brand="" data-intro="brand">
+      <Link
+        ref={brandRef}
+        className={styles.brand}
+        href="/"
+        data-measure-frame=""
+        // Úvodní stránka nahoře (žádná sekce ve výhledu): aktivní je logo.
+        data-measure-active={pathname === "/" && activeNav < 0 ? "" : undefined}
+        aria-current={pathname === "/" && activeNav < 0 ? "page" : undefined}
+        data-brand=""
+        data-intro="brand"
+      >
         {/* `alt` zůstává prázdný i s obrázkem z CMS: jméno stojí hned vedle
             jako text a čtečka by ho jinak slyšela dvakrát. */}
         <Image

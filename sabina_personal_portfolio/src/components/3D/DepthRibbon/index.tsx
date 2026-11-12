@@ -31,6 +31,7 @@ import {
   type RibbonController,
   type RibbonSettings,
 } from "./engine";
+import { PAGE_LEAVE_EVENT } from "@/motion/PageTransition";
 import styles from "./styles.module.scss";
 
 export type { DepthRibbonItem, DepthRibbonPath, DepthRibbonTour, DepthRibbonOrder } from "./engine";
@@ -133,6 +134,9 @@ export interface DepthRibbonProps {
    */
   editTarget?: (index: number) => Record<string, unknown>;
   className?: string;
+  /** Třída popisku přiblížené karty — stránka ho může přesunout jinam
+   *  (výchozí poloha je dole uprostřed). */
+  captionClassName?: string;
   style?: CSSProperties;
   children?: ReactNode;
 }
@@ -215,6 +219,7 @@ const DepthRibbon = forwardRef<DepthRibbonHandle, DepthRibbonProps>(function Dep
     onCurrentChange,
     editTarget,
     className,
+    captionClassName,
     style,
     children,
   },
@@ -320,7 +325,12 @@ const DepthRibbon = forwardRef<DepthRibbonHandle, DepthRibbonProps>(function Dep
       return () => cancelAnimationFrame(frame);
     }
     controllerRef.current = controller;
+    // Odchod na jinou stránku (PageTransition, PAGE_LEAVE_EVENT): kamera
+    // odjede do přehledu celé dráhy — nástup pozpátku.
+    const leave = () => controller.leave();
+    window.addEventListener(PAGE_LEAVE_EVENT, leave);
     return () => {
+      window.removeEventListener(PAGE_LEAVE_EVENT, leave);
       controller.destroy();
       controllerRef.current = null;
     };
@@ -346,6 +356,8 @@ const DepthRibbon = forwardRef<DepthRibbonHandle, DepthRibbonProps>(function Dep
     <div
       ref={rootRef}
       className={[styles.root, className].filter(Boolean).join(" ")}
+      // Značka pro přechod stránek: stránka s dráhou zhasne později (odjezd).
+      data-ribbon=""
       style={style}
       role="region"
       aria-roledescription="gallery"
@@ -388,7 +400,11 @@ const DepthRibbon = forwardRef<DepthRibbonHandle, DepthRibbonProps>(function Dep
 
       {/* Popisek přiblížené karty. Klik mimo odkaz kartu vrátí (engine). */}
       {captions && !failed ? (
-        <div className={styles.caption} data-open={current ? "" : undefined} aria-live="polite">
+        <div
+          className={captionClassName ? `${styles.caption} ${captionClassName}` : styles.caption}
+          data-open={current ? "" : undefined}
+          aria-live="polite"
+        >
           {current ? (
             <>
               <span className={styles.captionTitle}>{current.title || current.alt}</span>

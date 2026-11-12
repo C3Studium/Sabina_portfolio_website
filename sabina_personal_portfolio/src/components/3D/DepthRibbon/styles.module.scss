@@ -1,3 +1,5 @@
+@use "../../../styles/system/_shortcuts.scss" as *;
+
 // DepthRibbon — vzhled. Scéna je jedno plátno přes celý kořen; tady jen
 // rám, popisek přiblížené karty a náhrada bez WebGL.
 // Sazba ve třech barvách: bílá, zelená a uhlová (žádné šedé).

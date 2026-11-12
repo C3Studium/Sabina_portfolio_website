@@ -15,10 +15,22 @@
 // stránka, kotvy (`#sluzby`), cokoli s `data-no-veil` a klik, který už někdo
 // zpracoval — třeba tlačítko kontaktu, které otevírá modál.
 
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { PageVeil, type VeilSceneProps } from "@c3studium/valecms/motion";
 
 import styles from "./PageTransition.module.scss";
+
+/** Začátek přechodu na jinou stránku — scény ho mohou použít na vlastní
+ *  odchod (DepthRibbon odjede do přehledu). */
+export const PAGE_LEAVE_EVENT = "page:leave";
+
+// Stránky s vlastním odchodem scény (Portfolio — 3D dráha odjede do odstupu):
+// přechod z nich dá scéně čas (TIMES_SCENE) a jméno s tvary nastoupí až po
+// ní (`html[data-leave-scene]`, styles).
+const SCENE_PAGES = ["/projects"];
+const LEAVE_ATTR = "data-leave-scene";
+// ms: delší odchod (stránka zhasne až od ~0,9 s), dobrzdění pro jméno.
+const TIMES_SCENE = { cover: 1450, walk: 80, final: 320 };
 
 // ms: odchod staré stránky (jméno se mezitím postaví), nejkratší pauza,
 // dobrzdění; s prolnutí nové. Dohromady drží scénu nejméně ~0,98 s — jméno
@@ -126,13 +138,29 @@ function Scene({ phase, name }: VeilSceneProps) {
 }
 
 export default function PageTransition() {
+  // Odkud se odchází — z adresy v okamžiku kliku (komponenta je vrstva nad
+  // stránkami a při změně routy se nepřekresluje, router by vrátil starou
+  // cestu). Stav se nastaví spolu s fází `cover`, engine si časy přečte
+  // z props už s ním.
+  const [fromScene, setFromScene] = useState(false);
+  const times = fromScene ? TIMES_SCENE : TIMES;
   return (
     <PageVeil
       scene={Scene}
       nameFor={nameFor}
-      cover={TIMES.cover}
-      walk={TIMES.walk}
-      final={TIMES.final}
+      onBegin={() => {
+        const scene = SCENE_PAGES.includes(window.location.pathname.replace(/\/+$/, "") || "/");
+        setFromScene(scene);
+        if (scene) document.documentElement.setAttribute(LEAVE_ATTR, "");
+        window.dispatchEvent(new Event(PAGE_LEAVE_EVENT));
+      }}
+      onFinish={() => {
+        setFromScene(false);
+        document.documentElement.removeAttribute(LEAVE_ATTR);
+      }}
+      cover={times.cover}
+      walk={times.walk}
+      final={times.final}
       reveal={{ mode: "fade", duration: TIMES.reveal, ease: [0.22, 1, 0.36, 1] }}
       reduced={{ cover: 150, walk: 0, final: 0, reveal: { duration: 0.2 } }}
     />

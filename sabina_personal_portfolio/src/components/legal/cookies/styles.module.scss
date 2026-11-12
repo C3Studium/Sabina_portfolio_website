@@ -1,0 +1,423 @@
+@use "../../../styles/system/_shortcuts.scss" as *;
+
+// /cookies (cookies/index.tsx) — převzaté doslova z webu Procházka Group a přebarvené do tónů
+// Sabiny: bílá → sněhová (--snow), tyrkysový akcent → zelená (--green),
+// bez vlastního písma (dědí Poppins webu). Podklad a posuvník jsou webu.
+
+
+// /cookies — see index.jsx. A reading layout in the site's open grammar: no
+// ground of its own (the WebGL shader in _app is the ground), no boxes, no
+// corners. One measured column of legal copy hangs from a left vertical rule;
+// each section carries an oversized ghost numeral; a sticky index beside the
+// column tracks the reader. Hairlines articulate everything, and exactly two
+// of them catch a travelling light.
+
+.CookiesContent {
+    // relative, but with NO z-index of its own: an explicit z here would make
+    // the section a stacking context, and the opened preference panel (fixed,
+    // z 1000) would be trapped inside it — under the navbar (160). The ground
+    // shaders sit at z -1, so the content needs no stacking of its own.
+    position: relative;
+    color: var(--snow);
+}
+
+// ── shared marks ────────────────────────────────────────────────────────
+
+.CookiesContent__eyebrow {
+    margin: 0 0 1.4rem;
+    font-weight: 300;
+    font-size: 0.78rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(var(--snow-rgb), 0.55);
+
+    em {
+        font-style: normal;
+        color: var(--green);
+    }
+}
+
+// ── the head ────────────────────────────────────────────────────────────
+
+.CookiesContent__head {
+    // A floor under the vh: on a 390px-tall landscape phone 22vh is 86px, and
+    // the title would sit under the navbar. A cap too, so a 1080px screen does
+    // not open with a third of a screen of nothing.
+    padding: clamp(6.5rem, 22vh, 15rem) 8vw 0;
+}
+
+.CookiesContent__title {
+    margin: 0;
+    font-weight: 300;
+    font-size: clamp(2rem, 4.4vw, 4.6rem);
+    line-height: 1.08;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+
+    span {
+        display: block;
+        color: rgba(var(--snow-rgb), 0.55);
+    }
+}
+
+.CookiesContent__rule {
+    position: relative;
+    display: block;
+    // 32.5rem is the 520px this cap has always been below 1921. The rule is cut
+    // to the title above it, and the title grows above 1920 — held at 520px the
+    // line would end a third of the way short of the word it underlines.
+    width: min(34vw, 32.5rem);
+    height: 1px;
+    margin: clamp(1.1rem, 3.4vh, 2.4rem) 0 clamp(0.9rem, 2.6vh, 1.8rem);
+    transform-origin: left center;
+    background-color: rgba(var(--snow-rgb), 0.22);
+
+    @include lineSweep(x, -2.6s, 8s, 13, 0.5);
+}
+
+.CookiesContent__lead {
+    margin: 0;
+    max-width: 44ch;
+    font-size: clamp(0.95rem, 1.15vw, 1.35rem);
+    line-height: 1.55;
+    color: rgba(var(--snow-rgb), 0.62);
+}
+
+// ── the body: index beside the reading column ───────────────────────────
+
+.CookiesContent__body {
+    display: flex;
+    align-items: flex-start;
+    gap: 5vw;
+    padding: clamp(3rem, 10vh, 8rem) 8vw clamp(1.5rem, 4vh, 3rem);
+}
+
+// The index: quiet, sticky, no box. A hairline down its own left edge keeps
+// it a column rather than a floating list.
+.CookiesContent__index {
+    flex: 0 0 auto;
+    // 12.5rem and 17.5rem are the 200px and 280px this column has always been
+    // below 1921. Both ends in rem, because the column is only ever as wide as
+    // the entries in it: those are set in rem and grow above 1920, so a cap
+    // frozen at 280px would start wrapping section titles that fit at 1920.
+    width: clamp(12.5rem, 18vw, 17.5rem);
+    position: sticky;
+    top: 14vh;
+
+    // A sticky column taller than the window is a column whose last entries
+    // can never be reached — nothing scrolls a sticky element into view. There
+    // are nineteen sections here, and once the entries grow to a thumb's 44px
+    // on a touch tablet the list is over 1000px long against an 820px screen.
+    // So it is bounded by the room it has and scrolls inside it, contained so
+    // the flick that reaches its end does not carry on into the page.
+    max-height: calc(100dvh - 20vh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+
+    scrollbar-width: thin;
+    scrollbar-color: rgba(var(--snow-rgb), 0.2) transparent;
+
+    &::-webkit-scrollbar { width: 3px; }
+    &::-webkit-scrollbar-thumb { background-color: rgba(var(--snow-rgb), 0.2); }
+}
+
+.CookiesContent__index__inner {
+    padding-left: 1.6rem;
+    border-left: 1px solid rgba(var(--snow-rgb), 0.14);
+}
+
+.CookiesContent__index__label {
+    margin: 0 0 1.6rem;
+    font-weight: 300;
+    font-size: 0.78rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(var(--snow-rgb), 0.55);
+}
+
+.CookiesContent__index ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.72rem;
+}
+
+.CookiesContent__index a {
+    display: flex;
+    align-items: baseline;
+    gap: 0.65rem;
+    text-decoration: none;
+    font-size: 0.82rem;
+    line-height: 1.35;
+    letter-spacing: 0.04em;
+    color: rgba(var(--snow-rgb), 0.45);
+    transition: color 0.3s ease;
+
+    // A tap fires pointerenter and never pointerleave, so a plain :hover here
+    // left every index entry a touch reader had ever pressed lit at 0.8 —
+    // fighting the accent square, which is the one thing on this list that is
+    // supposed to say where you are.
+    @include fine-pointer {
+        &:hover {
+            color: rgba(var(--snow-rgb), 0.8);
+        }
+    }
+
+    @include touch {
+        // The link's own text is 11px tall. This is a jump control on a page
+        // read mostly on a phone, so the thing a thumb has to hit is the row,
+        // not the words in it. The list's own gap is taken back where this
+        // applies (see the stacked arm) so the rows butt up at exactly 44 and
+        // neighbouring targets neither overlap nor leave dead space.
+        align-items: center;
+        min-height: 44px;
+
+        &:active {
+            color: rgba(var(--snow-rgb), 0.9);
+        }
+    }
+}
+
+// The active mark: a small accent square, the only filled shape on the page.
+.CookiesContent__index__mark {
+    flex: none;
+    // 0.375rem is the 6px it has always been. A filled square, not a hairline —
+    // it is a glyph in a row of type and it belongs to the row's scale, so it
+    // grows with the entry it marks rather than shrinking against it.
+    width: 0.375rem;
+    height: 0.375rem;
+    align-self: center;
+    background-color: var(--green);
+    opacity: 0;
+    transform: scale(0.4);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.CookiesContent__index__num {
+    flex: none;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    color: rgba(var(--snow-rgb), 0.35);
+    transition: color 0.3s ease;
+}
+
+.CookiesContent__index a.is-active {
+    color: var(--snow);
+
+    .CookiesContent__index__mark {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    .CookiesContent__index__num {
+        color: var(--green);
+    }
+}
+
+// ── the reading column ──────────────────────────────────────────────────
+//
+// The sections hang from one vertical rule at the column's left edge. The
+// rule is drawn by the reader's own progress (scaleY in the component); each
+// section grows a short tick out of it at its head, and the copy holds a
+// book's measure — this page exists to be read.
+.CookiesContent__sections {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-left: clamp(2rem, 3.5vw, 4rem);
+}
+
+.CookiesContent__rail {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 1px;
+    background-color: rgba(var(--snow-rgb), 0.18);
+    transform-origin: center top;
+    pointer-events: none;
+}
+
+.CookiesContent__section {
+    position: relative;
+    padding: 1vh 0 0;
+    margin-bottom: clamp(3.5rem, 11vh, 9rem);
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+
+    h2 {
+        margin: 0 0 clamp(0.7rem, 2.2vh, 1.6rem);
+        font-weight: 300;
+        font-size: clamp(1.3rem, 1.9vw, 2rem);
+        line-height: 1.15;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    // The measure needs no cap above 1920 and must not be given one. `ch` is
+    // the element's own zero, so 68ch is sixty-eight characters at every root
+    // size there is: the type gets a third larger on a 2560 monitor and the
+    // column gets a third wider with it, and the line still breaks after the
+    // same word. A cap in px or rem would have had to be held back by an
+    // `xxl-h` block — this one is already saying the only thing such a block
+    // could say, which is "a line of this is sixty-eight characters long".
+    p {
+        margin: 0;
+        max-width: 68ch;
+        font-size: clamp(0.95rem, 1.05vw, 1.2rem);
+        line-height: 1.65;
+        color: rgba(var(--snow-rgb), 0.74);
+    }
+}
+
+// The tick: a short horizontal grown out of the rail at the section's head —
+// origin left, the junction it belongs to.
+.CookiesContent__section__tick {
+    position: absolute;
+    top: 0;
+    left: calc(-1 * clamp(2rem, 3.5vw, 4rem));
+    width: clamp(2.6rem, 4.5vw, 5rem);
+    height: 1px;
+    background-color: rgba(var(--snow-rgb), 0.18);
+    transform-origin: left center;
+    pointer-events: none;
+}
+
+// The house's section mark: an oversized ghost numeral, light and half-there.
+.CookiesContent__section__num {
+    display: block;
+    margin-bottom: 1.2vh;
+    font-weight: 300;
+    font-size: clamp(4rem, 8vw, 8rem);
+    line-height: 0.9;
+    letter-spacing: 0.02em;
+    color: rgba(var(--snow-rgb), 0.5);
+}
+
+// ── the action ──────────────────────────────────────────────────────────
+
+.CookiesContent__manage {
+    position: relative;
+    padding: clamp(4.5rem, 14vh, 11rem) 8vw clamp(5rem, 16vh, 13rem);
+}
+
+.CookiesContent__manage__rule {
+    position: absolute;
+    top: 0;
+    left: 8vw;
+    right: 8vw;
+    height: 1px;
+    background-color: rgba(var(--snow-rgb), 0.18);
+    transform-origin: left center;
+
+    @include lineSweep(x, -6s, 8s, 13, 0.5);
+}
+
+.CookiesContent__manage__title {
+    margin: 0 0 clamp(1.6rem, 4.5vh, 3.5rem);
+    max-width: 18ch;
+    font-weight: 300;
+    font-size: clamp(1.8rem, 3vw, 3.4rem);
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.CookiesContent__manage__cta {
+    display: inline-block;
+}
+
+// ── a phone ─────────────────────────────────────────────────────────────
+//
+// One column. The index folds up to the top of the copy as a wrapped list —
+// still every section, still the tracker — and the sections keep their rail;
+// the numerals come down a size so the words stay the loudest thing.
+//
+// The height arm is not decoration. `below(sm)` alone is a width-only gate,
+// and a 932×430 phone held sideways is 932px wide: it stayed on the desktop
+// composition, where a sticky index 393px tall hangs at top: 14vh inside a
+// 430px viewport — its last entries below the fold, and nothing to scroll them
+// into view because the thing is sticky. Anything this short gets the stacked
+// form whatever its width. (Written out rather than as `below(sm)` because the
+// helper cannot express the second arm; the 899.98px here is exactly what
+// below(sm) emits, and the two must be changed together.)
+@media (max-width: 899.98px), (max-height: 520px) {
+    .CookiesContent__head {
+        padding: clamp(6rem, 18vh, 12rem) 6vw 0;
+    }
+
+    .CookiesContent__rule {
+        width: min(60vw, 520px);
+    }
+
+    .CookiesContent__body {
+        flex-direction: column;
+        gap: clamp(2.2rem, 7vh, 5rem);
+        padding: clamp(2.5rem, 8vh, 6rem) 6vw clamp(1.5rem, 4vh, 3rem);
+    }
+
+    .CookiesContent__index {
+        position: static;
+        width: 100%;
+
+        // Not sticky here, so nothing can scroll out of reach and the bound
+        // above would only cut the list in half.
+        max-height: none;
+        overflow: visible;
+    }
+
+    .CookiesContent__index ul {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.7rem 1.6rem;
+
+        // The rows are 44px of their own under touch; the row gap would put
+        // 11px of nothing between each pair on top of that.
+        @include touch {
+            gap: 0 1.6rem;
+        }
+    }
+
+    .CookiesContent__index a {
+        font-size: 0.8rem;
+    }
+
+    .CookiesContent__sections {
+        padding-left: 1.4rem;
+    }
+
+    .CookiesContent__section {
+        margin-bottom: clamp(2.6rem, 8vh, 6rem);
+    }
+
+    .CookiesContent__section__tick {
+        left: -1.4rem;
+        width: 2.2rem;
+    }
+
+    .CookiesContent__section__num {
+        font-size: clamp(3rem, 14vw, 4.5rem);
+    }
+
+    .CookiesContent__manage {
+        padding: clamp(3.2rem, 10vh, 8rem) 6vw clamp(4.5rem, 14vh, 11rem);
+    }
+
+    .CookiesContent__manage__rule {
+        left: 6vw;
+        right: 6vw;
+    }
+}
+
+// Nothing sweeps for a reader who has asked for that.
+@include reduced-motion {
+    .CookiesContent__rule::after,
+    .CookiesContent__manage__rule::after {
+        animation: none;
+        opacity: 0;
+    }
+}

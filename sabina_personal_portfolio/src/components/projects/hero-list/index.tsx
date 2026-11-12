@@ -218,6 +218,9 @@ export default function HeroList({ copy = null, labels = null, projects = null }
       <div className={styles.ribbon}>
         <DepthRibbon
           ref={ribbon}
+          // Popisek přiblížené karty vpravo nad pagerem (ne dole uprostřed
+          // pod výzvou).
+          captionClassName={styles.ribbonCaption}
           items={items}
           // Velký prstenec s jemnou vlnou: v klidu mírně prohnutá řada,
           // při posunu z odstupu čistý kruh.

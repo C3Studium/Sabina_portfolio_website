@@ -18,6 +18,7 @@ import type { GlobalCopy } from "@/lib/site/globals";
 import { isScenePage } from "@/lib/scene-pages";
 import Preloader from "@/motion/Preloader";
 import PageTransition from "@/motion/PageTransition";
+import ScenePreload from "@/motion/ScenePreload";
 import CookieBanner from "@/providers/CookieBanner";
 import { Toaster } from "sonner";
 import { CookiesProvider } from "@/providers/CookiesProvider";
@@ -173,6 +174,9 @@ function App({ Component, pageProps, router }: AppProps) {
       {/* Reference / Služby / Spolupráce z hlavičky jako samostatná okna.
           Obsah úvodní stránky z pageProps jen na ní (jiné stránky mají pod
           `content` svůj); jinde si ho okno načte z /api/home-content. */}
+      {/* 3D scéna Portfolia se na pozadí předehřeje (kód + obrázky), ať je
+          přechod na /projects plynulý. */}
+      <ScenePreload />
       <SectionPopups
         content={router.pathname === "/" ? ((pageProps as { content?: HomeContent }).content ?? null) : null}
       />

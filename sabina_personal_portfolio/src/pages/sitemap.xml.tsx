@@ -18,6 +18,9 @@ export const getServerSideProps: GetServerSideProps = async ({ res, req }) => {
     { loc: "/", priority: "1.0" },
     { loc: "/projects", priority: "0.9" },
     { loc: "/about", priority: "0.7" },
+    { loc: "/ochrana-soukromi", priority: "0.3" },
+    { loc: "/cookies", priority: "0.3" },
+    { loc: "/obchodni-podminky", priority: "0.3" },
     ...slugs.map((slug) => ({ loc: `/projects/${slug}`, priority: "0.8" })),
   ];
   const xml = [

@@ -47,9 +47,9 @@ const FALLBACK = {
   tagline: ["Strategie.", "Design.", "Výsledky."],
   legalTitle: "Právní informace",
   legal: [
-    { label: "Zásady ochrany údajů", href: "#" },
-    { label: "Obchodní podmínky", href: "#" },
-    { label: "Cookies", href: "#" },
+    { label: "Zásady ochrany údajů", href: "/ochrana-soukromi" },
+    { label: "Obchodní podmínky", href: "/obchodni-podminky" },
+    { label: "Cookies", href: "/cookies" },
   ],
   followTitle: "Sledujte mě",
   socials: [

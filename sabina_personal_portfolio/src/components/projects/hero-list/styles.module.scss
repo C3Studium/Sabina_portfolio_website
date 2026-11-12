@@ -235,6 +235,28 @@ $text: var(--snow);
   mask-image: linear-gradient(to bottom, transparent 0, transparent 4.5rem, #000 calc(4.5rem + 7vh));
 }
 
+/* ---------- Popisek přiblížené karty ---------- */
+
+// DepthRibbon ho kreslí dole uprostřed — tam je výzva. Na šířku vpravo,
+// zarovnaný k pravé hraně pageru, nad ním. (Selektor dvakrát: vyhraje nad
+// výchozí polohou ve stylech scény.)
+@media (orientation: landscape) {
+  .ribbonCaption.ribbonCaption {
+    left: auto;
+    right: 4vw;
+    // Pager: 5vh od spodku + tlačítka (až 4,7vh) + mezera.
+    bottom: calc(5vh + clamp(1.7rem, 4.7vh, 6.2rem) + 3.5vh);
+    align-items: flex-end;
+    max-width: 34vw;
+    text-align: right;
+    transform: translateY(1.5vh);
+
+    &[data-open] {
+      transform: none;
+    }
+  }
+}
+
 /* ---------- Pager ---------- */
 
 // Leží na tmavé části jeviště, proto světlé barvy.
@@ -359,8 +381,26 @@ $text: var(--snow);
 }
 
 /* ---------- Nástup stránky ---------- */
-// Scéna nastupuje z přehledu kruhu (DepthRibbon, ~2,9 s). Text pod ní
-// a pager vyjedou, až se kamera usazuje do řady — postupně zleva.
+// Scéna nastupuje z přehledu kruhu (DepthRibbon, ~2,9 s): pravítka se
+// kreslí zleva doprava (0–1,5 s), karty se rozsvěcují od hlavní do stran
+// (od ~0,4 s). Ztmavení odspodu (.dim) se zvedne s nimi; text pod scénou
+// a pager vyjedou, když se kamera usazuje do řady — postupně zleva.
+
+// Ztmavení vyjede zespodu (posun přes průhlednou horní část gradientu).
+.dim {
+  animation: hero-list-dim 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+
+@keyframes hero-list-dim {
+  from {
+    opacity: 0;
+    transform: translateY(18%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
 @keyframes hero-list-rise {
   from {
     opacity: 0;
@@ -379,13 +419,13 @@ $text: var(--snow);
   animation: hero-list-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.shared > :nth-child(1) { animation-delay: 1.7s; }
-.shared > :nth-child(2) { animation-delay: 1.78s; }
-.shared > :nth-child(3) { animation-delay: 1.86s; }
-.shared > :nth-child(4) { animation-delay: 1.94s; }
-.shared > :nth-child(5) { animation-delay: 2.02s; }
-.cta { animation-delay: 2.1s; }
-.pager { animation-delay: 2.2s; }
+.shared > :nth-child(1) { animation-delay: 1.45s; }
+.shared > :nth-child(2) { animation-delay: 1.53s; }
+.shared > :nth-child(3) { animation-delay: 1.61s; }
+.shared > :nth-child(4) { animation-delay: 1.69s; }
+.shared > :nth-child(5) { animation-delay: 1.77s; }
+.cta { animation-delay: 1.85s; }
+.pager { animation-delay: 1.95s; }
 
 // Čárkovaná linka bloku se vytáhne shora dolů spolu s textem.
 .shared {
@@ -397,11 +437,11 @@ $text: var(--snow);
       transparent 3px 6px
     )
     left top / 1px 0 no-repeat;
-  // Celý blok je do 1,6 s schovaný — i seznam (.sharedList), který má
+  // Celý blok je do 1,35 s schovaný — i seznam (.sharedList), který má
   // vlastní animaci při změně projektu a během průletu kruhu se mění.
   animation:
-    hero-list-line 0.9s cubic-bezier(0.22, 1, 0.36, 1) 1.6s both,
-    hero-list-show 0.4s ease 1.6s both;
+    hero-list-line 0.9s cubic-bezier(0.22, 1, 0.36, 1) 1.35s both,
+    hero-list-show 0.4s ease 1.35s both;
 }
 
 @keyframes hero-list-show {
@@ -420,6 +460,7 @@ $text: var(--snow);
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .dim,
   .shared,
   .shared > :not(.sharedList),
   .cta,

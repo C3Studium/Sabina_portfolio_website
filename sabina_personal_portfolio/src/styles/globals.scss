@@ -258,3 +258,22 @@ a.secondary {
   padding: 0.1em 0.4em;
   border-radius: 6px;
 }
+
+/* Světlo běžící po vlasové lince (mixin lineSweep v _shortcuts.scss) —
+   převzaté z webu Procházka Group; používají ho právní stránky. Pohyb skončí
+   v 62 % a zbytek cyklu linka leží tmavá, ať je to puls, ne stálý odlesk. */
+@keyframes lineSweepX {
+  0% { transform: translateX(0%); opacity: 0; }
+  8% { opacity: 1; }
+  54% { opacity: 1; }
+  62% { transform: translateX(var(--sweep-travel)); opacity: 0; }
+  100% { transform: translateX(var(--sweep-travel)); opacity: 0; }
+}
+
+@keyframes lineSweepY {
+  0% { transform: translateY(0%); opacity: 0; }
+  8% { opacity: 1; }
+  54% { opacity: 1; }
+  62% { transform: translateY(var(--sweep-travel)); opacity: 0; }
+  100% { transform: translateY(var(--sweep-travel)); opacity: 0; }
+}

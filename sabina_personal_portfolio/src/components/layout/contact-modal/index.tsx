@@ -55,7 +55,6 @@ const BAR = {
 // Nadpis úvodu, když blok žádný nemá — tentýž zápis, jaký zakládá seed.
 const FALLBACK_HEADLINE = "Pustíme se\ndo něčeho,\nco *funguje*?";
 import styles from "./styles.module.scss";
-import { cvw } from "@/lib/fluid";
 
 // Jméno povrchu z `defineSurface` v src/lib/cms/layout.ts. Literál schválně:
 // konfigurace webu je server/Studio, komponenta ji do bundlu tahat nemá.
@@ -270,6 +269,8 @@ export default function ContactModal({ open, onClose, copy = null }: ContactModa
   // rámečkem a konturou. Ve Studiu stojí formulář hotový.
   const editing = Boolean(copy?.docId);
   const build = useFormBuild({ active: isOpen, disabled: studioOpen || editing, panelRef });
+  // Horní linka pásu kontaktů (CSS `--draw`), viz SlideIn.
+  const channelDraw = useTransform(build.channels, channelLine);
   const formTitle = textAt(items, LINES.formTitle, "label", FALLBACK.formTitle);
   const formLead = textAt(items, LINES.formLead, "label", FALLBACK.formLead);
   const submitLabel = textAt(items, LINES.submit, "label", FALLBACK.submit);
@@ -453,7 +454,7 @@ export default function ContactModal({ open, onClose, copy = null }: ContactModa
               {/* Kontakty — na šířku pod úvodem, na výšku pod formulářem.
                   Přijedou jeden po druhém, až se formulář postaví
                   (build.channels). */}
-              <ul className={styles.channels}>
+              <motion.ul className={styles.channels} style={{ "--draw": channelDraw } as never}>
                 {FALLBACK.channels.map((channel, i) => {
                   const at = LINES.channelsFrom + i;
                   return (
@@ -474,7 +475,7 @@ export default function ContactModal({ open, onClose, copy = null }: ContactModa
                     </SlideIn>
                   );
                 })}
-              </ul>
+              </motion.ul>
             </div>
           </motion.div>
         </motion.div>
@@ -631,9 +632,19 @@ function TailArrowIcon() {
   );
 }
 
-// Kontakt, který přijede zprava: vlastní úsek postupu `progress` 0–1,
-// úseky se překrývají (rozestup čtvrt délky), jako stagger.
+// Pás kontaktů na postupu `progress` 0–1 (build.channels; při zavření
+// jede zpět k 0, takže odchod je týž pohyb pozpátku):
+//   0 – CHANNEL_LINE   horní linka pásu se natáhne zleva
+//   CHANNEL_TILES – 1  moduly vyjedou zespodu jeden po druhém (úseky se
+//                      překrývají o CHANNEL_OVERLAP), kolečko ikony doroste
+// Pozpátku: moduly zapadnou od posledního, linka se stáhne až po nich.
+const CHANNEL_LINE = 0.4;
+const CHANNEL_TILES = 0.18;
+const CHANNEL_OVERLAP = 0.3;
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+const clamp01 = (t: number) => Math.min(Math.max(t, 0), 1);
+const channelLine = (p: number) => easeOut(clamp01(p / CHANNEL_LINE));
+
 function SlideIn({
   progress,
   index,
@@ -647,12 +658,13 @@ function SlideIn({
   className?: string;
   children: React.ReactNode;
 }) {
-  const length = 1 / (1 + (count - 1) * 0.25);
-  const from = index * length * 0.25;
-  const t = useTransform(progress, (p) => easeOut(Math.min(Math.max((p - from) / length, 0), 1)));
-  const x = useTransform(t, (v) => cvw((1 - v) * 2.4));
+  const length = (1 - CHANNEL_TILES) / (1 + (count - 1) * CHANNEL_OVERLAP);
+  const from = CHANNEL_TILES + index * length * CHANNEL_OVERLAP;
+  const t = useTransform(progress, (p) => easeOut(clamp01((p - from) / length)));
+  // Vyjede o třetinu své výšky zespodu; `--pop` čte kolečko ikony (CSS).
+  const y = useTransform(t, (v) => `${(1 - v) * 34}%`);
   return (
-    <motion.li className={className} style={{ x, opacity: t }}>
+    <motion.li className={className} style={{ y, opacity: t, "--pop": t } as never}>
       {children}
     </motion.li>
   );

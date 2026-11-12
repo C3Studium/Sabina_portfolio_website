@@ -35,9 +35,12 @@ const PARTS_DELAY = 0.35;
 const STAGGER = 0.08;
 // Stavba jedné části (rámeček → kontura → výplň → rámeček zhasne).
 const BUILD = 0.8;
-// Kontakty pod formulářem: začnou, když je tlačítko zhruba v půlce stavby.
-const CHANNELS = 0.6;
-const CHANNELS_AT = 0.5;
+// Pás kontaktů: linka a pak moduly (index.tsx, SlideIn); začne, když je
+// tlačítko zhruba ve třetině stavby. Při zavření jede tentýž postup zpět
+// (CHANNELS_OUT) — moduly zapadnou dřív, než panel zhasne (PANEL v index.tsx).
+const CHANNELS = 1.05;
+const CHANNELS_AT = 0.3;
+const CHANNELS_OUT = 0.34;
 
 const EASE_SMOKE = [0.25, 0.6, 0.3, 1] as const;
 
@@ -163,9 +166,11 @@ export function useFormBuild({
 
     return () => {
       // Zavření: stavba zamrzne, jak je — modál právě odchází. Do
-      // výchozího stavu ji vrátí `reset` po odchodu.
+      // výchozího stavu ji vrátí `reset` po odchodu. Jen pás kontaktů
+      // odjede pozpátku (odchod = nástup obráceně).
       done = true;
       stops.forEach((s) => s.stop());
+      animate(v.channels, 0, { duration: CHANNELS_OUT * v.channels.get(), ease: [0.4, 0, 0.6, 1] });
       panel.removeEventListener("pointerdown", finish, true);
       panel.removeEventListener("keydown", finish, true);
       panel.removeEventListener("focusin", finish, true);

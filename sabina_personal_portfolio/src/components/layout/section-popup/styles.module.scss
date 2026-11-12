@@ -1,3 +1,5 @@
+@use "../../../styles/system/_shortcuts.scss" as *;
+
 // Sekce úvodní stránky jako samostatné okno. Přes celou obrazovku i přes
 // hlavičku (z-index nad ní, pod kontaktním modalem). Podklad je ztmavený
 // a rozostřený shader webu — sekce mají průhledné pozadí a počítají s ním.

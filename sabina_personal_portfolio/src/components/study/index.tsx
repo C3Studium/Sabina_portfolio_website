@@ -96,6 +96,9 @@ const ISO = { pull: 0.14 };
 // Po zastavení scrollu uprostřed přejezdu kamera dosedne na nejbližší
 // zastávku (ms klidu, s doby dojezdu).
 const SETTLE = { idle: 220, duration: 1.1 };
+// Nástup stránky: přílet kamery z přehledu na titulní (s). Pomalý rozjezd,
+// dlouhé dosednutí; artboardy se mezitím objeví (styles .board, --k).
+const FLY_IN = { duration: 2.1, delay: 0.55, ease: [0.65, 0, 0.2, 1] as [number, number, number, number] };
 // Rámování artboardu (podíl obrazovky) na šířku / na výšku.
 // Na výšku svisle celé okno — místo nahoře a dole určí `roomy`.
 const FRAME = { wide: { fw: 0.94, fh: 0.86, fx: 0.5, fy: 0.535 }, tall: { fw: 0.92, fh: 0.96, fx: 0.5, fy: 0.5 } };
@@ -295,6 +298,22 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
     outputs: actOutputs,
   };
 
+  // Nástup: kamera začne na přehledu celého plátna (artboardy se mezitím
+  // po jednom objeví, styles .board) a přiletí na titulní. Obsah titulní
+  // se začne stavět, až kamera dosedne (`arrived` → BoardProps.go).
+  const flyIn = useMotionValue(reduce ? 1 : 0);
+  const [arrived, setArrived] = useState(reduce);
+  useEffect(() => {
+    if (!go || reduce) return;
+    const controls = animate(flyIn, 1, {
+      duration: FLY_IN.duration,
+      delay: FLY_IN.delay,
+      ease: FLY_IN.ease,
+      onComplete: () => setArrived(true),
+    });
+    return () => controls.stop();
+  }, [go, reduce, flyIn]);
+
   // Náběh pravítek po oponě.
   const rulerIn = useMotionValue(reduce ? 1 : 0);
   useEffect(() => {
@@ -328,10 +347,23 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
     // Na zastávce celé px (ostrý text), při přejezdu plynule.
     const still = travel <= 0;
     const snap = (n: number) => (still ? Math.round(n) : n);
-    const tx = snap(W * (a.fx + (b.fx - a.fx) * e) - cx * s);
-    const ty = snap(H * (a.fy + (b.fy - a.fy) * e) - cy * s);
+    let tx = snap(W * (a.fx + (b.fx - a.fx) * e) - cx * s);
+    let ty = snap(H * (a.fy + (b.fy - a.fy) * e) - cy * s);
+    let sNow = s;
+    // Nástup: z přehledu celého plátna (kamera END) do právě spočtené.
+    const f = flyIn.get();
+    if (f < 1) {
+      const o = cams.current[END];
+      sNow = Math.exp(Math.log(o.s) * (1 - f) + Math.log(s) * f);
+      const fx = o.fx + (a.fx + (b.fx - a.fx) * e - o.fx) * f;
+      const fy = o.fy + (a.fy + (b.fy - a.fy) * e - o.fy) * f;
+      const ox = o.cx + (cx - o.cx) * f;
+      const oy = o.cy + (cy - o.cy) * f;
+      tx = W * fx - ox * sNow;
+      ty = H * fy - oy * sNow;
+    }
     Object.assign(L, { m, x });
-    world.style.transform = `translate(${tx.toFixed(2)}px, ${ty.toFixed(2)}px) scale(${s.toFixed(5)})`;
+    world.style.transform = `translate(${tx.toFixed(2)}px, ${ty.toFixed(2)}px) scale(${sNow.toFixed(5)})`;
     // --cam-s = měřítko pro písmo a drobné prvky (`X / var(--cam-s)`): měřítko
     // zastávek, ne skutečné — při oddálení na celé plátno se text nezvětší
     // přes artboardy, ale zmenší se s nimi (přehled drží měřítko Výstupů).
@@ -341,10 +373,10 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
     world.style.setProperty("--cam-s", (textS / uiK(textS)).toFixed(5));
     world.style.setProperty("--m", m.toFixed(4));
     frame.style.setProperty("--m", m.toFixed(4));
-    const grid = 50 * s;
+    const grid = 50 * sNow;
     frame.style.backgroundSize = `${grid.toFixed(2)}px ${grid.toFixed(2)}px`;
     frame.style.backgroundPosition = `${tx.toFixed(2)}px ${ty.toFixed(2)}px`;
-    if (zoomRef.current) zoomRef.current.textContent = `${Math.round(s * 100)} %`;
+    if (zoomRef.current) zoomRef.current.textContent = `${Math.round(sNow * 100)} %`;
 
     BOARDS.forEach((board, k) => acts[board].set(k < i ? 1 : k > i ? 0 : act));
     endIn.set(end);
@@ -397,6 +429,7 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
   }, [tall, phone]);
   useMotionValueEvent(pos, "change", apply);
   useMotionValueEvent(rulerIn, "change", apply);
+  useMotionValueEvent(flyIn, "change", apply);
 
 
   // Dosednutí: scroll se zastavil uprostřed přejezdu → dojet na bližší
@@ -458,18 +491,27 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
           aria-hidden="true"
         />
       ))}
-      <div ref={frameRef} className={styles.canvasFrame} data-tall={tall || undefined} data-flat="" data-study-frame="">
+      <div
+        ref={frameRef}
+        className={styles.canvasFrame}
+        data-tall={tall || undefined}
+        data-flat=""
+        data-study-frame=""
+        data-go={go || undefined}
+      >
+        {/* Jen prolnutí — pohyb dělá kamera (FLY_IN) a artboardy (.board). */}
         <motion.div
           className={styles.worldFade}
-          initial={reduce ? false : { opacity: 0, scale: 1.04 }}
-          animate={go ? { opacity: 1, scale: 1 } : undefined}
-          transition={{ duration: 1.5, ease: ENTRANCE }}
+          initial={reduce ? false : { opacity: 0 }}
+          animate={go ? { opacity: 1 } : undefined}
+          transition={{ duration: 0.6, ease: ENTRANCE }}
         >
           <div ref={lensRef} className={styles.lens}>
             <div ref={worldRef} className={styles.world} style={{ width: bounds.w, height: bounds.h }}>
               {BOARDS.map((board, k) => {
                 const r = layout[board];
-                const props: BoardProps = { c, act: acts[board], rect: r, go, reduce, seen: k <= index };
+                // Obsah se staví až po příletu kamery (FLY_IN).
+                const props: BoardProps = { c, act: acts[board], rect: r, go: go && arrived, reduce, seen: k <= index };
                 return (
                   <div
                     key={board}
@@ -480,7 +522,7 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
                     data-board={board}
                     data-active={stop === board || undefined}
                     data-seen={k <= index || undefined}
-                    style={{ left: r.x, top: r.y, width: r.w, height: r.h }}
+                    style={{ left: r.x, top: r.y, width: r.w, height: r.h, "--k": k } as CSSProperties}
                   >
                     <span className={styles.plate} aria-hidden="true" />
                     <p className={styles.boardName}>

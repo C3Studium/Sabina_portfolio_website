@@ -129,6 +129,8 @@ export interface RibbonController {
   step: (direction: 1 | -1) => void;
   focus: (item: number) => void;
   release: () => void;
+  /** Odchod ze stránky: kamera svižně odjede do přehledu celé dráhy. */
+  leave: () => void;
   reveal: (show: boolean) => void;
   destroy: () => void;
 }
@@ -170,10 +172,29 @@ const SCOPE_RISE = 0.35;
 const SCOPE_SPEED_FROM = 5;
 // `autoplay`: jak dlouho (s) po zásahu návštěvníka scéna sama nejede.
 const AUTOPLAY_HOLD = 3;
-// Nástup scény: délka (s), pauza před ním (s) a o kolik karet kruh dojede.
-const INTRO_LENGTH = 2.6;
-const INTRO_DELAY = 0.25;
-const INTRO_CARDS = 8;
+// Nástup a odchod scény — JEDNA časová osa (průběh p 0–1), odchod je
+// nástup pozpátku:
+//   p 0 → 1 (nástup, INTRO_LENGTH s): celá scéna se v přehledu prolne
+//     (INTRO_FADE), řada se dokulí o INTRO_CARDS karet s dobrzděním
+//     a kamera se v úseku INTRO_SETTLE z přehledu přiblíží na hlavní kartu.
+//   p 1 → 0 (odchod, LEAVE_LENGTH s — sedí na přechod stránek, viz
+//     TIMES_SCENE v motion/PageTransition): kamera odjede do přehledu, řada
+//     se rozkulí zpět a scéna na konci zhasne.
+const INTRO_LENGTH = 2.8;
+const INTRO_DELAY = 0.15;
+// Po přechodu stránek (s od začátku prolnutí): jméno stránky, linka a tvary
+// odplouvají ~0,5 s (PageTransition.module.scss, veil-*-out) — scéna
+// nastoupí až po nich, ne přes ně.
+const INTRO_AFTER_VEIL = 0.55;
+const INTRO_CARDS = 10;
+const INTRO_SETTLE = [0.25, 0.95] as const;
+const INTRO_FADE = 0.3;
+const INTRO_RULER = [0, 0.45] as const;
+const LEAVE_LENGTH = 1.3;
+/** Dojezd řady: plná rychlost hned, pak plynule do klidu (ease-out). */
+const introTravel = (p: number) => 1 - Math.pow(1 - p, 3);
+/** Odstup kamery (stir) v průběhu p: přehled, pak přiblížení do řady. */
+const introHeld = (p: number) => 1 - smoothstep01(clamp((p - INTRO_SETTLE[0]) / (INTRO_SETTLE[1] - INTRO_SETTLE[0]), 0, 1));
 const smoothstep01 = (t: number) => t * t * (3 - 2 * t);
 const SCOPE_SPEED_FULL = 14;
 // Jemnost tvaru dráhy a rozestup dílků pravítka (světové jednotky).
@@ -355,10 +376,14 @@ const threadFragmentShader = `
 precision highp float;
 uniform vec3 uColor;
 uniform float uOpacity;
+// Nástup: pravítka se kreslí zleva doprava přes obrazovku — vidět je jen
+// to, co leží vlevo od uSweep (px plátna), s měkkou hranou uSoft.
+uniform float uSweep;
+uniform float uSoft;
 varying float vFade;
 
 void main() {
-  float alpha = uOpacity * vFade;
+  float alpha = uOpacity * vFade * (1.0 - smoothstep(uSweep - uSoft, uSweep, gl_FragCoord.x));
   gl_FragColor = vec4(uColor * alpha, alpha);
 }
 `;
@@ -513,6 +538,8 @@ export const createRibbon = (
     uFogStart: fogStart,
     uColor: { value: accent },
     uOpacity: { value: 0.3 },
+    uSweep: { value: 1e6 },
+    uSoft: { value: 1 },
   };
   const threadMaterial = new THREE.ShaderMaterial({
     uniforms: threadUniforms,
@@ -585,6 +612,11 @@ export const createRibbon = (
   let rate = 1;
   let rateV = 0;
   let pull = 0;
+  // Odchod ze stránky (přechod na jinou): průběh 0–1, -1 = neběží.
+  let outro = -1;
+  let outroStart = 0;
+  let outroFrom = 0;
+  let leaving = false;
   let pullV = 0;
   // `row`: odtažení do přehledu podle rychlosti jízdy (0–1) a ta rychlost.
   let stir = 0;
@@ -597,8 +629,12 @@ export const createRibbon = (
   let introFrom = 0;
   let introTo = 0;
   const introRunning = () => intro >= 0 && intro < 1;
-  // Karty se během prvních 30 % nástupu rozsvítí.
-  const introFade = () => (intro < 0 ? 1 : smoothstep01(clamp(intro / 0.3, 0, 1)));
+  // Průběh osy nástupu/odchodu (1 = scéna stojí na místě).
+  const introPhase = () => (outro >= 0 ? 1 - outro : intro >= 0 ? intro : 1);
+  // Celá scéna se prolne najednou (a při odchodu najednou zhasne).
+  const sceneFade = () => smoothstep01(clamp(introPhase() / INTRO_FADE, 0, 1));
+  // Pravítka se kreslí přes obrazovku zleva doprava (při odchodu zpět).
+  const rulerSweep = () => clamp((introPhase() - INTRO_RULER[0]) / (INTRO_RULER[1] - INTRO_RULER[0]), 0, 1);
   let speedNow = 0;
   let lastS = 0;
   // `row`: hloubka, pod kterou karty mizí (viz uNearCut).
@@ -1329,7 +1365,8 @@ export const createRibbon = (
     // Na hlavní kartě se popisek ukáže jen v klidu (při odtažení zhasne).
     // Na úzké kartě (telefon) se písmo popisku z úvodní stránky nevejde — v klidu bez popisku.
     const roomy = box ? box.halfW * 2 >= LABEL_MIN_WIDTH : false;
-    const want = box ? (card === hovered ? 1 : roomy ? clamp(1 - stir * 5, 0, 1) : 0) : 0;
+    // Popisek hlavní karty zhasne při odtažení i v přehledu (nástup, odchod).
+    const want = box && !leaving ? (card === hovered ? 1 : roomy ? clamp(1 - Math.max(stir, pull) * 5, 0, 1) : 0) : 0;
     labelAlpha += (want - labelAlpha) * (1 - Math.exp(-dt / 0.12));
     if (Math.abs(labelAlpha - want) < 0.003) labelAlpha = want;
     if (box) labelCard = card;
@@ -1536,13 +1573,28 @@ export const createRibbon = (
     }
     // Nástup: poloha řady jde po křivce z `introFrom` do `introTo` a přebíjí
     // jízdu, dojezd i autoplay, dokud neskončí.
-    if (intro >= 0 && intro < 1) {
+    // Nástup čeká, dokud je stránka schovaná přechodem (závoj, ještě bez
+    // příchodu) — jinak by proběhl neviděný.
+    if (intro === 0 && typeof document !== "undefined") {
+      const html = document.documentElement.dataset;
+      if (html.veil === "1" && html.preloadReveal !== "1") introStart = time + INTRO_AFTER_VEIL;
+    }
+    if (intro >= 0 && intro < 1 && outro < 0) {
       intro = clamp((time - introStart) / INTRO_LENGTH, 0, 1);
-      const travel = 1 - Math.pow(1 - smoothstep01(clamp((intro - 0.08) / 0.92, 0, 1)), 2.2);
-      s = introFrom + (introTo - introFrom) * travel;
+      s = introFrom + (introTo - introFrom) * introTravel(intro);
       velocity = 0;
       pendingTravel = 0;
       busy0 = true;
+      // Po dojetí počká autoplay celou pauzu — nástup má doznít v klidu.
+      if (intro >= 1) userAt = time;
+    }
+    // Odchod: nástup pozpátku — z místa zpět o INTRO_CARDS karet (rozjezd).
+    if (outro >= 0) {
+      outro = clamp((time - outroStart) / LEAVE_LENGTH, 0, 1);
+      s = outroFrom - INTRO_CARDS * (1 - introTravel(1 - outro));
+      velocity = 0;
+      pendingTravel = 0;
+      busy0 = outro < 1;
     }
     s = wrap(s, cardCount);
     updateShifts();
@@ -1559,7 +1611,7 @@ export const createRibbon = (
       // Autoplay: v klidu po `autoplay` s další projekt. Zásah návštěvníka
       // (i karta pod myší) ho na AUTOPLAY_HOLD s pozdrží.
       const interacting =
-        !!press || hovered >= 0 || time - userAt < AUTOPLAY_HOLD || !!focus || pull > 0.05 || introRunning();
+        !!press || hovered >= 0 || time - userAt < AUTOPLAY_HOLD || !!focus || pull > 0.05 || introRunning() || leaving;
       if (settings.autoplay > 0 && !settings.editing && !settings.paused && !reduced) busy0 = true;
       if (settings.autoplay > 0 && !settings.editing && !settings.paused && !reduced && !interacting) {
         if (pendingTravel === 0 && Math.abs(velocity) < 0.35) autoClock += dt;
@@ -1572,7 +1624,7 @@ export const createRibbon = (
       }
       // Po zastavení dojet na nejbližší kartu (hlavní karta přesně na středu).
       const idle = !press && time - wheelAt > 0.25 && Math.abs(velocity) < 0.35 && pendingTravel === 0;
-      if (idle && !focus) {
+      if (idle && !focus && !leaving) {
         const off = Math.round(s + LEAD) - (s + LEAD);
         if (Math.abs(off) > 1e-3) {
           pendingTravel = off;
@@ -1584,10 +1636,10 @@ export const createRibbon = (
       const stirTarget = reduced ? 0 : hard * hard * clamp(settings.scope, 0, 1);
       [stir, stirV] = springTo(stir, stirV, stirTarget, dt, stirTarget > stir ? 0.9 : 1.4);
       if (Math.abs(stir - stirTarget) > 1e-3 || Math.abs(stirV) > 1e-3) busy0 = true;
-      // Nástup: kamera drží přehled a ke konci se plynule přiblíží do řady.
-      if (introRunning()) {
-        const held = 1 - smoothstep01(clamp((intro - 0.35) / 0.65, 0, 1));
-        if (held > stir) {
+      // Nástup i odchod: odstup kamery jede po ose (přehled ↔ řada).
+      if (introRunning() || outro >= 0) {
+        const held = introHeld(introPhase());
+        if (outro >= 0 || held > stir) {
           stir = held;
           stirV = 0;
         }
@@ -1666,6 +1718,13 @@ export const createRibbon = (
     cardUniforms.uShadow.value = clamp(settings.shadow, 0, 1);
     threadUniforms.uOpacity.value =
       clamp(settings.thread, 0, 1) * Math.min(1, 1 + (dpr - 1) * 0.85) * (1 - focusE * 0.7);
+    {
+      // Hrana kresby pravítek v px plátna (gl_FragCoord), s měkkým koncem.
+      const soft = width * dpr * 0.18;
+      const sweep = smoothstep01(rulerSweep());
+      threadUniforms.uSoft.value = soft;
+      threadUniforms.uSweep.value = sweep >= 1 ? 1e6 : sweep * (width * dpr + soft);
+    }
     thread.visible = settings.thread > 0;
 
     let busy = !reduced && !settings.paused && (Math.abs(settings.speed) > 1e-4 || tour !== "ride");
@@ -1692,16 +1751,20 @@ export const createRibbon = (
     if (settings.view === "row") depths[wrap(Math.round(s + LEAD), cardCount)] = -1e3;
     if (hovered >= 0) depths[hovered] = -2e3;
     order.sort((a, b) => depths[b] - depths[a] || a - b);
+    const fade = sceneFade();
     order.forEach((i, slot) => {
       cardPosition(i, tmpB);
       const shape = shapeOfCard(i);
+      // Nástup / odchod: celá scéna se prolne najednou (sceneFade).
+      const e = fade;
+      const size = sizeOf(i);
       centers[slot * 3] = tmpB.x;
       centers[slot * 3 + 1] = tmpB.y;
       centers[slot * 3 + 2] = tmpB.z;
-      cardData[slot * 4] = sizeOf(i);
+      cardData[slot * 4] = size;
       cardData[slot * 4 + 1] = assignment[i] ?? 0;
       cardData[slot * 4 + 2] = Math.max(lifts[i].value, 0);
-      cardData[slot * 4 + 3] = (focus && i === focus.card ? 0 : presence(i)) * introFade();
+      cardData[slot * 4 + 3] = (focus && i === focus.card ? 0 : presence(i)) * e;
       shapeData[slot] = shape;
     });
     geometry.instanceCount = cardCount;
@@ -2037,6 +2100,17 @@ export const createRibbon = (
       }
     },
     release,
+    leave: () => {
+      if (settingsRef.current.reduced || settingsRef.current.editing || leaving) return;
+      leaving = true;
+      focus = null;
+      // Odchod začne z místa, kde řada právě je (i uprostřed nástupu).
+      outro = intro >= 0 && intro < 1 ? 1 - intro : 0;
+      outroStart = time - outro * LEAVE_LENGTH;
+      outroFrom = s + INTRO_CARDS * (1 - introTravel(1 - outro));
+      intro = -1;
+      schedule();
+    },
     reveal: (show: boolean) => {
       peek = show;
       schedule();

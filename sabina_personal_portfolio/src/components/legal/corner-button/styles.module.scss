@@ -1,0 +1,114 @@
+@use "../../../styles/system/_shortcuts.scss" as *;
+
+// Tlačítko s rohy — převzaté z webu Procházka Group (CornerButton), přebarvené:
+// bílá → sněhová, bez vlastního písma. Rohy se při najetí rozestoupí.
+
+.cornerButton {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+
+    // The class goes on a <button> as often as on a link — the contact sheet's
+    // send, the advisor card's — and a bare <button> is painted by the browser:
+    // a light grey face, its own border, its own font. Nothing else in here
+    // ever mentions a background, so on those two the button came out as a
+    // solid white bar in the middle of a page drawn entirely in hairlines.
+    appearance: none;
+    background: none;
+    border: 0;
+    cursor: pointer;
+
+    color: var(--snow);
+    text-decoration: none;
+    text-transform: uppercase;
+    font-weight: 300;
+    font-size: 1rem;
+    letter-spacing: 0.1em;
+
+    // The arms are a measure of the frame and move in rem: 0.5625rem is the 9px
+    // they always were up to 1920, and above it they grow with the label they
+    // bracket (see globals.scss). Left in px they would not — the word inside is
+    // rem and gets a third bigger on a 2560 monitor, and four nine-pixel ticks
+    // around type that size read as a frame that has come loose from it.
+    //
+    // The border weights below stay in px. They are the page's hairline, the
+    // same one every rule on the site is drawn at, and a hairline is one pixel
+    // on every screen — grown to 1.33 it is a smudge, not a line.
+    .corner {
+        position: absolute;
+        width: 0.5625rem;
+        height: 0.5625rem;
+        border: 0 solid var(--snow);
+        transition: transform 0.3s ease;
+    }
+
+    .tl { top: 0; left: 0; border-top-width: 1.5px; border-left-width: 1.5px; }
+    .tr { top: 0; right: 0; border-top-width: 1.5px; border-right-width: 1.5px; }
+    .bl { bottom: 0; left: 0; border-bottom-width: 1.5px; border-left-width: 1.5px; }
+    .br { bottom: 0; right: 0; border-bottom-width: 1.5px; border-right-width: 1.5px; }
+
+    .arrow {
+        font-size: 0.85em;
+        transition: transform 0.3s ease;
+    }
+
+    // The browser used to say this by greying its own face, and that face has
+    // just been taken away — the advisor card's send is disabled while it is
+    // sending, and without this it looks exactly like a button that will work.
+    &:disabled {
+        opacity: 0.45;
+        cursor: default;
+    }
+
+    // On touch the visual button stays exactly as drawn — a hairline-cornered
+    // label barely 30px tall — but the thing a finger can hit grows to the
+    // 44px minimum. The ::after is centred on the button and never smaller
+    // than it, so wide buttons keep their full width and only gain height.
+    // It paints nothing and, being part of the button, taps on it are taps
+    // on the button.
+    @include touch {
+        &::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: max(100%, 44px);
+            height: max(100%, 44px);
+        }
+    }
+
+    // The corners spread and the arrow leans for a POINTER. A finger has no
+    // hover to leave: the tap latches this on and nothing ever clears it, so
+    // every button a touch reader has ever pressed stays spread behind them.
+    // The same gesture gets it as a press instead, which ends when the finger
+    // lifts.
+    //
+    // These travels stay in px while the arms above went to rem, and on purpose:
+    // the arms are the drawing and have to keep their proportion to the label,
+    // but this is motion, and how far a thing moves on hover is not a function
+    // of how many pixels the monitor has. Three pixels of open is three pixels
+    // of open — plainly legible against a nine- or a twelve-pixel arm, and a
+    // gesture scaled up with the panel would only read as a bigger flinch.
+    @include fine-pointer {
+        &:hover:not(:disabled) {
+            .tl { transform: translate(-3px, -3px); }
+            .tr { transform: translate(3px, -3px); }
+            .bl { transform: translate(-3px, 3px); }
+            .br { transform: translate(3px, 3px); }
+            .arrow { transform: translate(2px, -2px); }
+        }
+    }
+
+    @include touch {
+        &:active:not(:disabled) {
+            .tl { transform: translate(-3px, -3px); }
+            .tr { transform: translate(3px, -3px); }
+            .bl { transform: translate(-3px, 3px); }
+            .br { transform: translate(3px, 3px); }
+            .arrow { transform: translate(2px, -2px); }
+        }
+    }
+}

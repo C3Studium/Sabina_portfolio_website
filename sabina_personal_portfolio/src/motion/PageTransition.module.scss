@@ -247,6 +247,31 @@ $leave: cubic-bezier(0.55, 0, 0.75, 0.2);
     transform 0.48s $ease;
 }
 
+// Odchod ze stránky se scénou (Portfolio, html[data-leave-scene] — TIMES_SCENE
+// v .tsx): 3D dráha se rozjede a odjede do odstupu, stránka zhasne až potom
+// (od 0,85 s, do 1,4 s) a jméno s tvary nastoupí po ní.
+:global(html[data-leave-scene][data-veil="1"]:not([data-preload-reveal="1"]) body main) {
+  transition:
+    opacity 0.55s ease-in 0.85s,
+    transform 1.2s $ease 0.2s;
+}
+
+:global(html[data-leave-scene]) .letter {
+  animation-delay: calc(1.05s + var(--i) * var(--step, 0.035s));
+}
+
+:global(html[data-leave-scene]) .rule {
+  animation-delay: calc(1.13s + var(--n, 8) * var(--step, 0.035s) * 0.5);
+}
+
+:global(html[data-leave-scene]) .shape {
+  animation-delay: calc(var(--d) + 0.85s);
+}
+
+:global(html[data-leave-scene]) .stroke {
+  animation-delay: calc(var(--d) + 0.95s);
+}
+
 // Příchod: krytí řídí engine (prolnutí), měřítko se tu zklidní z 1,01.
 :global(html[data-veil="1"][data-preload-reveal="1"] body main) {
   animation: pageSettle 0.65s $ease both;
@@ -261,12 +286,36 @@ $leave: cubic-bezier(0.55, 0, 0.75, 0.2);
   }
 }
 
-// Hlavička je na všech stránkách stejná — při přechodu stojí a zůstává
-// klikací. (Pod oponou při načtení ji drží úvod, to tady neplatí.)
-:global(html[data-veil="1"] body header[data-motion-hold]) {
+// Hlavička (a na telefonu zelená lišta s výzvou — obojí `data-motion-hold`)
+// při přechodu zmizí se starou stránkou, ať uprostřed zůstane jen jméno
+// a tvary. Vrátí se chvíli po začátku příchodu nové stránky, až jméno
+// odpluje. (Pod oponou při načtení je drží úvod, to tady neplatí.)
+:global(html[data-veil="1"]:not([data-preload-reveal="1"]) body [data-motion-hold]) {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.38s $ease;
+}
+
+:global(html[data-veil="1"]:not([data-preload-reveal="1"]) body header[data-motion-hold]) {
+  transform: translateY(-12px);
+  transition:
+    opacity 0.38s $ease,
+    transform 0.5s $ease;
+}
+
+// Příchod: jen prvky, které nejsou schované samy (lišta s výzvou má
+// `data-away`, když je na obrazovce jiná výzva — ta zůstane pryč).
+:global(html[data-veil="1"][data-preload-reveal="1"] body [data-motion-hold]:not([data-away])) {
   opacity: 1;
-  transform: none;
   pointer-events: auto;
+  transition: opacity 0.55s $ease 0.3s;
+}
+
+:global(html[data-veil="1"][data-preload-reveal="1"] body header[data-motion-hold]) {
+  transform: none;
+  transition:
+    opacity 0.55s $ease 0.3s,
+    transform 0.7s $ease 0.3s;
 }
 
 @media (prefers-reduced-motion: reduce) {

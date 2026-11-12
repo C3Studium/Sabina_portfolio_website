@@ -1,7 +1,8 @@
 @use "../../styles/system/_shortcuts.scss" as *;
 
-// Stránka 404 (not-found/index.tsx). Jedna obrazovka v rámu webu;
-// podklad je společný shader (_app).
+// Stránka 404 (not-found/index.tsx). Jedna obrazovka v rámu webu; podklad
+// je společný shader (_app). Velikosti: písmo v clamp(rem, vh, rem) jako
+// sekce homepage, na výšku a na telefonu vlastní bloky dole.
 
 $accent: var(--green);
 $text: var(--snow);
@@ -13,31 +14,112 @@ $ease: cubic-bezier(0.22, 1, 0.36, 1);
   place-items: center;
   min-height: 100vh;
   overflow: hidden;
-  padding: 18vh 6vw 12vh;
+  padding: 16vh 6vw 10vh;
   color: $text;
 }
 
 .inner {
   position: relative;
-  z-index: 1;
+  z-index: 3;
   display: grid;
   justify-items: center;
+  max-width: 100%;
   text-align: center;
 }
+
+/* ---------- Bannery za číslem ---------- */
+
+// Pole, kolem kterého se bannery rozmístí (neviditelné) — za číslem.
+.bannerArea {
+  position: absolute;
+  top: 14vh;
+  left: 34vw;
+  width: 32vw;
+  height: 80vh;
+  pointer-events: none;
+}
+
+.banners {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+// Ztmavení uprostřed — číslo a text zůstanou čitelné nad bannery.
+.veil {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  background: radial-gradient(ellipse 48% 52% at 50% 52%, rgba(22, 22, 22, 0.72), rgba(22, 22, 22, 0.35) 60%, transparent 85%);
+  pointer-events: none;
+}
+
+/* ---------- Rohové značky ---------- */
+
+.corners {
+  position: absolute;
+  z-index: 2;
+  inset: 13vh 4vw 6vh;
+  pointer-events: none;
+
+  i {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-color: rgba(var(--snow-rgb), 0.35);
+    border-style: solid;
+    border-width: 0;
+
+    &:nth-child(1) {
+      top: 0;
+      left: 0;
+      border-top-width: 1px;
+      border-left-width: 1px;
+    }
+
+    &:nth-child(2) {
+      top: 0;
+      right: 0;
+      border-top-width: 1px;
+      border-right-width: 1px;
+    }
+
+    &:nth-child(3) {
+      bottom: 0;
+      left: 0;
+      border-bottom-width: 1px;
+      border-left-width: 1px;
+    }
+
+    &:nth-child(4) {
+      right: 0;
+      bottom: 0;
+      border-right-width: 1px;
+      border-bottom-width: 1px;
+    }
+  }
+}
+
+/* ---------- Text ---------- */
 
 .eyebrow {
   display: flex;
   align-items: center;
   gap: 0.8em;
-  margin: 0 0 2vh;
-  font-size: clamp(0.62rem, 1.25vh, 1.6rem);
+  margin: 0 0 1.5vh;
+  font-size: clamp(0.66rem, 1.3vh, 1.6rem);
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  opacity: 0.8;
+  opacity: 0.85;
 
   span {
-    width: 0.5em;
-    height: 0.5em;
+    width: 0.55em;
+    height: 0.55em;
     border-radius: 50%;
     background: $accent;
   }
@@ -48,62 +130,114 @@ $ease: cubic-bezier(0.22, 1, 0.36, 1);
   margin: 0;
   padding: 0 0.04em;
   color: $accent;
-  font-size: clamp(6rem, 34vh, 34rem);
+  font-size: clamp(6rem, 32vh, 34rem);
   font-weight: 200;
   line-height: 0.9;
   letter-spacing: 0.02em;
 }
 
+// Štítek s adresou, která neexistuje (jako popisek vrstvy v editoru).
+.path {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7em;
+  max-width: 100%;
+  margin: 2.6vh 0 0;
+  padding: 0.55em 0.9em;
+  border-radius: 4px;
+  background: rgba(22, 22, 22, 0.55);
+  box-shadow: 0 0.6rem 1.6rem rgba(0, 0, 0, 0.25);
+  font-size: clamp(0.62rem, 1.2vh, 1.4rem);
+
+  code {
+    overflow: hidden;
+    color: $text;
+    font-family: inherit;
+    font-weight: 500;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+
+.pathLabel,
+.pathState {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.pathState {
+  color: $accent;
+  opacity: 1;
+}
+
 .lead {
-  margin: 3.5vh 0 0;
-  font-size: clamp(0.85rem, 1.9vh, 2.2rem);
+  margin: 3vh 0 0;
+  font-size: clamp(0.95rem, 2vh, 2.3rem);
   font-weight: 300;
   line-height: 1.6;
-  opacity: 0.85;
+  opacity: 0.9;
 
   strong {
     font-weight: 500;
   }
 }
 
+/* ---------- Tlačítka ---------- */
+
 .actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 1rem 2rem;
-  margin-top: 5vh;
+  gap: 1.2rem 1.6rem;
+  margin-top: 4.5vh;
 }
 
-// Hlavní cesta: zelené verzálky a kroužek se šipkou (jako výzva webu).
+// Hlavní: tmavé tlačítko se zelenými verzálkami a kroužkem (jako „Odeslat"
+// v kontaktu a výzva webu).
 .primary {
   display: inline-flex;
   align-items: center;
-  gap: 1.1rem;
+  gap: 1.6rem;
+  min-height: clamp(3.6rem, 8vh, 7rem);
+  padding: 0.6rem 0.6rem 0.6rem 2rem;
+  border-radius: 999px;
+  background: #1a1a1a;
   color: $accent;
-  font-size: clamp(0.8rem, 1.7vh, 2rem);
+  box-shadow: 0 1rem 2.6rem rgba(0, 0, 0, 0.35);
+  font-size: clamp(0.82rem, 1.75vh, 2rem);
   font-weight: 500;
   letter-spacing: 0.16em;
   text-decoration: none;
   text-transform: uppercase;
+  transition:
+    background 0.25s ease,
+    transform 0.35s $ease;
 
-  &:hover .disc,
-  &:focus-visible .disc {
-    background: $accent;
-    color: var(--charcoal);
+  &:hover,
+  &:focus-visible {
+    background: #0f0f0f;
+    transform: translateY(-2px);
+
+    .disc {
+      background: $accent;
+      color: var(--charcoal);
+    }
   }
 
   &:focus-visible {
     outline: 1px dashed $accent;
-    outline-offset: 0.6rem;
+    outline-offset: 0.5rem;
   }
 }
 
 .disc {
   display: grid;
   place-items: center;
-  width: clamp(2.6rem, 6vh, 6rem);
-  height: clamp(2.6rem, 6vh, 6rem);
+  flex-shrink: 0;
+  width: clamp(2.8rem, 6.4vh, 5.8rem);
+  height: clamp(2.8rem, 6.4vh, 5.8rem);
   border: 1px solid $accent;
   border-radius: 50%;
   transition:
@@ -116,23 +250,76 @@ $ease: cubic-bezier(0.22, 1, 0.36, 1);
   }
 }
 
+// Vedlejší: obrysové tlačítko stejné výšky.
 .secondary {
-  padding-bottom: 0.25em;
-  border-bottom: 1px solid rgba(var(--snow-rgb), 0.35);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-height: clamp(3.6rem, 8vh, 7rem);
+  padding: 0 2rem;
+  border: 1px solid rgba(var(--snow-rgb), 0.35);
+  border-radius: 999px;
   color: $text;
-  font-size: clamp(0.7rem, 1.45vh, 1.7rem);
-  letter-spacing: 0.18em;
+  font-size: clamp(0.78rem, 1.6vh, 1.85rem);
+  letter-spacing: 0.16em;
   text-decoration: none;
   text-transform: uppercase;
-  opacity: 0.8;
   transition:
-    opacity 0.25s ease,
-    border-color 0.25s ease;
+    border-color 0.25s ease,
+    color 0.25s ease,
+    transform 0.35s $ease;
+
+  svg {
+    width: 1.15em;
+    height: 1.15em;
+    color: $accent;
+  }
 
   &:hover,
   &:focus-visible {
     border-color: $accent;
-    opacity: 1;
+    color: $accent;
+    transform: translateY(-2px);
+  }
+}
+
+// Drobné odkazy dole.
+.links {
+  display: flex;
+  gap: 0.6rem 2rem;
+  margin-top: 4vh;
+
+  a {
+    position: relative;
+    color: $text;
+    font-size: clamp(0.62rem, 1.2vh, 1.4rem);
+    letter-spacing: 0.22em;
+    text-decoration: none;
+    text-transform: uppercase;
+    opacity: 0.6;
+    transition: opacity 0.25s ease;
+
+    &::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -0.45em;
+      height: 1px;
+      background: $accent;
+      transform: scaleX(0);
+      transform-origin: 0 50%;
+      transition: transform 0.35s $ease;
+    }
+
+    &:hover,
+    &:focus-visible {
+      opacity: 1;
+
+      &::after {
+        transform: scaleX(1);
+      }
+    }
   }
 }
 
@@ -140,11 +327,12 @@ $ease: cubic-bezier(0.22, 1, 0.36, 1);
 
 .construct {
   position: absolute;
+  z-index: 2;
   top: 50%;
   left: 50%;
   width: min(120vw, 150vh);
   translate: -50% -50%;
-  opacity: 0.22;
+  opacity: 0.2;
   pointer-events: none;
 
   path,
@@ -237,18 +425,148 @@ $ease: cubic-bezier(0.22, 1, 0.36, 1);
   }
 }
 
-@media (orientation: portrait) {
+/* ---------- Nízká obrazovka na šířku (notebook, telefon na šířku) ---------- */
+
+@media (orientation: landscape) and (max-height: 620px) {
+  .page {
+    padding: 15vh 6vw 6vh;
+  }
+
   .code {
-    font-size: clamp(6rem, 42vw, 22rem);
+    font-size: clamp(4rem, 30vh, 12rem);
+  }
+
+  .lead {
+    margin-top: 2vh;
+  }
+
+  .actions {
+    margin-top: 3vh;
+  }
+
+  .primary,
+  .secondary {
+    min-height: 3.2rem;
+  }
+
+  .disc {
+    width: 2.4rem;
+    height: 2.4rem;
+  }
+
+  .links,
+  .corners {
+    display: none;
+  }
+}
+
+/* ---------- Na výšku (tablet) ---------- */
+
+@media (orientation: portrait) {
+  .page {
+    padding: 14vh 6vw 8vh;
+  }
+
+  // Bannery přes celou šířku, spodky u spodní hrany (jako hero na výšku).
+  .bannerArea {
+    top: 10vh;
+    left: 4vw;
+    width: 92vw;
+    height: 90vh;
+  }
+
+  .banners {
+    opacity: 0.32;
+  }
+
+  .veil {
+    background: radial-gradient(ellipse 70% 42% at 50% 46%, rgba(22, 22, 22, 0.75), rgba(22, 22, 22, 0.35) 65%, transparent 90%);
+  }
+
+  .code {
+    font-size: clamp(6rem, 34vw, 22rem);
+  }
+
+  .lead {
+    font-size: clamp(0.95rem, 2.6vw, 1.6rem);
   }
 
   .construct {
     width: 170vw;
+  }
+
+  .corners {
+    inset: 11vh 4vw 4vh;
+  }
+}
+
+/* ---------- Telefon na výšku ---------- */
+
+@media (orientation: portrait) and (max-width: 599.98px) {
+  .page {
+    padding: 13vh 5vw 7vh;
+  }
+
+  .eyebrow {
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+  }
+
+  .code {
+    font-size: 36vw;
+  }
+
+  .path {
+    font-size: 0.66rem;
+  }
+
+  .lead {
+    font-size: 0.95rem;
+  }
+
+  // Tlačítka pod sebou přes celou šířku — velký cíl pro palec.
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 0.75rem;
+  }
+
+  .primary {
+    justify-content: space-between;
+    min-height: 3.6rem;
+    padding-left: 1.4rem;
+    font-size: 0.82rem;
+  }
+
+  .disc {
+    width: 2.6rem;
+    height: 2.6rem;
+  }
+
+  .secondary {
+    justify-content: center;
+    min-height: 3.4rem;
+    padding: 0 1.2rem;
+    font-size: 0.74rem;
+  }
+
+  .links {
+    gap: 1.4rem;
+  }
+
+  .corners {
+    display: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .construct * {
     animation: none !important;
+  }
+
+  .primary,
+  .secondary {
+    transition: none;
   }
 }
