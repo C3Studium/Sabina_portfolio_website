@@ -4,7 +4,7 @@ import type { AppProps } from "next/app";
 import { Poppins, Caveat } from "next/font/google";
 import Lenis from "lenis";
 import Header from "@/components/layout/header";
-import { SiteHead } from "@/components/seo";
+import { SeoProvider, SiteHead } from "@/components/seo";
 import Footer from "@/components/layout/footer";
 import ContactModal from "@/components/layout/contact-modal";
 import SectionPopups from "@/components/layout/section-popup";
@@ -148,6 +148,7 @@ function App({ Component, pageProps, router }: AppProps) {
   }, []);
 
   return (
+    <SeoProvider seo={(pageProps as { globals?: GlobalCopy }).globals?.seo}>
     <div className={`${poppins.variable} ${caveat.variable} ${poppins.className}`}>
       <SiteHead />
       <ShaderBackground />
@@ -181,6 +182,7 @@ function App({ Component, pageProps, router }: AppProps) {
         copy={globals?.contact}
       />
     </div>
+    </SeoProvider>
   );
 }
 

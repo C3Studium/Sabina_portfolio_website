@@ -86,7 +86,7 @@ export default function CaseStudyPage({ content, project, next, visuals }: Props
     <>
       {/* Náhled sdílení: společný og-image (formát 1,91 : 1 sítím sedí);
           banner projektu je na výšku a sítě by ho ořízly. */}
-      <Seo title={title} description={description} type="article" image={cover && cover.width && cover.height && cover.width / cover.height > 1.2 ? cover : null} />
+      <Seo title={title} description={description} page={project.seo} type="article" image={cover && cover.width && cover.height && cover.width / cover.height > 1.2 ? cover : null} />
       {/* `key` podle slugu: přechod mezi dvěma detaily je nová stránka, ne
           přepsání té staré — animace a scroll začínají znovu. */}
       <main key={`project-${project.slug}`}>

@@ -13,6 +13,7 @@ import {
     numberValue,
     readPublished,
     registerSources,
+    seoOf,
     slugValue,
     stringValue,
     plainText,
@@ -22,6 +23,7 @@ import {
 import { projectSlug } from '../cms/slug.ts'
 import { studyFrom } from './study.ts'
 import type { StudyContent } from '../../components/study/content'
+import type { PageSeo } from '@c3studium/valecms/server/site'
 
 /** Co si stránka přečetla z preview cookie: publikovaný web, koncept, nebo okamžik. */
 export type View = { draft: boolean; at: string | null }
@@ -69,6 +71,8 @@ export type Project = {
     cardCta: string
     /** Případová studie (záložka „Případová studie"), nebo null = dosavadní detail. */
     study: StudyContent | null
+    /** Přepis SEO stránky (záložka „SEO"); prázdné hodnoty = výchozí. */
+    seo: PageSeo
 }
 
 /**
@@ -143,6 +147,7 @@ export const getProjects = async ({
                 featured: data.featured === true,
                 cardCta: stringValue(data.cardCta),
                 study: studyFrom(data, title, numberValue(data.order) ?? 100),
+                seo: seoOf(data),
             }
         })
         .filter((project) => project.title && project.slug)

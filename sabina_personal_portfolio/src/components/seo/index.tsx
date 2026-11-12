@@ -1,103 +1,75 @@
-// SEO stránky: titulek, popis, kanonická adresa a náhled pro sdílení
-// (Open Graph — Facebook, LinkedIn, Messenger, WhatsApp; Twitter / X karta).
+// SEO stránky nad knihovnou (@c3studium/valecms/seo, 0.1.56).
+//
+// Hodnoty webu (jméno, výchozí popis, náhled, ikony) jsou ve Studiu —
+// dokument „SEO a ikony" — a cestují v `pageProps.globals.seo`; bez něj
+// platí SEO_FALLBACK (src/lib/seo.ts). _app je dá do kontextu a vykreslí
+// <SiteHead />; stránka dává jen <Seo … />.
+//
 // Instagram náhledy z odkazů nečte — v bio / stories se ukáže jen adresa.
-//
-// Absolutní adresy (kanonická, og:url, og:image) staví z NEXT_PUBLIC_SITE_URL
-// — na produkci musí být skutečná doména, jinak sítě obrázek nenajdou.
-//
-// Společné značky (ikony, manifest, barva, jméno webu) jsou v <SiteHead />
-// v _app; stránka dává jen <Seo … />.
 
+import { createContext, useContext, type ReactNode } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
+import { SeoHead, SiteIcons, envSiteUrl } from "@c3studium/valecms/seo";
+import type { PageSeo, SiteSeo } from "@c3studium/valecms/server/site";
+import { SEO_FALLBACK } from "@/lib/seo";
 
-export const SITE = {
-  name: "Sabina Hudrmentová",
-  role: "Grafická designérka",
-  description:
-    "Grafická designérka Sabina Hudrmentová — reklamní bannery, kampaně a vizuály pro e-shopy, které zaujmou a prodávají.",
-  image: { src: "/og-image.jpg", width: 1200, height: 630, alt: "Sabina Hudrmentová — grafika pro lepší výsledky" },
-  locale: "cs_CZ",
-  themeColor: "#262626",
-};
+const SeoContext = createContext<SiteSeo>(SEO_FALLBACK);
 
 /** Kořen webu bez lomítka na konci; prázdný = jen relativní adresy. */
-export const siteUrl = () => (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/+$/, "");
+export const siteUrl = () => envSiteUrl();
 
-const absolute = (path: string) => (/^https?:\/\//.test(path) ? path : `${siteUrl()}${path.startsWith("/") ? "" : "/"}${path}`);
+export function SeoProvider({ seo, children }: { seo: SiteSeo | null | undefined; children: ReactNode }) {
+  return <SeoContext.Provider value={seo ?? SEO_FALLBACK}>{children}</SeoContext.Provider>;
+}
+
+export const useSiteSeo = () => useContext(SeoContext);
 
 type SeoProps = {
-  /** Celý titulek (bez přípony); `null` = jen jméno webu. */
+  /** Titulek stránky (bez jména webu); `null` = „Jméno — podtitul". */
   title?: string | null;
   description?: string;
-  /** Obrázek náhledu (adresa); bez něj společný og-image. */
-  image?: { src: string; width?: number; height?: number; alt?: string } | null;
-  /** `article` u případových studií, jinak `website`. */
+  image?: { src: string; width?: number | null; height?: number | null; alt?: string } | null;
+  /** Přepis z dokumentu (pole `seo` ve Studiu) — má přednost. */
+  page?: PageSeo | null;
   type?: "website" | "article" | "profile";
-  /** Nezařazovat do vyhledávačů (šablony, testovací stránky). */
   noindex?: boolean;
-  /** Strukturovaná data (JSON-LD), např. Person na úvodní stránce. */
   jsonLd?: Record<string, unknown> | null;
 };
 
-export default function Seo({ title = null, description = SITE.description, image = null, type = "website", noindex = false, jsonLd = null }: SeoProps) {
+export default function Seo({ title = null, description = "", image = null, page = null, type = "website", noindex = false, jsonLd = null }: SeoProps) {
+  const site = useSiteSeo();
   const { asPath } = useRouter();
   const path = asPath.split(/[?#]/)[0] || "/";
-  const fullTitle = title ? `${title} | ${SITE.name}` : `${SITE.name} — ${SITE.role}`;
-  const img = image ?? SITE.image;
-  const imgUrl = absolute(img.src);
-  const url = absolute(path);
-  return (
-    <Head>
-      <title>{fullTitle}</title>
-      <meta name="description" content={description} key="description" />
-      {siteUrl() ? <link rel="canonical" href={url} key="canonical" /> : null}
-      {noindex ? <meta name="robots" content="noindex, follow" key="robots" /> : null}
-
-      <meta property="og:type" content={type} key="og:type" />
-      <meta property="og:title" content={fullTitle} key="og:title" />
-      <meta property="og:description" content={description} key="og:description" />
-      {siteUrl() ? <meta property="og:url" content={url} key="og:url" /> : null}
-      <meta property="og:image" content={imgUrl} key="og:image" />
-      {img.width ? <meta property="og:image:width" content={String(img.width)} key="og:image:width" /> : null}
-      {img.height ? <meta property="og:image:height" content={String(img.height)} key="og:image:height" /> : null}
-      <meta property="og:image:alt" content={img.alt || fullTitle} key="og:image:alt" />
-
-      <meta name="twitter:card" content="summary_large_image" key="twitter:card" />
-      <meta name="twitter:title" content={fullTitle} key="twitter:title" />
-      <meta name="twitter:description" content={description} key="twitter:description" />
-      <meta name="twitter:image" content={imgUrl} key="twitter:image" />
-      <meta name="twitter:image:alt" content={img.alt || fullTitle} key="twitter:image:alt" />
-
-      {jsonLd ? <script type="application/ld+json" key="jsonld" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /> : null}
-    </Head>
-  );
+  const img = image ? { src: image.src, width: image.width ?? null, height: image.height ?? null, alt: image.alt ?? "" } : null;
+  return <SeoHead site={site} title={title} description={description} image={img} page={page} path={path} type={type} noindex={noindex} jsonLd={jsonLd} />;
 }
 
-/** Společné značky všech stránek (v _app). */
+/** Společné značky všech stránek (v _app): ikony ze Studia + soubory z /public. */
 export function SiteHead() {
+  const site = useSiteSeo();
   return (
-    <Head>
-      <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" key="viewport" />
-      <link rel="icon" href="/favicon.ico" sizes="48x48" key="icon-ico" />
-      <link rel="icon" type="image/png" sizes="32x32" href="/icon.png" key="icon-png" />
-      <link rel="apple-touch-icon" href="/apple-touch-icon.png" key="apple-touch-icon" />
-      <link rel="manifest" href="/site.webmanifest" key="manifest" />
-      <meta name="theme-color" content={SITE.themeColor} key="theme-color" />
-      <meta name="author" content={SITE.name} key="author" />
-      <meta property="og:site_name" content={SITE.name} key="og:site_name" />
-      <meta property="og:locale" content={SITE.locale} key="og:locale" />
-    </Head>
+    <>
+      <Head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" key="viewport" />
+        <link rel="icon" href="/favicon.ico" sizes="48x48" key="icon-ico" />
+        <meta name="author" content={site.siteName} key="author" />
+      </Head>
+      <SiteIcons site={site} manifest="/site.webmanifest" />
+    </>
   );
 }
 
 /** Osoba pro vyhledávače (úvodní stránka). */
-export const personJsonLd = () => ({
-  "@context": "https://schema.org",
-  "@type": "Person",
-  name: SITE.name,
-  jobTitle: SITE.role,
-  description: SITE.description,
-  ...(siteUrl() ? { url: siteUrl(), image: absolute(SITE.image.src) } : {}),
-  knowsAbout: ["Grafický design", "Reklamní bannery", "Online kampaně", "Vizuální komunikace"],
-});
+export const personJsonLd = (site: SiteSeo) => {
+  const base = siteUrl();
+  return {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: site.siteName,
+    jobTitle: site.tagline,
+    description: site.description,
+    ...(base ? { url: base, ...(site.shareImage ? { image: /^https?:/.test(site.shareImage.src) ? site.shareImage.src : base + site.shareImage.src } : {}) } : {}),
+    knowsAbout: ["Grafický design", "Reklamní bannery", "Online kampaně", "Vizuální komunikace"],
+  };
+};

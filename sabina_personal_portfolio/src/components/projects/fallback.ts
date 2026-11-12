@@ -1,4 +1,7 @@
 import type { Project } from "@/lib/site/projects";
+
+// Záloha nemá vlastní SEO — stránka vezme název a výchozí hodnoty webu.
+const NO_SEO = { title: "", description: "", image: null, noindex: false };
 import { STUDY_TEMPLATE } from "@/components/study/content";
 import { STUDY_JORDAN, STUDY_VIKIO, STUDY_VLNENE_ZBOZI } from "@/components/study/studies";
 
@@ -44,6 +47,7 @@ export const FALLBACK_PROJECTS: Project[] = [
     featured: true,
     cardCta: "Zjistit víc",
     study: null,
+    seo: NO_SEO,
   },
   {
     slug: "vecicky",
@@ -67,6 +71,7 @@ export const FALLBACK_PROJECTS: Project[] = [
     cardCta: "Zjistit víc",
     // Případová studie Věciček — záloha bez databáze (ve Studiu záložka „Případová studie").
     study: STUDY_TEMPLATE,
+    seo: NO_SEO,
   },
   {
     slug: "bruzek",
@@ -89,6 +94,7 @@ export const FALLBACK_PROJECTS: Project[] = [
     featured: true,
     cardCta: "Zjistit víc",
     study: null,
+    seo: NO_SEO,
   },
   {
     slug: "wooline",
@@ -111,6 +117,7 @@ export const FALLBACK_PROJECTS: Project[] = [
     featured: false,
     cardCta: "",
     study: null,
+    seo: NO_SEO,
   },
   {
     slug: "mistr-pet",
@@ -133,6 +140,7 @@ export const FALLBACK_PROJECTS: Project[] = [
     featured: false,
     cardCta: "",
     study: null,
+    seo: NO_SEO,
   },
   {
     slug: "samurai",
@@ -155,6 +163,7 @@ export const FALLBACK_PROJECTS: Project[] = [
     featured: true,
     cardCta: "Chci vědět víc",
     study: null,
+    seo: NO_SEO,
   },
   // Další případové studie — jen v záloze (a ve Studiu po scripts/cms-studies.mjs).
   {
@@ -173,6 +182,7 @@ export const FALLBACK_PROJECTS: Project[] = [
     featured: false,
     cardCta: "",
     study: STUDY_VLNENE_ZBOZI,
+    seo: NO_SEO,
   },
   {
     slug: "vikio",
@@ -190,6 +200,7 @@ export const FALLBACK_PROJECTS: Project[] = [
     featured: false,
     cardCta: "",
     study: STUDY_VIKIO,
+    seo: NO_SEO,
   },
   {
     slug: "jordan",
@@ -207,6 +218,7 @@ export const FALLBACK_PROJECTS: Project[] = [
     featured: false,
     cardCta: "",
     study: STUDY_JORDAN,
+    seo: NO_SEO,
   },
 ];
 

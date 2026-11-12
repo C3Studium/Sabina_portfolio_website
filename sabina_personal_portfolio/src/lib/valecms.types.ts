@@ -30,6 +30,9 @@
 import { defineField, defineType } from '@c3studium/valecms/core'
 import siteCopy from '@c3studium/valecms/schemas/siteCopy.js'
 import review from '@c3studium/valecms/schemas/review.js'
+// SEO a ikony webu (jeden dokument) a pole SEO pro stránky — z knihovny (0.1.56).
+import siteSeo from '@c3studium/valecms/schemas/siteSeo.js'
+import { seoField } from '@c3studium/valecms/seo/field.js'
 
 // Pořadí v řadě — u všech typů stejně: menší číslo = dřív.
 const order = (group?: string) =>
@@ -161,6 +164,7 @@ const project = defineType({
         { name: 'karta', title: 'Karta', default: true },
         { name: 'detail', title: 'Detail stránky' },
         { name: 'studie', title: 'Případová studie' },
+        { name: 'seo', title: 'SEO' },
     ],
     orderings: BY_ORDER,
     fields: [
@@ -346,6 +350,8 @@ const project = defineType({
                 defineField({ name: 'status', title: 'Stav', type: 'string', description: 'Např. „Odpovím do *24 hodin*".', validation: (rule) => rule.max(60) }),
             ],
         }),
+        // Titulek, popis a náhled stránky projektu ve vyhledávání a na sítích.
+        seoField('seo'),
         seedKey('karta'),
     ],
     preview: (doc: Record<string, unknown>) => ({
@@ -797,7 +803,7 @@ const socialLink = defineType({
 })
 
 // Pořadí je pořadí v menu Studia.
-export const types = [siteCopy, project, visual3d, heroWord, stackItem, statItem, service, processStep, reference, socialLink, review]
+export const types = [siteCopy, siteSeo, project, visual3d, heroWord, stackItem, statItem, service, processStep, reference, socialLink, review]
 
 // Typ, o kterém se píšou recenze (např. 'consultant'), nebo null.
 export const reviewSubjectType = null

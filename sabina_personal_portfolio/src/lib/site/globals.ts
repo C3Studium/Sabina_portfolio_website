@@ -14,6 +14,7 @@
 import {
     documentId,
     getSiteCopy,
+    getSiteSeo,
     imageValue,
     numberValue,
     readerFor,
@@ -21,6 +22,8 @@ import {
 } from '@c3studium/valecms/server/site'
 
 import { GLOBAL } from '../cms/layout.ts'
+import type { SiteSeo } from '@c3studium/valecms/server/site'
+import { SEO_FALLBACK } from '../seo.ts'
 
 /** Obrázek tak, jak ho tvaruje `imageValue` v knihovně — `src` i `url` je totéž. */
 export type CopyImage = {
@@ -72,6 +75,8 @@ export type GlobalCopy = {
     contact: GlobalBlock | null
     /** Prázdné = patička ukáže sítě z kódu. */
     socials: SocialLink[]
+    /** SEO a ikony webu (Studio „SEO a ikony", jinak SEO_FALLBACK). */
+    seo: SiteSeo
 }
 
 /** Co stránka předává dál z `viewOf(context)`. */
@@ -113,13 +118,18 @@ const shapeBlock = (raw: RawBlock | undefined, draft: boolean): GlobalBlock | nu
 export const getGlobalCopy = async (view: GlobalsView = {}): Promise<GlobalCopy> => {
     const { draft = false, at = null } = view
     const read = readerFor({ draft, at })
-    const [copy, socials] = await Promise.all([getSiteCopy({ page: 'global', read }), getSocialLinks(read)])
+    const [copy, socials, seo] = await Promise.all([
+        getSiteCopy({ page: 'global', read }),
+        getSocialLinks(read),
+        getSiteSeo({ read, fallback: SEO_FALLBACK }),
+    ])
 
     return {
         header: shapeBlock(copy[GLOBAL.header], draft),
         footer: shapeBlock(copy[GLOBAL.footer], draft),
         contact: shapeBlock(copy[GLOBAL.contact], draft),
         socials,
+        seo,
     }
 }
 

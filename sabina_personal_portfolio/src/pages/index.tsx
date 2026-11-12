@@ -1,4 +1,5 @@
 import Seo, { personJsonLd } from "@/components/seo";
+import { SEO_FALLBACK } from "@/lib/seo";
 import type { GetStaticPropsContext } from "next";
 import { getPageContent } from "@c3studium/valecms/server/site";
 import { getGlobalCopy, type GlobalCopy } from "@/lib/site/globals";
@@ -68,14 +69,14 @@ export async function getStaticProps(context: GetStaticPropsContext) {
   };
 }
 
-export default function HomePage({ content }: HomeProps) {
+export default function HomePage({ content, globals }: HomeProps) {
   return (
     <>
       <Seo
         title={null}
         description="Grafika pro lepší výsledky. Grafická designérka Sabina Hudrmentová — reklamní bannery, kampaně a vizuály pro e-shopy, které zaujmou a prodávají."
         type="profile"
-        jsonLd={personJsonLd()}
+        jsonLd={personJsonLd(globals?.seo ?? SEO_FALLBACK)}
       />
       <main>
         {/* `content.<at>` je blok podle src/lib/cms/home.ts. `docId` v něm je
