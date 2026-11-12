@@ -10,7 +10,8 @@ import { useGate } from "@/motion/LoadProvider";
 import { useIntroAt } from "@/motion/intro/useIntroAt";
 import { LOGO } from "@/motion/intro/timeline";
 import { PORTRAIT_PHONE, useMedia } from "@/lib/fluid";
-import { NAV_ITEMS } from "../nav-items";
+import { useRouter } from "next/router";
+import { NAV_ITEMS, currentNavIndex } from "../nav-items";
 import { MENU_OPEN_EVENT, openSection, type SectionKey } from "../section-popup/open";
 import Menu from "../menu";
 import styles from "./styles.module.scss";
@@ -24,14 +25,19 @@ const PAD = { brand: 10, link: 0, cta: 5 } as const;
 // Odkaz navigace jako vlastní komponenta: každý se zapisuje do registru
 // pod svým klíčem a hook nejde volat v cyklu. `data-measure-frame` říká
 // MeasureText, že rámeček obejme celý odkaz; text v `data-measure` měří.
-function NavLink({ href, label, popup }: { href: string; label: string; popup?: SectionKey }) {
+//
+// `active`: stránka (nebo sekce úvodní stránky), na které návštěvník je —
+// odkaz drží rámeček a zelenou jako při najetí (`data-measure-active`).
+function NavLink({ href, label, popup, active = false }: { href: string; label: string; popup?: SectionKey; active?: boolean }) {
   const ref = useRegisterRef(`header.nav.${href}`, { pad: PAD.link });
   return (
     <a
       ref={ref}
       className={styles.navLink}
       href={href}
+      aria-current={active ? (popup ? "location" : "page") : undefined}
       data-measure-frame=""
+      data-measure-active={active ? "" : undefined}
       data-intro="link"
       // Sekce úvodní stránky jako samostatné okno. Bez modifikátoru —
       // Ctrl/⌘ + klik dál otevře stránku v nové kartě. `data-no-veil`:
@@ -178,6 +184,28 @@ export default function Header({ onContactClick, contactOpen = false, onContactC
   const brandRef = useRegisterRef("header.brand", { pad: PAD.brand });
   const ctaRef = useRegisterRef("header.cta", { pad: PAD.cta });
 
+  // Aktivní odkaz: stránka podle cesty, na úvodní stránce sekce ve výhledu
+  // (počítá se při scrollu, nejvýš jednou za snímek).
+  const { pathname } = useRouter();
+  const [activeNav, setActiveNav] = useState(-1);
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      setActiveNav(currentNavIndex(pathname));
+    };
+    update();
+    if (pathname !== "/") return;
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, [pathname]);
+
   // Jméno v logu se při úvodu vylije (TextMorph), když ho rámeček loga
   // obejme — jméno, o kousek později příjmení. Bez úvodu (`?nopl=1`,
   // omezený pohyb) ho pustí brána `go`. Ve Studiu zůstává obyčejným
@@ -259,8 +287,8 @@ export default function Header({ onContactClick, contactOpen = false, onContactC
           dostane rámeček s rozměrem a drobky a celý název zezelená. */}
       <MeasureText variant="nav" className={styles.navSlot}>
         <nav className={styles.nav} aria-label="Hlavní navigace">
-          {NAV_ITEMS.map((item) => (
-            <NavLink key={item.href} href={item.href} label={item.label} popup={item.popup} />
+          {NAV_ITEMS.map((item, i) => (
+            <NavLink key={item.href} href={item.href} label={item.label} popup={item.popup} active={i === activeNav} />
           ))}
         </nav>
       </MeasureText>

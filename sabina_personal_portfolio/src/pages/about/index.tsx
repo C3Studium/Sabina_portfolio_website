@@ -9,12 +9,6 @@ type Props = {
   globals: GlobalCopy;
 };
 
-// Co request chce vidět: publikovaný web, koncept, nebo stav k okamžiku.
-// Typová deklarace balíčku popisuje `viewOf` jako funkci nad `{ draft, at }`
-// s výsledkem `unknown`; za běhu bere Next context a vrací právě tenhle tvar
-// (server/site/archive.js). Přetypování překlenuje deklaraci, ne chování.
-type View = { draft?: boolean; at?: string | null };
-
 // ISR: texty se mění zřídka a `revalidate` je to, čím se publikace ze Studia
 // dostane na web bez nasazení.
 const REVALIDATE_SECONDS = 600;

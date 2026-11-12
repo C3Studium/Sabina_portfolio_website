@@ -2,8 +2,8 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/router";
 import { AnimatePresence, motion } from "framer-motion";
-import { NAV_ITEMS } from "../nav-items";
-import { openSection, type SectionKey } from "../section-popup/open";
+import { NAV_ITEMS, currentNavIndex } from "../nav-items";
+import { openSection } from "../section-popup/open";
 import styles from "./styles.module.scss";
 
 // Menu pro okna, kde se navigace do hlavičky nevejde (na výšku do 1180px,
@@ -67,26 +67,6 @@ function ArrowIcon() {
   );
 }
 
-// Sekce úvodní stránky v pořadí, jak jdou pod sebou: kotva → položka menu.
-const HOME_SECTIONS: [string, SectionKey][] = [
-  ["sluzby", "services"],
-  ["proces", "process"],
-  ["spoluprace", "references"],
-];
-
-/** Index položky, na které návštěvník je: stránka, nebo sekce úvodní stránky ve výhledu. */
-function currentIndex(pathname: string) {
-  const byHref = NAV_ITEMS.findIndex((item) => !item.popup && item.href !== "/" && pathname.startsWith(item.href));
-  if (byHref >= 0) return byHref;
-  if (pathname !== "/" || typeof document === "undefined") return -1;
-  let key: SectionKey | null = null;
-  for (const [id, section] of HOME_SECTIONS) {
-    const el = document.getElementById(id);
-    if (el && el.getBoundingClientRect().top <= window.innerHeight * 0.5) key = section;
-  }
-  return key ? NAV_ITEMS.findIndex((item) => item.popup === key) : -1;
-}
-
 const noop = () => () => {};
 
 type MenuProps = {
@@ -101,7 +81,7 @@ type MenuProps = {
 function Sheet({ id, onClose, onContact, ctaLabel }: Omit<MenuProps, "open">) {
   const { pathname } = useRouter();
   // Kde návštěvník je — změří se jednou při otevření.
-  const [active] = useState(() => currentIndex(pathname));
+  const [active] = useState(() => currentNavIndex(pathname));
   const [hover, setHover] = useState<number | null>(null);
   const framed = hover ?? (active >= 0 ? active : null);
   const where = active >= 0 ? NAV_ITEMS[active].label : "Úvod";

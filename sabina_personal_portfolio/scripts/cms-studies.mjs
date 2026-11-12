@@ -202,4 +202,7 @@ console.log('')
 if (!writes) console.log('Všechno je na místě. Nic k zápisu.')
 else if (!write) console.log(`Nic jsem nezapsal. Spusť s --write (${writes} projektů, ${planned.size} obrázků k nahrání).`)
 else console.log(`Hotovo: ${writes - failed} projektů zapsáno, ${uploaded.size} obrázků v knihovně médií${failed ? `, ${failed} selhalo` : ''}.`)
-process.exit(failed ? 1 : 0)
+// Kód ukončení, ne process.exit(): na Windows by tvrdé ukončení při
+// zavírání síťových spojení spadlo na assertion v libuv (async.c) a pnpm
+// by hlásil chybu i po úspěšném běhu.
+process.exitCode = failed ? 1 : 0

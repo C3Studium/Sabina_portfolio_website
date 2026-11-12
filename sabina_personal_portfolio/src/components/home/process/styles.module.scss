@@ -1521,6 +1521,13 @@ $line: rgba(var(--charcoal-rgb), 0.16);
   .calloutLead {
     max-width: none;
   }
+
+  // Panel Text: široký podle obsahu (pevných 14rem nechávalo „Prostrkání"
+  // přetékat přes okraj okna); designer.ts ho podle šířky drží v okně.
+  .textPanel {
+    width: fit-content;
+    max-width: 92vw;
+  }
 }
 
 /* ---------- Responzivita na šířku (telefon → notebook → monitor) ---------- */

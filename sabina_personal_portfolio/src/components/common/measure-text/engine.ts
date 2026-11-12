@@ -127,6 +127,9 @@ type Word = {
   box: { x: number; y: number; w: number; h: number };
   /** Kolik je slovo přebarvené na `hoverTint` (0–1). */
   tint: number;
+  /** Rámeček slova má `data-measure-active` (aktivní odkaz hlavičky): bez
+   *  myši nad písmeny drží rámeček a barvu jako při najetí. */
+  active: boolean;
   /** Slovo právě kreslí TextMorph (přelévá se) — písmo se tady nekreslí. */
   hidden: boolean;
 };
@@ -399,6 +402,7 @@ export function createMeasure(
           h: frameRect.height / k,
         },
         el: span,
+        active: Boolean(framer && root.contains(framer) && framer.hasAttribute("data-measure-active")),
         anchor: { x: (anchorRect.left - origin.left) / k, y: (anchorRect.top - origin.top) / k },
         shift: { x: 0, y: 0 },
         alpha: 1,
@@ -440,6 +444,7 @@ export function createMeasure(
       fonts.push({ font: "", ink: "" });
       nextWords.push({
         el,
+        active: el.hasAttribute("data-measure-active"),
         box: { x, y, w: r.width, h: r.height },
         anchor: { x, y },
         shift: { x: 0, y: 0 },
@@ -930,7 +935,11 @@ export function createMeasure(
       lookOn();
     }
 
-    focus = dragging >= 0 ? dragging : hovering() ? hoverIndex : look.index;
+    // Bez myši a bez samostatného pohledu stojí rámeček na aktivním slově
+    // (`data-measure-active`), když nějaké je.
+    const resting = !hovering() && look.index < 0;
+    const rest = resting ? glyphs.findIndex((glyph) => words[glyph.word]?.active) : -1;
+    focus = dragging >= 0 ? dragging : hovering() ? hoverIndex : resting ? rest : look.index;
     // Samostatný pohled je pomalý a líný, myš svižná.
     const pace = hovering() ? null : settings.sweepPace;
 
@@ -956,15 +965,16 @@ export function createMeasure(
     guideAlpha = approach(guideAlpha, settings.guides && focus >= 0 ? 1 : 0, dt, 0.14);
 
     glyphs.forEach((glyph, i) => {
-      const target = settings.letterOutline && i === focus && i !== dragging ? 1 : 0;
+      const target = settings.letterOutline && !resting && i === focus && i !== dragging ? 1 : 0;
       glyph.outline = approach(glyph.outline, target, dt, pace?.fade ?? 0.09);
     });
 
     // Přebarvení celého slova pod myší (menu): slovo zezelená naráz, ne po písmenech.
     if (settings.hoverTint) {
+      // Aktivní slovo je přebarvené pořád (i když myš stojí jinde).
       const tinted = hovering() && focus >= 0 ? glyphs[focus].word : -1;
       words.forEach((word, w) => {
-        word.tint = approach(word.tint, w === tinted ? 1 : 0, dt, 0.12);
+        word.tint = approach(word.tint, w === tinted || word.active ? 1 : 0, dt, 0.12);
       });
     }
 
@@ -1054,7 +1064,7 @@ export function createMeasure(
     characterData: true,
     childList: true,
     attributes: true,
-    attributeFilter: ["data-measure"],
+    attributeFilter: ["data-measure", "data-measure-active"],
   });
   document.fonts?.ready.then(measure).catch(() => {});
   // Po načtení stránky ještě jednou — v devu přicházejí styly modulů pozdě.

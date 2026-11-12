@@ -1958,7 +1958,8 @@ export default function Process({
         scale={designer.textPanel.scale}
         x={designer.textPanel.x}
         y={designer.textPanel.y}
-        font="Agrandir Grand"
+        // NDA: žádný název písma klienta — v poli jen obecný popisek.
+        font="Písmo nadpisu"
         weight="Bold"
         size={FONT_SIZE}
         focused={designer.typed.sizeFocus}

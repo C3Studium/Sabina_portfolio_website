@@ -1,34 +1,135 @@
-// Přechod mezi stránkami — PROLNUTÍ. Mechaniku dělá engine z knihovny:
-// zachytí klik na vnitřní odkaz, nechá starou stránku odjet, vymění routu
-// neviděně, počká na vykreslení nové stránky a prolne ji zpátky
-// (`reveal.mode: 'fade'`). Kdyby stránka nedorazila do 10 s, načte ji
-// prohlížeč sám.
+// Přechod mezi stránkami — PROLNUTÍ se jménem stránky. Mechaniku dělá engine
+// z knihovny: zachytí klik na vnitřní odkaz, nechá starou stránku odjet,
+// vymění routu neviděně, počká na vykreslení nové stránky a prolne ji
+// zpátky (`reveal.mode: 'fade'`). Kdyby stránka nedorazila do 10 s, načte
+// ji prohlížeč sám.
 //
-// Bez závoje: scéna je prázdná, mezi stránkami je vidět jen podklad webu.
-// Stará stránka se rozplyne s nepatrným zmenšením, nová se prolne se
-// zklidněním z mírně většího měřítka; hlavička stojí (je na všech stránkách
-// stejná). Vzhled je v PageTransition.module.scss.
+// Bez závoje: stará stránka se rozplyne, uprostřed vyjede po písmenech jméno
+// cílové stránky (tenké verzálky jako nadpisy webu), pod ním se nakreslí
+// zelená linka a kolem se tahem pera nakreslí tři malé tvary z „konstrukce"
+// webu (kruh, čtverec, trojúhelník) s čárkovanými vodítky. S příjezdem nové
+// stránky jméno i tvary odplují nahoru a zhasnou. Hlavička stojí (je na všech
+// stránkách stejná). Vzhled je v PageTransition.module.scss.
 //
 // Co se nezachytí: odkaz ven, `target="_blank"`, modifikátor, stejná
 // stránka, kotvy (`#sluzby`), cokoli s `data-no-veil` a klik, který už někdo
 // zpracoval — třeba tlačítko kontaktu, které otevírá modál.
 
-import { PageVeil } from "@c3studium/valecms/motion";
+import type { CSSProperties } from "react";
+import { PageVeil, type VeilSceneProps } from "@c3studium/valecms/motion";
 
 import styles from "./PageTransition.module.scss";
 
-// Prázdná scéna — průhledný obal jen kvůli třídě (globální pravidla prolnutí).
-function Scene() {
-  return <div className={styles.veil} aria-hidden="true" />;
+// ms: odchod staré stránky (jméno se mezitím postaví), nejkratší pauza,
+// dobrzdění; s prolnutí nové. Dohromady drží scénu nejméně ~0,98 s — jméno
+// (i dlouhé), linka i tvary stihnou dojet, než odplují.
+const TIMES = { cover: 700, walk: 80, final: 200, reveal: 0.75 };
+// Rozestup písmen jména (s): nejvýš 35 ms, u dlouhého jména kratší, aby
+// celý nástup písmen trval nejvýš ~0,26 s.
+const LETTER_STAGGER = { max: 0.035, total: 0.26 };
+
+/** Jméno cílové stránky uprostřed přechodu. Projekt má jen slug (bez
+ *  diakritiky), proto obecně „Případová studie". Jinde bez jména. */
+const nameFor = (path: string): string | null => {
+  const clean = path.split(/[?#]/)[0].replace(/\/+$/, "") || "/";
+  if (clean === "/") return "Úvod";
+  if (clean === "/projects") return "Portfolio";
+  if (clean.startsWith("/projects/")) return "Případová studie";
+  if (clean === "/about") return "O mně";
+  return null;
+};
+
+// Tři tvary, každý ve vlastním SVG přivázaném ke kraji jména (styles:
+// .at-*), aby nepřekryly dlouhé jméno. Kreslí se tahem pera v pořadí.
+const SHAPES = [
+  {
+    at: "top",
+    d: "0.12s",
+    body: (
+      <>
+        <path className={styles.guide} d="M2 50h96M50 2v96" />
+        <circle className={styles.stroke} cx="50" cy="50" r="26" pathLength={1} />
+        <circle className={styles.dot} cx="50" cy="24" r="3" />
+      </>
+    ),
+  },
+  {
+    at: "right",
+    d: "0.2s",
+    body: (
+      <>
+        <path className={styles.guide} d="M2 50h96M50 2v96" />
+        <rect className={styles.stroke} x="28" y="28" width="44" height="44" pathLength={1} />
+        <circle className={styles.dot} cx="72" cy="28" r="3" />
+      </>
+    ),
+  },
+  {
+    at: "bottom",
+    d: "0.28s",
+    body: (
+      <>
+        <path className={styles.guide} d="M5 66h90M50 20v76" />
+        <path className={styles.stroke} d="M50 28l22 38H28z" pathLength={1} />
+        <circle className={styles.dot} cx="28" cy="66" r="3" />
+      </>
+    ),
+  },
+] as const;
+
+function Shapes() {
+  return (
+    <>
+      {SHAPES.map((shape) => (
+        <svg
+          key={shape.at}
+          className={`${styles.shape} ${styles[`at-${shape.at}`]}`}
+          viewBox="0 0 100 100"
+          fill="none"
+          style={{ "--d": shape.d } as CSSProperties}
+          aria-hidden="true"
+        >
+          {shape.body}
+        </svg>
+      ))}
+    </>
+  );
 }
 
-// ms: odchod staré stránky, nejkratší pauza, dobrzdění; s prolnutí nové.
-const TIMES = { cover: 480, walk: 60, final: 0, reveal: 0.65 };
+function Scene({ phase, name }: VeilSceneProps) {
+  const letters = Array.from(name ?? "");
+  return (
+    <div className={styles.veil} data-phase={phase} aria-hidden="true">
+      {name ? (
+        <div
+          className={styles.stage}
+          style={
+            {
+              "--n": letters.length,
+              "--step": `${Math.min(LETTER_STAGGER.max, LETTER_STAGGER.total / Math.max(letters.length, 1)).toFixed(4)}s`,
+            } as CSSProperties
+          }
+        >
+          <Shapes />
+          <p className={styles.name}>
+            {letters.map((ch, i) => (
+              <span key={i} className={styles.letter} style={{ "--i": i } as CSSProperties}>
+                {ch === " " ? " " : ch}
+              </span>
+            ))}
+          </p>
+          <span className={styles.rule} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export default function PageTransition() {
   return (
     <PageVeil
       scene={Scene}
+      nameFor={nameFor}
       cover={TIMES.cover}
       walk={TIMES.walk}
       final={TIMES.final}

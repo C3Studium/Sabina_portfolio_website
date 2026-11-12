@@ -1,21 +1,242 @@
 @use "../styles/system/_shortcuts.scss" as *;
 
-// Přechod mezi stránkami — prolnutí bez závoje (PageTransition.tsx).
+// Přechod mezi stránkami — prolnutí se jménem stránky (PageTransition.tsx).
 //
 // Engine (valecms/motion, hold.js) píše na `main` odchod: krytí 0 a zmenšení
 // na 0,955 — na tichý přechod moc. Tady jemnější verze a příchod nové
 // stránky; selektory o stupeň konkrétnější, aby vyhrály nad stylem enginu.
 //   html[data-veil="1"]                 přechod běží
 //   html[data-preload-reveal="1"]       nová stránka se prolíná dovnitř
+// Scéna (jméno a tvary) dostává fázi enginu v `data-phase`:
+//   cover → walk → final   jméno a tvary se staví a stojí
+//   reveal                 písmena odjedou nahoru, linka se stáhne, tvary
+//                          se zmenší a zhasnou — nová stránka se prolíná
+//
+// Časování (od kliknutí): stránka zhasne 0–0,48 s; tvary se kreslí od
+// 0,12 s; písmena od 0,22 s (rozestup --step, celý nástup ≤ 0,26 s, každé
+// 0,5 s); linka s nimi. Vše dojede do ~0,98 s = nejkratší držení enginem
+// (TIMES v .tsx), aby odchod nezačal uprostřed nástupu.
 
 $ease: cubic-bezier(0.22, 1, 0.36, 1);
+$draw: cubic-bezier(0.65, 0, 0.35, 1);
+$leave: cubic-bezier(0.55, 0, 0.75, 0.2);
 
 // Scéna je průhledná — mezi stránkami je vidět jen podklad webu.
 .veil {
   position: absolute;
   inset: 0;
+  display: grid;
+  place-items: center;
   pointer-events: none;
 }
+
+.stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+
+  // Pojistka: odchod dělají písmena, linka a tvary samy; celek zhasne až
+  // po nich (kdyby engine scénu ještě chvíli držel).
+  .veil[data-phase="reveal"] & {
+    opacity: 0;
+    transition: opacity 0.2s ease 0.45s;
+  }
+}
+
+/* ---------- Jméno ---------- */
+
+// Tenké verzálky jako nadpisy webu; písmena vyjedou zpod masky.
+.name {
+  display: flex;
+  margin: 0;
+  overflow: hidden;
+  padding: 0.08em 0.04em;
+  color: var(--snow);
+  // Dlouhé jméno („Případová studie") se na úzkém okně zmenší, aby se
+  // vešlo do 86 % šířky (verzálky ~0,72 em na písmeno vč. prostrkání).
+  font-size: min(clamp(2.2rem, 6.4vw, 7.5rem), calc(86vw / (var(--n, 8) * 0.72)));
+  font-weight: 200;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: pre;
+}
+
+// Písmena vyjedou zpod masky s lehkým doostřením; při odchodu odjedou
+// nahoru za masku, rychle a po sobě.
+.letter {
+  display: inline-block;
+  animation: veil-letter 0.5s $ease both;
+  animation-delay: calc(0.22s + var(--i) * var(--step, 0.035s));
+
+  .veil[data-phase="reveal"] & {
+    animation: veil-letter-out 0.42s $leave both;
+    animation-delay: calc(var(--i) * var(--step, 0.035s) * 0.4);
+  }
+}
+
+@keyframes veil-letter {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(105%);
+  }
+  to {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+}
+
+@keyframes veil-letter-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-105%);
+  }
+}
+
+// Zelená linka pod jménem — nakreslí se zleva doprava.
+.rule {
+  display: block;
+  width: 100%;
+  height: 1px;
+  margin-top: clamp(0.8rem, 1.6vh, 1.4rem);
+  background: var(--green);
+  transform-origin: 0 50%;
+  // Kreslí se souběžně s písmeny, dojede s posledním.
+  animation: veil-rule 0.5s $draw both;
+  animation-delay: calc(0.3s + var(--n, 8) * var(--step, 0.035s) * 0.5);
+
+  // Odchod: stáhne se doprava, za písmeny.
+  .veil[data-phase="reveal"] & {
+    transform-origin: 100% 50%;
+    animation: veil-rule-out 0.45s $leave both;
+  }
+}
+
+@keyframes veil-rule-out {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes veil-rule {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* ---------- Tvary z konstrukce ---------- */
+
+// Malé tvary u krajů jména: tah pera obrysu, čárkovaná vodítka a zelený
+// úchyt. Každý tvar je vlastní SVG přivázané ke kraji jména (.stage),
+// takže dlouhé jméno nepřekryjí.
+.shape {
+  position: absolute;
+  width: clamp(3.6rem, 6vw, 7rem);
+  height: auto;
+  overflow: visible;
+  animation: veil-shape 0.7s $ease both;
+  animation-delay: var(--d);
+
+  // Odchod: zmenší se a pootočí, po sobě (zrcadlo nástupu).
+  .veil[data-phase="reveal"] & {
+    animation: veil-shape-out 0.4s $leave both;
+    animation-delay: calc(var(--d) * 0.3);
+  }
+}
+
+@keyframes veil-shape-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.7) rotate(10deg);
+  }
+}
+
+// Kruh nad levým horním rohem, čtverec za pravým koncem, trojúhelník pod
+// linkou vlevo.
+.at-top {
+  left: 0;
+  bottom: 100%;
+  translate: -45% 15%;
+}
+
+.at-right {
+  left: 100%;
+  top: 50%;
+  translate: 25% -60%;
+}
+
+.at-bottom {
+  left: 12%;
+  top: 100%;
+  translate: 0 -10%;
+}
+
+// Úzké okno: za jménem není místo — čtverec nad jeho pravý konec.
+@media (max-width: 599.98px) {
+  .at-right {
+    left: auto;
+    right: 0;
+    top: auto;
+    bottom: 100%;
+    translate: 20% 10%;
+  }
+}
+
+@keyframes veil-shape {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-12deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.stroke {
+  stroke: rgba(var(--snow-rgb), 0.7);
+  stroke-width: 1.2;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  vector-effect: non-scaling-stroke;
+  animation: veil-draw 0.7s $draw both;
+  animation-delay: calc(var(--d) + 0.1s);
+}
+
+@keyframes veil-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.guide {
+  stroke: rgba(var(--snow-rgb), 0.28);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.dot {
+  fill: var(--green);
+}
+
+/* ---------- Stránka pod scénou ---------- */
 
 // Odchod: rozplynutí s nepatrným zmenšením.
 :global(html[data-veil="1"]:not([data-preload-reveal="1"]) body main) {
@@ -52,5 +273,17 @@ $ease: cubic-bezier(0.22, 1, 0.36, 1);
   :global(html[data-veil="1"] body main) {
     transform: none !important;
     animation: none !important;
+  }
+
+  .letter,
+  .rule,
+  .shape,
+  .stroke {
+    // !important: přebije i odchodové animace ve fázi reveal.
+    animation: none !important;
+  }
+
+  .stroke {
+    stroke-dashoffset: 0;
   }
 }

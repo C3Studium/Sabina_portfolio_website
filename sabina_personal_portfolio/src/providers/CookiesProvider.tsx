@@ -79,7 +79,10 @@ export function CookiesProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         const saved = read()
+        // Úložiště je jen v prohlížeči — číst po mountu je záměr (server
+        // ho nezná, jinak hydratační chyba), proto setState v efektu.
         if (saved) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- čtení localStorage po mountu (viz výš)
             setPreferences({ ...DEFAULTS, ...saved.preferences })
             setDecided(true)
             setDecidedAt(new Date(saved.at))

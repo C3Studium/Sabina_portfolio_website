@@ -24,6 +24,14 @@ type Perf = {
 
 const PerformanceContext = createContext<Perf | null>(null)
 
+/** Network Information API (jen Chromium) — co se z něj čte. */
+type NetworkInfo = {
+    effectiveType?: string
+    saveData?: boolean
+    addEventListener?: (type: 'change', fn: () => void) => void
+    removeEventListener?: (type: 'change', fn: () => void) => void
+}
+
 export function PerformanceProvider({ children }: { children: ReactNode }) {
     const [slowNetwork, setSlowNetwork] = useState(false)
     const [lowPower, setLowPower] = useState(false)
@@ -35,10 +43,10 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
     const [reducedMotion, setReducedMotion] = useState(false)
 
     useEffect(() => {
-        const connection = (navigator as any)?.connection
+        const connection = (navigator as Navigator & { connection?: NetworkInfo }).connection
         if (connection) {
             const check = () => setSlowNetwork(
-                ['slow-2g', '2g', '3g'].includes(connection.effectiveType) || connection.saveData === true,
+                ['slow-2g', '2g', '3g'].includes(connection.effectiveType ?? '') || connection.saveData === true,
             )
             check()
             connection.addEventListener?.('change', check)
@@ -51,7 +59,10 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
         // Jádra a paměť jsou hrubý odhad, ne měřítko. Stačí ale na rozhodnutí
         // "pustit tuhle animaci vůbec", což je jediné, k čemu to tu slouží.
         const cores = navigator.hardwareConcurrency || 4
-        const memory = (navigator as any)?.deviceMemory || 4
+        const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 4
+        // Údaje zařízení zná jen prohlížeč — nastavují se po mountu (záměr,
+        // server je nezná; viz komentář u reducedMotion).
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- údaje zařízení po mountu
         setLowPower(cores <= 4 || memory <= 4)
 
         const coarse = window.matchMedia?.('(pointer: coarse)').matches
