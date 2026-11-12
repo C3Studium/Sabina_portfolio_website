@@ -40,3 +40,7 @@ const paced = (vh: number) => {
 /** Bod časové osy hera zadaný ve vh původní osy → průběh 0–1. Jen body,
  *  ne délky: délka by se přepočetla tempem prvního úseku, ne svého. */
 export const heroAt = (vh: number) => paced(vh) / HERO_PINNED;
+
+/** Umělá myš klikne v kontextové nabídce na „Smazat" a 3D scéna s kartami
+ *  zmizí (hero/index.tsx) — sdílené s choreografií (info/choreography.ts). */
+export const SCENE_DELETED = heroAt(421.5);

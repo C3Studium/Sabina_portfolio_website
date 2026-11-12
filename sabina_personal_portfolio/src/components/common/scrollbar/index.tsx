@@ -1,15 +1,17 @@
 import { motion, useSpring, useTransform } from "framer-motion";
 import { useRouter } from "next/router";
 import {
-  type CSSProperties,
   type MouseEvent,
   type PointerEvent,
   Fragment,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
+import { onViewportResize, viewportHeight } from "@/lib/fluid";
+import { frameThrottle } from "@/lib/frame-throttle";
 import styles from "./styles.module.scss";
 
 // Vlastní posuvník stránky — lišta čárek pod výzvou v hlavičce (na telefonu
@@ -77,7 +79,7 @@ const scrollToTarget = (target: number | HTMLElement, immediate = false) => {
   window.scrollTo({ top, behavior: immediate ? "auto" : "smooth" });
 };
 
-const maxScroll = () => Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+const maxScroll = () => Math.max(0, document.documentElement.scrollHeight - viewportHeight());
 const pageTop = (element: HTMLElement) => element.getBoundingClientRect().top + window.scrollY;
 
 const getPageSections = (): ScrollSection[] => {
@@ -113,7 +115,7 @@ const getPageSections = (): ScrollSection[] => {
     // tam, kde začíná CTA uvnitř něj).
     const next = candidates[index + 1];
     const span = next ? (tops.get(next) ?? 0) - (tops.get(element) ?? 0) : element.offsetHeight;
-    const sectionViewports = span / Math.max(window.innerHeight, 1);
+    const sectionViewports = span / Math.max(viewportHeight(), 1);
     const subdivisions = Math.min(16, Math.max(5, Math.round(sectionViewports * 4)));
     return { element, id, label, subdivisions };
   });
@@ -142,7 +144,7 @@ const subdivisionTarget = (sections: ScrollSection[], index: number, subdivision
   const section = sections[index];
   const sectionTop = pageTop(section.element);
   const next = sections[index + 1];
-  const sectionEnd = next ? pageTop(next.element) : sectionTop + Math.max(section.element.offsetHeight, window.innerHeight);
+  const sectionEnd = next ? pageTop(next.element) : sectionTop + Math.max(section.element.offsetHeight, viewportHeight());
   return sectionTop + Math.max(sectionEnd - sectionTop, 1) * ((subdivision + 1) / (section.subdivisions + 1));
 };
 
@@ -204,7 +206,6 @@ export default function Scrollbar() {
   const { asPath } = useRouter();
   const [sections, setSections] = useState<ScrollSection[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [sectionProgress, setSectionProgress] = useState(0);
   const [hoveredMarker, setHoveredMarker] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
   // Sbalená (úzká, u pravého okraje) / rozbalená (pod tlačítkem, celé čárky).
@@ -225,43 +226,97 @@ export default function Scrollbar() {
   const drag = useRef<Drag | null>(null);
   const suppressClick = useRef(false);
 
+  // Geometrie lišty (polohy sekcí, stupnice) se měří jen po změně stránky,
+  // velikosti nebo po doběhu scrollu — ne v každém snímku. Dřív se při
+  // scrollu měřilo ~100 prvků za snímek a celá lišta (desítky motion
+  // komponent) se každý snímek překreslovala Reactem; na iPhonu to bralo
+  // většinu snímku.
+  const geometry = useRef<{ tops: number[]; lastEnd: number; scale: Scale | null } | null>(null);
+  const activeRef = useRef(0);
+  const progressRef = useRef(0);
+  // Postup čárek jde přímo do stylu (--line-progress); pamatuje si poslední hodnotu.
+  const written = useRef(new Map<HTMLElement, number>());
+
+  const applyProgress = useCallback(() => {
+    const rail = railRef.current;
+    if (!rail) return;
+    const active = activeRef.current;
+    const progress = progressRef.current;
+    rail.querySelectorAll<HTMLElement>("[data-rail-section]").forEach((el) => {
+      const index = Number(el.dataset.railSection);
+      const steps = Number(el.dataset.railSteps || 0);
+      const step = Number(el.dataset.railStep || 0);
+      let value = 0;
+      if (index < active) value = 1;
+      else if (index === active) value = steps ? clamp((progress - step / steps) * steps) : progress;
+      value = Math.round(value * 1000) / 1000;
+      if (written.current.get(el) === value) return;
+      written.current.set(el, value);
+      el.style.setProperty("--line-progress", String(value));
+    });
+  }, []);
+
   const measure = useCallback(() => {
     if (!sections.length) return;
-    const readingLine = window.scrollY + window.innerHeight * 0.42;
+    if (!geometry.current) {
+      const tops = sections.map((section) => pageTop(section.element));
+      const last = sections[sections.length - 1];
+      const lastEnd = tops[tops.length - 1] + Math.max(last.element.offsetHeight, viewportHeight());
+      const rail = railRef.current;
+      geometry.current = { tops, lastEnd, scale: rail ? scaleOf(rail, sections) : null };
+    }
+    const { tops, lastEnd, scale } = geometry.current;
+    const readingLine = window.scrollY + viewportHeight() * 0.42;
     let nextActive = 0;
-    sections.forEach((section, index) => {
-      if (pageTop(section.element) <= readingLine) nextActive = index;
+    tops.forEach((top, index) => {
+      if (top <= readingLine) nextActive = index;
     });
-    const active = sections[nextActive];
-    const activeTop = pageTop(active.element);
-    const nextTop = sections[nextActive + 1]
-      ? pageTop(sections[nextActive + 1].element)
-      : activeTop + Math.max(active.element.offsetHeight, window.innerHeight);
-    const progress = Math.min(1, Math.max(0, (readingLine - activeTop) / Math.max(nextTop - activeTop, 1)));
+    const activeTop = tops[nextActive];
+    const nextTop = tops[nextActive + 1] ?? lastEnd;
+    progressRef.current = Math.min(1, Math.max(0, (readingLine - activeTop) / Math.max(nextTop - activeTop, 1)));
+    activeRef.current = nextActive;
     setActiveIndex((current) => (current === nextActive ? current : nextActive));
-    setSectionProgress(progress);
+    applyProgress();
 
     // Poloha jezdce (vidět při tahu) — přímo do stylu, bez překreslení Reactu.
     const rail = railRef.current;
-    const scale = rail ? scaleOf(rail, sections) : null;
-    if (rail && scale) rail.style.setProperty("--fill", `${railAt(scale, window.scrollY).toFixed(1)}px`);
-  }, [sections]);
+    // Na jezdec, ne na lištu: proměnná na liště by se zdědila do všech
+    // čárek a každý snímek přepočítala styl celé lišty.
+    const thumb = rail?.querySelector<HTMLElement>(`.${styles.thumb}`);
+    if (thumb && scale) thumb.style.setProperty("--fill", `${railAt(scale, window.scrollY).toFixed(1)}px`);
+  }, [sections, applyProgress]);
+
+  // Po každém vykreslení (jiná aktivní sekce, hover) vrátit postup čárkám.
+  useLayoutEffect(() => {
+    written.current.clear();
+    applyProgress();
+  });
 
   // Sekce stránky (znovu po změně DOMu, velikosti a stránky).
   useEffect(() => {
-    let discoveryFrame = 0;
     let cancelled = false;
     const discover = () => {
+      // Jiné sekce → nová lišta a s ní i nová geometrie (efekt měření níž
+      // se s novými sekcemi spustí znovu); stejné sekce nic nemění.
       const next = getPageSections();
       setSections((current) => (sameSections(current, next) ? current : next));
     };
-    const scheduleDiscovery = () => {
-      window.cancelAnimationFrame(discoveryFrame);
-      discoveryFrame = window.requestAnimationFrame(discover);
-    };
+    // Nejvýš ~3× za sekundu: psaní textu a animované řádky mění DOM
+    // průběžně a každé hledání sekcí čte layout celé stránky.
+    const scheduleDiscovery = frameThrottle(discover, 300);
     scheduleDiscovery();
-    const observer = new MutationObserver(scheduleDiscovery);
-    const resizeObserver = new ResizeObserver(scheduleDiscovery);
+    // Jen přidané / odebrané prvky — změna textu (popisek zoomu, psaní,
+    // počítadla) mění textové uzly každý snímek a sekce neposune.
+    const isElement = (node: Node) => node.nodeType === Node.ELEMENT_NODE;
+    const observer = new MutationObserver((records) => {
+      if (records.some((r) => Array.from(r.addedNodes).some(isElement) || Array.from(r.removedNodes).some(isElement)))
+        scheduleDiscovery();
+    });
+    // Jiná výška stránky posune sekce → geometrie lišty se změří znovu.
+    const resizeObserver = new ResizeObserver(() => {
+      geometry.current = null;
+      scheduleDiscovery();
+    });
     observer.observe(document.body, { childList: true, subtree: true });
     resizeObserver.observe(document.body);
     document.fonts.ready.then(() => {
@@ -269,7 +324,7 @@ export default function Scrollbar() {
     });
     return () => {
       cancelled = true;
-      window.cancelAnimationFrame(discoveryFrame);
+      scheduleDiscovery.cancel();
       observer.disconnect();
       resizeObserver.disconnect();
     };
@@ -298,12 +353,12 @@ export default function Scrollbar() {
     const header = document.querySelector("header");
     const resizeObserver = new ResizeObserver(place);
     if (header) resizeObserver.observe(header);
-    window.addEventListener("resize", place);
+    const stopResize = onViewportResize(place);
     document.fonts.ready.then(place);
     const late = window.setTimeout(place, 1200);
     return () => {
       resizeObserver.disconnect();
-      window.removeEventListener("resize", place);
+      stopResize();
       window.clearTimeout(late);
     };
   }, [sections.length, asPath]);
@@ -317,12 +372,26 @@ export default function Scrollbar() {
         frame.current = null;
       });
     };
+    // Po doběhu scrollu a po změně okna se geometrie změří znovu (animace
+    // stránky mohou sekce posunout, aniž se změní její výška).
+    let idle = 0;
+    const remeasure = () => {
+      geometry.current = null;
+      requestMeasure();
+    };
+    const onScroll = () => {
+      requestMeasure();
+      window.clearTimeout(idle);
+      idle = window.setTimeout(remeasure, 250);
+    };
+    geometry.current = null;
     requestMeasure();
-    window.addEventListener("scroll", requestMeasure, { passive: true });
-    window.addEventListener("resize", requestMeasure);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    const stopResize = onViewportResize(remeasure);
     return () => {
-      window.removeEventListener("scroll", requestMeasure);
-      window.removeEventListener("resize", requestMeasure);
+      window.clearTimeout(idle);
+      window.removeEventListener("scroll", onScroll);
+      stopResize();
       if (frame.current !== null) {
         window.cancelAnimationFrame(frame.current);
         frame.current = null;
@@ -521,9 +590,7 @@ export default function Scrollbar() {
           const position = markerOffsets[index];
           const active = index === activeIndex;
           const lineScale = markerScale(position, active ? 1 : 0.56) * lineK;
-          const lineProgress = index < activeIndex ? 1 : active ? sectionProgress : 0;
           const labelVisible = (hoveredMarker !== null || dragging) && (active || index === hoveredSectionIndex);
-          const itemStyle = { "--line-progress": lineProgress } as CSSProperties;
 
           return (
             <Fragment key={section.id}>
@@ -533,8 +600,8 @@ export default function Scrollbar() {
                 data-active={active || undefined}
                 aria-current={active ? "location" : undefined}
                 aria-label={section.label}
-                style={itemStyle}
                 data-rail-marker={position}
+                data-rail-section={index}
                 draggable={false}
                 onClick={(event) => scrollToSection(event, section)}
                 onFocus={() => setHoveredMarker(position)}
@@ -568,18 +635,17 @@ export default function Scrollbar() {
 
               {index < sections.length - 1 &&
                 Array.from({ length: section.subdivisions }, (_, subdivision) => {
-                  const stepSize = 1 / section.subdivisions;
-                  const stepStart = subdivision * stepSize;
                   const visualScale = 0.58 + ((subdivision * 7 + index * 3) % 5) * 0.05;
                   const minorPosition = markerOffsets[index] + subdivision + 1;
                   const scale = markerScale(minorPosition, visualScale, 1.14) * lineK;
-                  const progress = index < activeIndex ? 1 : active ? clamp((sectionProgress - stepStart) / stepSize) : 0;
 
                   return (
                     <motion.button
                       type="button"
                       className={styles.minorTrack}
-                      style={{ "--line-progress": progress } as CSSProperties}
+                      data-rail-section={index}
+                      data-rail-steps={section.subdivisions}
+                      data-rail-step={subdivision}
                       initial={false}
                       animate={{ scaleX: scale }}
                       transition={lineTransition(minorPosition)}

@@ -2,7 +2,8 @@
 //
 // Řídí ji scroll ve čtyřech úsecích:
 //   hero (0–1)    průběh přišpendleného hera (hero/progress.ts). Myš přiletí,
-//                 označí 3D scénu s kartami a SMAŽE ji (Delete), pak klikne
+//                 označí 3D scénu s kartami a SMAŽE ji (pravé tlačítko →
+//                 „Smazat" v kontextové nabídce), pak klikne
 //                 na portrét a táhne ho na místo v Info (přelet píše hero).
 //   stage (0–1)   přišpendlená Info. Myš postaví pilulky (první jako odkaz
 //                 hlavičky, další DUPLIKÁTY — Ctrl/⌘ + D), napíše nadpis
@@ -23,24 +24,32 @@
 import { useMemo, useRef, useState, type RefObject } from "react";
 import { useAnimationFrame, useMotionValue, type MotionValue } from "framer-motion";
 import { useRefRegistry } from "@/providers/RefContext";
-import { heroAt, heroProgress } from "@/components/home/hero/progress";
+import { SCENE_DELETED, heroAt, heroProgress } from "@/components/home/hero/progress";
 import { isTyped, resetTyped } from "@/components/home/typing";
 import { PROCESS, PROCESS_PINNED } from "@/components/home/designer-timeline";
 import type { LayerRow } from "./designer";
-import { PORTRAIT_TABLET, viewFrame } from "@/lib/fluid";
+import { PORTRAIT_TABLET, viewFrame, viewportHeight } from "@/lib/fluid";
 
 /* ---------- Časy ---------- */
 
 // Úsek hera ve vh jeho přišpendleného scrollu (heroAt, hero/progress.ts).
-// Scéna zmizí v 424vh, přelet portrétu od 489vh (hero/index.tsx).
+// Mazání scény jako v editoru, ať je vidět, proč zmizela: klik (výběr),
+// pravé tlačítko → kontextová nabídka, myš sjede na „Smazat" a klikne.
+// Scéna zmizí v SCENE_DELETED (421,5vh), přelet portrétu od 489vh.
 const HERO = {
-  arrive: [heroAt(370), heroAt(405)] as const,
-  select: heroAt(410),
-  remove: heroAt(421),
+  arrive: [heroAt(370), heroAt(400)] as const,
+  select: heroAt(403),
+  /** Pravé tlačítko — otevře kontextovou nabídku. */
+  menu: heroAt(407.5),
+  /** Myš sjede na položku „Smazat" … */
+  toDelete: [heroAt(410), heroAt(415.5)] as const,
+  /** … položka se zvýrazní a myš na ni klikne. */
+  deleteClick: heroAt(419.5),
+  remove: SCENE_DELETED,
   toPortrait: [heroAt(447), heroAt(478)] as const,
   portrait: heroAt(484),
   /** Panel vrstev naskočí, když myš označí scénu. */
-  panel: [heroAt(400), heroAt(416)] as const,
+  panel: [heroAt(396), heroAt(410)] as const,
 };
 
 // Stavba v Info — podíly původního rozvržení, stlačené do první části
@@ -211,6 +220,16 @@ export function useDesigner({ stage, names, refs, cardsPad, enabled }: Options) 
     press: useMotionValue(0),
     duplicate: useMotionValue(0),
   };
+  // Kontextová nabídka nad 3D scénou v heru (designer.tsx ContextMenu);
+  // `hot` = zvýraznění položky „Smazat" pod myší.
+  const menu = {
+    x: useMotionValue(0),
+    y: useMotionValue(0),
+    opacity: useMotionValue(0),
+    hot: useMotionValue(0),
+  };
+  /** Bod položky „Smazat" — myš na něm zůstane i po zavření nabídky. */
+  const deletePtRef = useRef<Pt | null>(null);
   const selection = useBoxValues();
   const hover = useBoxValues();
   const marqueeBox = useBoxValues();
@@ -262,6 +281,7 @@ export function useDesigner({ stage, names, refs, cardsPad, enabled }: Options) 
     // Bez portrétu v Info (úzká obrazovka) i ve Studiu se myš nehraje.
     if (!enabled || !info || !info.width) {
       cursor.opacity.set(0);
+      menu.opacity.set(0);
       selection.opacity.set(0);
       hover.opacity.set(0);
       marqueeBox.opacity.set(0);
@@ -312,6 +332,9 @@ export function useDesigner({ stage, names, refs, cardsPad, enabled }: Options) 
     let flying: Rect | null = null;
     let active: string | null = null;
     let key: Shortcut = null;
+    let menuShown = 0;
+    let menuHot = 0;
+    let menuPos: Pt | null = null;
 
     if (p <= 0) {
       // ---- Hero: scéna označit a smazat, pak portrét. ----
@@ -321,14 +344,29 @@ export function useDesigner({ stage, names, refs, cardsPad, enabled }: Options) 
       const portraitPt = grabOf(heroPortrait);
       // Délky jako rozdíl dvou bodů (heroAt přepočítává body tempem úseku).
       opacity = within([HERO.arrive[0], heroAt(380.5)])(h);
-      if (galleryPt && gallery && h < HERO.toPortrait[0]) {
-        pos = h < HERO.arrive[1] ? move([fx + vw + 40, fy + vh * 0.62], galleryPt, within(HERO.arrive)(h)) : galleryPt;
-        press = click(h, HERO.select, heroAt(414) - HERO.select);
+      // Nabídka se otevře u špičky kurzoru; „Smazat" se měří z DOMu (po
+      // zavření zůstává poslední bod — myš odtud jde pro portrét).
+      if (galleryPt) {
+        menuShown = h >= HERO.menu && h < HERO.remove ? within([HERO.menu, heroAt(409)])(h) : 0;
+        menuPos = [galleryPt[0] + 6, galleryPt[1] + 6];
+        const item = document.querySelector<HTMLElement>("[data-context-delete]")?.getBoundingClientRect();
+        if (item && item.width) deletePtRef.current = [item.left + item.width * 0.32, item.top + item.height * 0.58];
+      }
+      const deletePt = deletePtRef.current ?? galleryPt;
+      if (galleryPt && deletePt && gallery && h < HERO.toPortrait[0]) {
+        if (h < HERO.arrive[1]) pos = move([fx + vw + 40, fy + vh * 0.62], galleryPt, within(HERO.arrive)(h));
+        else pos = move(galleryPt, deletePt, within(HERO.toDelete)(h));
+        press = Math.max(
+          click(h, HERO.select, heroAt(406) - HERO.select),
+          click(h, HERO.menu, heroAt(409) - HERO.menu),
+          click(h, HERO.deleteClick, heroAt(421) - HERO.deleteClick),
+        );
+        menuHot = h < HERO.remove ? within([HERO.toDelete[1] - 0.002, HERO.toDelete[1]])(h) : 0;
         if (h >= HERO.select && h < HERO.remove) select = { r: gallery, label: "3D scéna", o: 1 };
         active = h >= HERO.select && h < HERO.remove ? "gallery" : null;
-        if (near(h, HERO.remove, HERO.remove - heroAt(416), heroAt(427) - HERO.remove)) key = "delete";
-      } else if (galleryPt && h < HERO.portrait) {
-        pos = move(galleryPt, portraitPt, within(HERO.toPortrait)(h));
+        if (near(h, HERO.remove, HERO.remove - HERO.deleteClick, heroAt(428) - HERO.remove)) key = "delete";
+      } else if (galleryPt && deletePt && h < HERO.portrait) {
+        pos = move(deletePt, portraitPt, within(HERO.toPortrait)(h));
         const grabbed = within([heroAt(480), HERO.portrait])(h);
         press = grabbed;
         select = { r: heroPortrait, label: "Portrét", o: grabbed };
@@ -557,6 +595,12 @@ export function useDesigner({ stage, names, refs, cardsPad, enabled }: Options) 
     cursor.opacity.set(opacity);
     cursor.press.set(press);
     cursor.duplicate.set(duplicate);
+    menu.opacity.set(menuShown);
+    menu.hot.set(menuHot);
+    if (menuPos) {
+      menu.x.set(menuPos[0]);
+      menu.y.set(menuPos[1]);
+    }
     writeBox(selection, select);
     writeBox(hover, hovered);
     writeBox(marqueeBox, marquee);
@@ -631,11 +675,15 @@ export function useDesigner({ stage, names, refs, cardsPad, enabled }: Options) 
   const live = useRef(false);
   useAnimationFrame(() => {
     const h = heroProgress.get();
+    // Před příletem myši v heru nic neměřit (dřív se rám Procesu četl
+    // každý snímek celé stránky — vynucený layout, na iPhonu znatelný).
+    if (h <= HERO.arrive[0] - 0.02 && !live.current) return;
     const p = stage.get();
     const processImg = registry.get("process-portrait");
     const section = processImg?.closest("section");
     const box = section?.getBoundingClientRect();
-    const vh = window.innerHeight;
+    // Výška bez lišty Safari — innerHeight by při jejím schování poskočil.
+    const vh = viewportHeight();
     const pe = box ? clamp01(1 - box.top / vh) : 0;
     const ps = box ? clamp01(-box.top / Math.max(1, box.height - vh)) : 0;
     const inRange = h > HERO.arrive[0] - 0.02 && ps < PROCESS.leave[1] + 0.01;
@@ -647,6 +695,7 @@ export function useDesigner({ stage, names, refs, cardsPad, enabled }: Options) 
   return {
     flow,
     cursor,
+    menu,
     selection,
     hover,
     marquee: marqueeBox,

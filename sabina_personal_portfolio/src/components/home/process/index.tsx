@@ -152,9 +152,6 @@ const SHOT_GEO: Record<"main" | "top" | "bottom", Geo> = {
   bottom: { left: 27.6, top: 37, width: 20.25, height: 36, rotate: -1 },
 };
 
-// Krok 05: o kolik výš (vh) stojí formát na výšku nad čtvercem — odtud se
-// duplikát táhne dolů.
-const SQUARE_DROP = 36;
 const LINE_STYLE = {
   /** Tloušťka v hloubce kroku u kamery (px). */
   width: 2.5,
@@ -339,14 +336,22 @@ const MORE_DETAILS: ProcessDetail[] = [
 ];
 
 // Vizuál kroku 04 rozdělený na podklad a nadpis (tools/banner-layers/
-// split-title.mjs) — nadpis jde zvětšit zvlášť. Klíč je obrázek kroku 04;
-// box nadpisu je podíl obrázku (x, y, šířka, výška).
-const TITLE_SPLIT: Record<string, { base: string; title: string; box: [number, number, number, number] }> = {
-  "/assets/banners/jordan_banner4.png": {
+// split-title.mjs) — nadpis jde zvětšit zvlášť. Klíč je JMÉNO souboru
+// obrázku kroku 04 (bez cesty a bez otisku, který přidá úložiště Studia:
+// „…/1e3447e043e9fd52-jordan-banner4.png" i „/assets/banners/jordan_banner4.png"
+// → „jordan_banner4.png"). Box nadpisu je podíl obrázku (x, y, šířka, výška).
+// Jiný obrázek ze Studia rozklad nemá — ukáže se celý, bez zvětšení.
+type TitleSplit = { base: string; title: string; box: [number, number, number, number] };
+const TITLE_SPLIT: Record<string, TitleSplit> = {
+  "jordan_banner4.png": {
     base: "/assets/banners/split/jordan_banner4_base.png",
     title: "/assets/banners/split/jordan_banner4_title.png",
     box: [0.128, 0.095, 0.739, 0.236],
   },
+};
+const titleSplitFor = (src: string): TitleSplit | undefined => {
+  const file = (src.split("?")[0].split("/").pop() ?? "").toLowerCase();
+  return TITLE_SPLIT[file.replace(/^[0-9a-f]{12,}-/, "").replace(/-/g, "_")];
 };
 
 // Kde v `items` bloku `index.process` co bydlí — musí sedět na src/lib/cms/home.ts.
@@ -667,11 +672,33 @@ function DeliverFormat({
   const kind = (["story", "portrait", "square"] as const)[index];
   const mark = S5.marks[index];
   const markIn = useTransform(progress, within([mark.click, mark.click + 0.008]));
+  // Čtverec vzniká duplikátem formátu na výšku a myš ho táhne dolů na jeho
+  // místo: začíná přesně na formátu na výšku. Odstup se měří (offsetLeft /
+  // offsetTop transformace nemění) — poloha čtverce v CSS závisí na poměru
+  // okna (styles .deliverSquare).
+  const boxRef = useRef<HTMLDivElement>(null);
+  const squareFrom = useRef({ x: 0, y: 0 });
+  useEffect(() => {
+    if (kind !== "square" || still) return;
+    const measure = () => {
+      const el = boxRef.current;
+      const source = el?.parentElement?.querySelector<HTMLElement>(`.${styles.deliverPortrait}`);
+      if (!el || !source) return;
+      squareFrom.current = { x: source.offsetLeft - el.offsetLeft, y: source.offsetTop - el.offsetTop };
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [kind, still]);
   const x = useTransform(progress, (s) =>
-    kind === "portrait" ? cvw((1 - ease(within(S5.portraitDrag)(s))) * 70) : "0vw",
+    kind === "portrait"
+      ? cvw((1 - ease(within(S5.portraitDrag)(s))) * 70)
+      : kind === "square"
+        ? `${squareFrom.current.x * (1 - ease(within(S5.square.drag)(s)))}px`
+        : "0vw",
   );
   const y = useTransform(progress, (s) =>
-    kind === "square" ? cvh(-(1 - ease(within(S5.square.drag)(s))) * SQUARE_DROP) : "0vh",
+    kind === "square" ? `${squareFrom.current.y * (1 - ease(within(S5.square.drag)(s)))}px` : "0vh",
   );
   const shown = useTransform(progress, (s) =>
     kind === "portrait" ? (s >= S5.portraitDrag[0] ? 1 : 0) : kind === "square" ? (s >= S5.square.drag[0] ? 1 : 0) : 1,
@@ -708,7 +735,7 @@ function DeliverFormat({
   }
 
   return (
-    <motion.div className={`${styles.deliver} ${variant}`} style={still ? undefined : { x, y, opacity: shown }}>
+    <motion.div ref={boxRef} className={`${styles.deliver} ${variant}`} style={still ? undefined : { x, y, opacity: shown }}>
       <div className={styles.cropMarks}>
         {format}
         <motion.span className={styles.cropFrame} style={still ? undefined : { opacity: markIn }} aria-hidden="true" />
@@ -1032,7 +1059,22 @@ export default function Process({
   const flyTo = useCallback(
     (tile: number) => {
       setStop(tile);
-      const distance = Math.abs(tile - camera.get());
+      const from = camera.get();
+      const distance = Math.abs(tile - from);
+      // K CTA (zastávka 7) přes výzvu „Jste připraveni na spolupráci?":
+      // kamera u ní chvíli postojí, ať se dá přečíst, a k CTA dojede pomalu.
+      if (tile === SEGMENTS && from < SEGMENTS - 1) {
+        const toCallout = Math.min(0.8 + (SEGMENTS - 1 - from) * 0.25, 1.8);
+        const hold = 1.1;
+        const toCta = 1.6;
+        const total = toCallout + hold + toCta;
+        animate(camera, [from, SEGMENTS - 1, SEGMENTS - 1, SEGMENTS], {
+          duration: total,
+          times: [0, toCallout / total, (toCallout + hold) / total, 1],
+          ease: [[0.65, 0, 0.35, 1], "linear", [0.45, 0, 0.25, 1]],
+        });
+        return;
+      }
       animate(camera, tile, { duration: Math.min(0.8 + distance * 0.25, 1.8), ease: [0.65, 0, 0.35, 1] });
     },
     [camera],
@@ -1145,7 +1187,7 @@ export default function Process({
   const noteOn = useTransform(sp1, (s) => (s >= S1.noteDrag[0] ? 1 : 0));
   // Krok 04: nadpis ve vizuálu se po přepsání velikosti zvětší.
   const titleScale = useTransform(sp4, (s) => TITLE_FROM + (1 - TITLE_FROM) * ease(within(S4.grow)(s)));
-  const split = TITLE_SPLIT[shots[3].src];
+  const split = titleSplitFor(shots[3].src);
   // Krok 05: story se natáhne z 1080 × 1350 na 1080 × 1920.
   const storyRatio = useTransform(
     sp5,

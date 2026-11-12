@@ -436,6 +436,9 @@ export function createGlyphLayer(host: HTMLElement, before: Element | null): Gly
     },
     destroy: () => {
       glyphs.length = 0;
+      // Paměť plátna hned (iOS ji počítá do limitu až do GC).
+      canvas.width = 0;
+      canvas.height = 0;
       canvas.remove();
     },
   };

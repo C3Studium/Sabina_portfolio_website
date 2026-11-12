@@ -19,6 +19,7 @@ import CornerButton from "../corner-button";
 import { CookiesSections } from "../terms";
 import { CURTAIN, ENTERS, RISE, group } from "../entrance";
 import type { LegalBlock } from "../privacy";
+import { viewportHeight } from "@/lib/fluid";
 import styles from "./styles.module.scss";
 
 const DRAW_X: Variants = {
@@ -73,7 +74,7 @@ export default function CookiesContent({ content }: { content?: CookiesCopy | nu
   // Aktivní oddíl: poslední, jehož vršek přešel polovinu obrazovky.
   useEffect(() => {
     const handleScroll = () => {
-      const scrollPosition = window.scrollY + window.innerHeight / 2;
+      const scrollPosition = window.scrollY + viewportHeight() / 2;
       let current = CookiesSections[0].id;
       for (let i = 0; i < sectionRefs.current.length; i++) {
         const section = sectionRefs.current[i];

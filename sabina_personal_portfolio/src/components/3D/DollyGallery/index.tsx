@@ -134,6 +134,18 @@ const DEFAULT_IMAGES = [
 
 const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
 const wrap = (value: number, span: number) => ((value % span) + span) % span;
+
+// Poslední zapsané hodnoty stylu každé dlaždice. Zapisuje se jen změna:
+// --dolly-t / --dolly-scale se dědí do celé kompozice dlaždice, takže každý
+// zápis znamenal přepočet stylu všech potomků (na iPhonu každý snímek).
+const written = new WeakMap<HTMLElement, Map<string, string>>();
+const put = (el: HTMLElement, prop: string, value: string) => {
+  let last = written.get(el);
+  if (!last) written.set(el, (last = new Map()));
+  if (last.get(prop) === value) return;
+  last.set(prop, value);
+  el.style.setProperty(prop, value);
+};
 // Stabilní „náhoda" podle pořadí dlaždice — rozmístění je při každém
 // vykreslení stejné.
 const jitter = (k: number, salt: number) => {
@@ -307,17 +319,18 @@ export function DollyGallery({
         const y = baseY + py * parallaxY * tileHeight * alpha + sway.current * drift * tileHeight;
         tiles.push({ index: ring[k].index, x, y, depth, alpha });
         if (!slot) continue;
-        // Proměnné pro animace obsahu dlaždice (viz hlavička souboru).
-        slot.style.setProperty("--dolly-t", t.toFixed(4));
-        slot.style.setProperty("--dolly-scale", (perspective / Math.max(perspective + depth, 1)).toFixed(4));
         if (alpha <= 0.002 || -depth >= perspective * 0.95) {
           // I průhlednost: potomek s vlastním `visibility: visible` (blikající
           // kurzor psaní) by jinak prosvítal ze schované dlaždice.
-          slot.style.visibility = "hidden";
-          slot.style.opacity = "0";
+          put(slot, "visibility", "hidden");
+          put(slot, "opacity", "0");
           continue;
         }
-        slot.style.visibility = "visible";
+        // Proměnné pro animace obsahu dlaždice (viz hlavička souboru) — jen
+        // u viditelné, schované je nepotřebuje.
+        put(slot, "--dolly-t", t.toFixed(3));
+        put(slot, "--dolly-scale", (perspective / Math.max(perspective + depth, 1)).toFixed(4));
+        put(slot, "visibility", "visible");
         const gap = Math.abs(depth);
         if (gap < nearestGap) {
           nearestGap = gap;
@@ -326,12 +339,16 @@ export function DollyGallery({
         const swell = 1 + pulse * rush * alpha;
         const rx = -py * tilt * rush * alpha;
         const ry = px * tilt * rush * alpha;
-        slot.style.opacity = alpha.toFixed(3);
-        slot.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, ${(-depth).toFixed(1)}px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) scale(${swell.toFixed(4)})`;
+        put(slot, "opacity", alpha.toFixed(3));
+        put(
+          slot,
+          "transform",
+          `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, ${(-depth).toFixed(1)}px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) scale(${swell.toFixed(4)})`,
+        );
         // Bližší dlaždice nad vzdálenějšími (i když proletěla kolem).
-        slot.style.zIndex = String(Math.round(10000 - depth));
+        put(slot, "z-index", String(Math.round(10000 - depth)));
         // Klikat jde jen na dlaždici u kamery.
-        slot.style.pointerEvents = alpha > 0.9 ? "auto" : "none";
+        put(slot, "pointer-events", alpha > 0.9 ? "auto" : "none");
       }
       if (nearest >= 0 && nearest !== lastIndex.current) {
         lastIndex.current = nearest;

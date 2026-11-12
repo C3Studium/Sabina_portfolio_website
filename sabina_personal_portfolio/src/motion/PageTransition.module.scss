@@ -240,7 +240,10 @@ $leave: cubic-bezier(0.55, 0, 0.75, 0.2);
 
 // Odchod: rozplynutí s nepatrným zmenšením.
 :global(html[data-veil="1"]:not([data-preload-reveal="1"]) body main) {
-  opacity: 0;
+  // Ne úplná nula: vrstvu s krytím 0 prohlížeč nekreslí, takže nová stránka
+  // by se celá kreslila až v prvním snímku prolnutí (desítky ms v GPU,
+  // zaškobrtnutí). S 0,002 (okem nerozeznatelné) se předkreslí pod oponou.
+  opacity: 0.002;
   transform: scale(0.985);
   transition:
     opacity 0.48s $ease,
@@ -283,6 +286,18 @@ $leave: cubic-bezier(0.55, 0, 0.75, 0.2);
   }
   to {
     transform: none;
+  }
+}
+
+// Dotyk: stránka se jen prolne, bez měřítka. Transform na celém <main>
+// (úvodní stránka má desítky obrazovek) z něj na iPhonu dělá obří vrstvu
+// po dlaždicích a fixované prvky uvnitř sekcí se během přechodu vztahují
+// k <main> místo k oknu — poskočí.
+@media (hover: none) and (pointer: coarse) {
+  // !important: pravidla odchodu / příchodu výš mají vyšší specificitu (:not).
+  :global(html[data-veil="1"] body main) {
+    transform: none !important;
+    animation: none !important;
   }
 }
 

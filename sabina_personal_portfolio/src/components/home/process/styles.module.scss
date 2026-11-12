@@ -31,13 +31,13 @@ $line: rgba(var(--charcoal-rgb), 0.16);
 
 .container {
   position: relative;
-  // 1978vh = 1878vh přišpendleného scrollu (PROCESS_PINNED v
-  // designer-timeline.ts; původně 3438vh, 2,25× rychleji, plus 7 × 50vh
+  // 2173vh = 2073vh přišpendleného scrollu (PROCESS_PINNED v
+  // designer-timeline.ts; původně 3876vh, 2,25× rychleji, plus 7 × 50vh
   // pauza po krocích — rozpis níž je v původních vh):
   // designer-timeline.ts): prvních ~154vh umělá myš dokončí přenos portrétu
   // a napíše texty, pak jízda kamery přes kroky 01–06, výzvu a CTA (~313vh
   // na jednotku váhy úseku, process/steps.ts), na konci ~60vh u CTA.
-  height: 1978vh;
+  height: 2173vh;
 }
 
 // Okno sekce (layout/section-popup): jedna obrazovka, bez přišpendlené
@@ -937,8 +937,10 @@ $line: rgba(var(--charcoal-rgb), 0.16);
 }
 
 .deliverSquare {
-  left: 30vw;
-  top: 36vh;
+  left: 32vw;
+  // Pod formátem na výšku (výška 18,75vw = 1,25 × šířka) s mezerou 3vh — na
+  // širším okně než 16 : 9 by ho kopie při duplikování jinak překrývala.
+  top: max(38.5vh, calc(18.75vw + 3vh));
   width: 15vw;
 
   .deliverCaption {
@@ -1748,7 +1750,9 @@ $line: rgba(var(--charcoal-rgb), 0.16);
   }
 
   .deliverSquare {
-    top: fluid-scale(36vh, 0.85);
+    // Pod formátem na výšku (jeho výška = 1,25 × šířka) s mezerou — na
+    // širším okně by ho jinak kopie při duplikování překrývala.
+    top: max(fluid-scale(38.5vh, 0.85), calc(#{fluid-scale(15vw, 0.85)} * 1.25 + 3vh));
 
     .deliverCaption {
       top: fluid-scale(16vh, 0.85);

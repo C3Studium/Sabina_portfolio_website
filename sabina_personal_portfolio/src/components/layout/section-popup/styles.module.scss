@@ -90,3 +90,13 @@
     transition: none;
   }
 }
+
+// Dotyk: bez rozmazání (celoplošný blur se na iPhonu přepočítává každý
+// snímek otevírání i scrollu uvnitř okna) a bez trvalé vrstvy pro clip-path.
+@media (hover: none) and (pointer: coarse) {
+  .popup {
+    background: rgba(22, 24, 28, 0.96);
+    backdrop-filter: none;
+    will-change: auto;
+  }
+}

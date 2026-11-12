@@ -6,14 +6,14 @@ import { useRefRegistry } from "@/providers/RefContext";
 import { editableIn, editableDoc } from "@c3studium/valecms/edit";
 import type { Project } from "@/lib/site/projects";
 import { usePerformance } from "@/providers/PerformanceProvider";
-import { cvh, lerp, PORTRAIT_PHONE, PORTRAIT_TABLET, useLandscapeFluid, useMedia } from "@/lib/fluid";
+import { cvh, lerp, PORTRAIT_PHONE, PORTRAIT_TABLET, useLandscapeFluid, useMedia, viewportHeight } from "@/lib/fluid";
 import { useGate } from "@/motion/LoadProvider";
 import ScrollPlaceholder from "@/components/common/scroll-placeholder";
 import MeasureText from "@/components/common/measure-text";
 import TextMorph from "@/components/common/text-morph";
 import SketchReveal from "@/components/common/sketch-reveal";
 import IntroBanners from "@/motion/intro/IntroBanners";
-import { heroAt, heroProgress } from "./progress";
+import { SCENE_DELETED, heroAt, heroProgress } from "./progress";
 import { BANNERS_IN, HINT_IN, PORTRAIT_IN, WORDS_IN, real } from "@/motion/intro/timeline";
 import { useIntroAt, useIntroRan } from "@/motion/intro/useIntroAt";
 import {
@@ -92,9 +92,9 @@ const PORTRAIT_DELAY = 0.6;
 // Časy hera jsou ve vh scrollu přišpendleného úseku (heroAt, progress.ts).
 const SCROLL_AWAY = heroAt(12);
 const SCROLL_BACK = heroAt(3);
-// Kdy umělá myš smaže 3D scénu (viz choreography.ts). Smazání je okamžité
+// Kdy umělá myš smaže 3D scénu: SCENE_DELETED (progress.ts) — klik na
+// „Smazat" v kontextové nabídce (choreography.ts). Smazání je okamžité
 // jako v editoru — žádné prolínání.
-const SCENE_DELETED = heroAt(424);
 // Přelet portrétu do Info: od FLIGHT_FROM do konce hera.
 const FLIGHT_FROM = heroAt(489);
 
@@ -459,7 +459,9 @@ export default function Hero({
         : 0;
       const grow = 1 + ((phone ? PHONE_GROW : TABLET_GROW) - 1) * k;
       const baseX = ((phone ? PHONE_SHIFT_VW : TABLET_SHIFT_VW) / 100) * window.innerWidth * k;
-      const lift = phone ? (PHONE_LIFT_VH / 100) * window.innerHeight * k : 0;
+      // viewportHeight: s lištou Safari nehýbe (innerHeight by portrétem
+      // při každém schování / vrácení lišty poskočil).
+      const lift = phone ? (PHONE_LIFT_VH / 100) * viewportHeight() * k : 0;
       const baseY = -(grow - 1) * (frame?.offsetHeight ?? 0) - lift;
       if (t <= 0 || !frame || !target) {
         flightX.set(baseX);

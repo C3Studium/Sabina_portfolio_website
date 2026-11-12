@@ -545,15 +545,30 @@ const statItem = defineType({
 
 /* ----------------------------------------------------------------- služby -- */
 
-// Karty „Co nabízím". První (podle pořadí) je rozložená celá, další stojí za
-// ní jen s číslem a názvem. „Zobrazit příklady" vede vždy na portfolio, takže
-// odkaz není pole.
+// Karty „Co nabízím" v balíčku vpravo od portrétu. Celý obsah karty je
+// v jejím dokumentu — číslo, štítek, název, text, body i text odkazu (dřív
+// štítek a odkaz bydlely v bloku textů a pletly se s nástroji). Odkaz vede
+// vždy na portfolio, takže cíl není pole.
 const service = defineType({
     name: 'service',
     title: 'Služby',
     icon: 'grid',
     orderings: BY_ORDER,
     fields: [
+        defineField({
+            name: 'number',
+            title: 'Číslo',
+            type: 'string',
+            description: 'Velké číslo v rohu karty, např. „01". Prázdné = pořadí karty.',
+            validation: (rule) => rule.max(6),
+        }),
+        defineField({
+            name: 'label',
+            title: 'Štítek',
+            type: 'string',
+            description: 'Malý nadpis nad názvem. Prázdné = „Co nabízím".',
+            validation: (rule) => rule.max(40),
+        }),
         defineField({
             name: 'title',
             title: 'Název',
@@ -581,6 +596,13 @@ const service = defineType({
             of: [{ type: 'string' }],
             description: 'Krátké položky seznamu na kartě, např. „Bannery".',
             validation: (rule) => rule.max(8),
+        }),
+        defineField({
+            name: 'cta',
+            title: 'Text odkazu',
+            type: 'string',
+            description: 'Odkaz dole na kartě (vede na portfolio). Prázdné = „Zobrazit příklady".',
+            validation: (rule) => rule.max(40),
         }),
         order(),
         seedKey(),

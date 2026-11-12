@@ -10,14 +10,18 @@
 // váhy úseku, process/steps.ts). Myš celkem
 // ~255vh scrollu od chvíle, kdy Proces začne vyjíždět.
 
-/** Časy níž jsou ve vh PŮVODNÍ osy (3438vh); skutečný úsek je 2,25×
- *  kratší — podíly zůstávají, jen se celá sekce projede rychleji. */
-const DESIGN_PINNED = 3438;
+/** Časy níž jsou ve vh PŮVODNÍ osy; skutečný úsek je 2,25× kratší —
+ *  podíly zůstávají, jen se celá sekce projede rychleji. */
 const PACE = 2.25;
+/** Delší závěr (2026-11-12, přání klientky): výzva a CTA mají o 1,4 váhy
+ *  úseku víc (process/steps.ts WEIGHTS) — o tolik se prodlouží jízda, ať
+ *  ostatní kroky mají scroll beze změny (~139vh skutečného scrollu na váhu). */
+const SLOW_END = 438;
+const DESIGN_PINNED = 3438 + SLOW_END;
 
 /** Jízda dolly v původní ose (vh): od rozjezdu kamery po příjezd k CTA. */
 const DOLLY_FROM = 154;
-const DOLLY_TO = 3378;
+const DOLLY_TO = 3378 + SLOW_END;
 /** Jízda dolly ve skutečném scrollu (vh), bez pauz. */
 export const DOLLY_TRAVEL_VH = (DOLLY_TO - DOLLY_FROM) / PACE;
 

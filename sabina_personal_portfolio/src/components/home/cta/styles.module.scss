@@ -499,6 +499,11 @@ $card-line: rgba(var(--snow-rgb), 0.15);
   z-index: 2;
 }
 
+// Částice připravené před příjezdem kamery (index.tsx) — zatím neviditelné.
+.portraitParticlesHold {
+  visibility: hidden;
+}
+
 /* ---------- Pás recenzí (ScrollBend) ---------- */
 
 // Na šířku karty recenze, přes celou výšku — sousední karty vykukují

@@ -28,6 +28,11 @@
   transform-style: preserve-3d;
 }
 
+// Daleko od výhledu (index.tsx, `data-away`): bez 3D vrstev karet v paměti.
+.root[data-away] .stage {
+  display: none;
+}
+
 .slot {
   position: absolute;
   top: var(--swap-oy);
@@ -85,4 +90,12 @@
 .stage[data-align="start"] {
   left: 0;
   transform-origin: 0 50%;
+}
+
+// Dotyk: karty bez rozmazání podkladu — při každém přeskládání by iPhone
+// znovu rozmazával karty za nimi v každém snímku.
+@media (hover: none) and (pointer: coarse) {
+  .card {
+    backdrop-filter: none;
+  }
 }

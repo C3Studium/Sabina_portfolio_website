@@ -26,6 +26,8 @@ import styles from "./styles.module.scss";
 import { ACCENT, SNOW_RGB } from "@/lib/palette";
 
 const PortraitParticles = dynamic(() => import("@/components/common/particle-image"), { ssr: false });
+// Za jak dlouho po načtení se částice portrétu připraví (pak ještě klid prohlížeče).
+const PARTICLES_WARM_MS = 3000;
 
 // Co sekce říká, když CMS mlčí — tytéž texty, jaké tu stály natvrdo.
 // Zvýrazněné úseky jsou dekódované po slovech, jako to dělá server; koncová
@@ -398,6 +400,24 @@ export default function Cta({
     const timer = window.setTimeout(() => setBannersOn(on), on ? BACKGROUND.settle * 1000 : 0);
     return () => window.clearTimeout(timer);
   }, [arrived, still]);
+  // Částice portrétu se připraví předem, v klidu chvíli po načtení: vytvoření
+  // plátna WebGL a překlad shaderů (~0,1 s) by jinak zasekly scroll přesně
+  // v okamžiku příjezdu kamery. Do příjezdu stojí schované a zastavené.
+  const [warm, setWarm] = useState(false);
+  useEffect(() => {
+    if (still) return;
+    let idle = 0;
+    const timer = window.setTimeout(() => {
+      const ready = () => setWarm(true);
+      if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(ready, { timeout: 3000 });
+      else ready();
+    }, PARTICLES_WARM_MS);
+    return () => {
+      window.clearTimeout(timer);
+      if (idle) window.cancelIdleCallback(idle);
+    };
+  }, [still]);
+  const particlesLive = !still && arrived;
   // Výzva postavená → MeasureText změří slova (kamera už stojí, dlaždice
   // má měřítko 1) a pustí rámeček přes písmena jako v heru.
   const [built, setBuilt] = useState(false);
@@ -492,12 +512,20 @@ export default function Cta({
   useEffect(() => {
     if (still) return;
     let cancelled = false;
+    // Překreslit jen při skutečně jiném rozměru karty. iOS posílá `resize`
+    // pokaždé, když se při scrollu schová/ukáže lišta Safari — dřív se tím
+    // uprostřed scrollu znovu kreslily a nahrávaly všechny karty do GPU.
+    let drawn = "";
+    let timer = 0;
     const draw = () => {
       const frame = rootRef.current?.querySelector<HTMLElement>(`.${styles.reviewFrame}`);
       if (!frame || cancelled) return;
       const width = frame.offsetWidth;
       const height = frame.offsetHeight;
       if (!width || !height) return;
+      const size = `${width}x${height}`;
+      if (size === drawn) return;
+      drawn = size;
       const family = getComputedStyle(rootRef.current ?? document.body).fontFamily;
       const version = Date.now();
       setCards({
@@ -514,11 +542,16 @@ export default function Cta({
         })),
       });
     };
+    const onResize = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(draw, 200);
+    };
     void document.fonts.ready.then(draw);
-    window.addEventListener("resize", draw);
+    window.addEventListener("resize", onResize);
     return () => {
       cancelled = true;
-      window.removeEventListener("resize", draw);
+      window.clearTimeout(timer);
+      window.removeEventListener("resize", onResize);
     };
     // Klíče místo polí — pole se tvoří každý render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -758,11 +791,11 @@ export default function Cta({
               sizes="(max-width: 1100px) 60vw, 28vw"
             />
             {/* Tytéž částice jako portrét v heru, jen jich je méně. */}
-            {!still && arrived && fluid.on ? (
+            {!still && (warm || arrived) && fluid.on ? (
               <PortraitParticles
                 src={portrait.src}
                 targetRef={portraitRef}
-                className={styles.portraitParticles}
+                className={particlesLive ? styles.portraitParticles : `${styles.portraitParticles} ${styles.portraitParticlesHold}`}
                 particleCount={Math.round(lerp(BACKGROUND.particles / 4, BACKGROUND.particles, fluid.t) / 5000) * 5000}
                 particleSize={lerp(0.25, 1, fluid.t)}
                 particleOpacity={0.4}
@@ -778,7 +811,7 @@ export default function Cta({
                 cursorStrength={0.02}
                 cursorRadius={120}
                 dpr={1.5}
-                paused={false}
+                paused={!particlesLive}
               />
             ) : null}
           </SketchReveal>

@@ -539,12 +539,16 @@ export default function AboutMe({ content = null }: { content?: AboutContent | n
           loading="eager"
           fetchPriority="high"
         />
-        {/* Tytéž částice jako portrét v heru a v CTA, jen jich je méně. */}
-        {scenery && go ? (
+        {/* Tytéž částice jako portrét v heru a v CTA, jen jich je méně.
+            Plátno vzniká hned (při přechodu ještě pod oponou), ne až s bránou
+            `go`: vytvoření kontextu WebGL a první překlad shaderů stojí
+            ~0,1 s a se zpožděním padly přesně do prolnutí stránky. Do `go`
+            stojí schované a zastavené. */}
+        {scenery ? (
           <PortraitParticles
             src={portrait.src}
             targetRef={portraitRef}
-            className={styles.portraitParticles}
+            className={go ? styles.portraitParticles : `${styles.portraitParticles} ${styles.portraitParticlesHold}`}
             particleCount={Math.round(lerp(BACKGROUND.particles / 4, BACKGROUND.particles, fluid.t) / 5000) * 5000}
             particleSize={lerp(0.25, 1, fluid.t)}
             particleOpacity={0.4}
@@ -560,7 +564,7 @@ export default function AboutMe({ content = null }: { content?: AboutContent | n
             cursorStrength={0.02}
             cursorRadius={120}
             dpr={1.5}
-            paused={false}
+            paused={!go}
           />
         ) : null}
         </SketchReveal>

@@ -277,3 +277,14 @@ a.secondary {
   62% { transform: translateY(var(--sweep-travel)); opacity: 0; }
   100% { transform: translateY(var(--sweep-travel)); opacity: 0; }
 }
+
+// iOS Safari při focusu přiblíží celou stránku, když má pole písmo menší
+// než 16 px (a zůstane přiblížená — v modálu pod hlavičkou to rozbije
+// rozvržení). Jen na iOS (-webkit-touch-callout), jinde návrh beze změny.
+@supports (-webkit-touch-callout: none) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
+}

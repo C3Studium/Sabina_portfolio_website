@@ -37,8 +37,7 @@ function read(): LandscapeFluid {
 }
 
 function subscribe(notify: () => void) {
-  window.addEventListener("resize", notify);
-  return () => window.removeEventListener("resize", notify);
+  return onViewportResize(notify);
 }
 
 /** Viz LandscapeFluid. Na serveru a do hydratace `on: false`. */
@@ -86,9 +85,39 @@ export type Frame = {
 /** Kde platí 16 : 9 podle výšky (jen ultrawide, širší než 20 : 9) — stejný dotaz jako v globals.scss. */
 const WIDE = `(min-width: ${FLUID.from}px) and (orientation: landscape) and (min-aspect-ratio: 20 / 9)`;
 
+// ---------------------------------------------------------------------------
+// Lišta prohlížeče na telefonu (Safari dole, Chrome nahoře) se při scrollu
+// schovává a vrací. `window.innerHeight` se tím mění o desítky px a přijde
+// `resize` — výpočty z něj (poloha, délka scrollu, plátna) by pokaždé
+// poskočily. Na dotyku se proto bere `documentElement.clientHeight`: ten
+// s lištou nehýbe (stejný základ používá i useScroll z framer-motion).
+// Mění se jen při otočení nebo jiné šířce okna.
+const coarse = () => typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+
+/** Výška okna, která na dotyku nehýbe s lištou prohlížeče (viz výše). */
+export function viewportHeight(): number {
+  if (coarse()) return document.documentElement.clientHeight || window.innerHeight;
+  return window.innerHeight;
+}
+
+/**
+ * `resize` bez změn od lišty prohlížeče: na dotyku zavolá `fn` jen při jiné
+ * šířce (otočení, rozdělená obrazovka), jinde při každé změně. Vrací úklid.
+ */
+export function onViewportResize(fn: () => void): () => void {
+  let width = window.innerWidth;
+  const handler = () => {
+    if (coarse() && window.innerWidth === width) return;
+    width = window.innerWidth;
+    fn();
+  };
+  window.addEventListener("resize", handler);
+  return () => window.removeEventListener("resize", handler);
+}
+
 /** Rám obsahu v px pro aktuální okno. */
 export function viewFrame(): Frame {
-  const h = window.innerHeight;
+  const h = viewportHeight();
   const byHeight = window.matchMedia(WIDE).matches ? (h * 16) / 9 : Infinity;
   const w = Math.min(window.innerWidth, byHeight);
   return { x: (window.innerWidth - w) / 2, y: 0, w, h };

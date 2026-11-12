@@ -34,7 +34,7 @@ import {
   type MotionValue,
 } from "framer-motion";
 import { useGate } from "@/motion/LoadProvider";
-import { PORTRAIT_PHONE, PORTRAIT_TABLET, useMedia } from "@/lib/fluid";
+import { PORTRAIT_PHONE, PORTRAIT_TABLET, useMedia, viewportHeight } from "@/lib/fluid";
 import { ACCENT_RGB } from "@/lib/palette";
 import { STUDY_TEMPLATE, type StudyBoard, type StudyContent, type StudyImage } from "./content";
 import { InspectContext, InspectorDock } from "./inspector";
@@ -370,9 +370,21 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
     const textOf = (k: number) => cams.current[Math.min(k, LAST)].s;
     const textS = Math.exp(Math.log(textOf(i)) * (1 - e) + Math.log(textOf(i + 1)) * e);
     // Na malé obrazovce se drobné prvky zmenšují s artboardem (UI).
-    world.style.setProperty("--cam-s", (textS / uiK(textS)).toFixed(5));
-    world.style.setProperty("--m", m.toFixed(4));
-    frame.style.setProperty("--m", m.toFixed(4));
+    // --cam-s a --m čte ~150 pravidel artboardů (písmo, stíny, obrysy), takže
+    // každý zápis = přepočet stylu i layoutu celého plátna. Zapisují se jen
+    // znatelné změny (0,3 % měřítka; na zastávce vždy přesně) — dřív každý
+    // snímek scrollu, na iPhonu hlavní zdroj trhání.
+    const camS = textS / uiK(textS);
+    const camText = camS.toFixed(5);
+    const lastCam = world.style.getPropertyValue("--cam-s");
+    if (camText !== lastCam && (still || !lastCam || Math.abs(camS / Number(lastCam) - 1) > 0.003))
+      world.style.setProperty("--cam-s", camText);
+    const mText = m.toFixed(4);
+    const lastM = world.style.getPropertyValue("--m");
+    if (mText !== lastM && (still || m === 0 || !lastM || Math.abs(m - Number(lastM)) > 0.01)) {
+      world.style.setProperty("--m", mText);
+      frame.style.setProperty("--m", mText);
+    }
     const grid = 50 * sNow;
     frame.style.backgroundSize = `${grid.toFixed(2)}px ${grid.toFixed(2)}px`;
     frame.style.backgroundPosition = `${tx.toFixed(2)}px ${ty.toFixed(2)}px`;
@@ -437,7 +449,13 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
   useEffect(() => {
     if (reduce) return;
     let timer = 0;
+    // Prst na displeji: nedosedat. Kdo drží prst uprostřed přejezdu,
+    // nescrolluje (žádné scroll události), a dosednutí by mu stránku
+    // vytrhlo zpod prstu. Po puštění se počítá znovu (i doběh setrvačnosti
+    // posílá scroll a odkládá ho).
+    let touching = false;
     const settle = () => {
+      if (touching) return;
       const section = sectionRef.current;
       if (!section) return;
       const x = target.get();
@@ -445,7 +463,7 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
       if (travel <= 0.02 || travel >= 0.98) return;
       const to = travel > 0.5 ? i + 1 : i + DWELL;
       const top = section.getBoundingClientRect().top + window.scrollY;
-      const y = top + (section.offsetHeight - window.innerHeight) * (to / TOTAL);
+      const y = top + (section.offsetHeight - viewportHeight()) * (to / TOTAL);
       if (window.lenisInstance) window.lenisInstance.scrollTo(y, { duration: SETTLE.duration });
       else window.scrollTo({ top: y, behavior: "smooth" });
     };
@@ -453,10 +471,25 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
       window.clearTimeout(timer);
       timer = window.setTimeout(settle, SETTLE.idle);
     };
+    const onTouchStart = () => {
+      touching = true;
+      window.clearTimeout(timer);
+    };
+    const onTouchEnd = (event: TouchEvent) => {
+      if (event.touches.length) return;
+      touching = false;
+      onScroll();
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
+    window.addEventListener("touchcancel", onTouchEnd, { passive: true });
     return () => {
       window.clearTimeout(timer);
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("touchcancel", onTouchEnd);
     };
   }, [reduce, target]);
 
@@ -465,7 +498,7 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
     const section = sectionRef.current;
     if (!section) return;
     const top = section.getBoundingClientRect().top + window.scrollY;
-    const y = top + (section.offsetHeight - window.innerHeight) * (k / TOTAL);
+    const y = top + (section.offsetHeight - viewportHeight()) * (k / TOTAL);
     if (window.lenisInstance) window.lenisInstance.scrollTo(y, { duration: 1.8 });
     else window.scrollTo({ top: y, behavior: "smooth" });
   };

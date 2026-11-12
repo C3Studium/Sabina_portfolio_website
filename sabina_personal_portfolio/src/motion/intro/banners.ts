@@ -213,9 +213,16 @@ export function createBanners(
   let items: Item[] = [];
   let last = -1;
 
+  let sized = "";
   const layout = () => {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     const own = canvas.getBoundingClientRect();
+    // Beze změny rozměru nic: `resize` chodí na telefonu i při každém
+    // schování / vrácení lišty prohlížeče a nové width / height plátno
+    // smaže a alokuje znovu (záblesk, zásek uprostřed scrollu).
+    const size = `${Math.round(own.width)}x${Math.round(own.height)}@${dpr}`;
+    if (size === sized) return;
+    sized = size;
     origin = [own.left, own.top];
     canvas.width = Math.round(own.width * dpr);
     canvas.height = Math.round(own.height * dpr);

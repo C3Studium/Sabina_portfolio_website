@@ -9,11 +9,17 @@ import { PORTRAIT_PHONE, PORTRAIT_TABLET, useMedia } from "@/lib/fluid";
 const PHONE_LANDSCAPE = "(min-width: 480px) and (max-height: 520px) and (orientation: landscape)";
 import type { Project } from "@/lib/site/projects";
 import { projectsOrFallback } from "../fallback";
+import { isTouchDevice } from "@/lib/device";
 import styles from "./styles.module.scss";
 
 // Kolik obrázků z galerie projektu jde do ribbonu za titulní obrázek.
 // Ribbon je o projektech, ne o celé galerii — ta patří do case study.
+// Na dotyku jen jeden (polovina obrázků — scéna musí jet i na starších
+// iPhonech). Rozhoduje se hned na klientu, ne až po hydrataci: položky se
+// do HTML nekreslí, a scéna by se jinak stavěla dvakrát.
 const GALLERY_IN_RIBBON = 3;
+const GALLERY_ON_TOUCH = 1;
+const galleryInRibbon = () => (isTouchDevice() ? GALLERY_ON_TOUCH : GALLERY_IN_RIBBON);
 
 type RibbonEntry = DepthRibbonItem & { projectId: string | null };
 
@@ -22,7 +28,7 @@ type RibbonEntry = DepthRibbonItem & { projectId: string | null };
 // case study. Rozměry z CMS drží poměr karty, než se obrázek načte.
 const ribbonItems = (projects: Project[], cta: string): RibbonEntry[] =>
   projects.flatMap((project, group) =>
-    [project.cover, ...project.gallery.slice(0, GALLERY_IN_RIBBON)]
+    [project.cover, ...project.gallery.slice(0, galleryInRibbon())]
       .filter((image): image is NonNullable<typeof image> => Boolean(image?.url))
       .map((image) => ({
         src: image.url,

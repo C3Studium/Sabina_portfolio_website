@@ -104,7 +104,11 @@ $col-portrait: 24%;
   // portrétu do Procesu. Časy choreografie jsou podíly, takže výška sekce
   // přímo určuje tempo myši.
   height: 606vh;
-  margin-top: -100vh;
+  // Překryv přesně o výšku přišpendleného rámu hera (--frame-h = 100svh).
+  // S -100vh to na telefonu nesedělo: vh je tam výška BEZ lišty prohlížeče
+  // (o desítky px víc než svh), Info pak nastupovalo dřív, než hero pustil
+  // — portrét poskočil / byl chvíli dvakrát. Na počítači je to totéž.
+  margin-top: calc(-1 * var(--frame-h));
 }
 
 .info {
@@ -1661,5 +1665,203 @@ $col-portrait: 24%;
         font-size: 8px;
       }
     }
+  }
+}
+
+/* ---------- Kontextová nabídka (hero: umělá myš klikne na „Smazat") ---------- */
+// Kreslená v px jako panely nástroje (fluid-ui) — na notebooku se zmenší celá.
+.contextMenu {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  min-width: fluid-ui(15.5rem);
+  padding: fluid-ui(0.4rem);
+  border: 1px solid rgba(var(--snow-rgb), 0.14);
+  border-radius: fluid-ui(10px);
+  background: rgba(28, 28, 28, 0.94);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 1.4vh 3.6vh rgba(0, 0, 0, 0.32);
+  color: var(--snow);
+  font-size: fluid-ui(14.5px, 10px);
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+.contextItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: fluid-ui(1.4rem);
+  padding: fluid-ui(0.42rem) fluid-ui(0.65rem);
+  border-radius: fluid-ui(6px);
+  white-space: nowrap;
+
+  > span:not(.contextHot) {
+    position: relative;
+  }
+
+  &[data-danger] {
+    font-weight: 600;
+    color: var(--green);
+  }
+}
+
+// Zvýraznění pod myší: zelený podklad, text uhlový (světlé pozadí).
+.contextHot {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: $accent;
+}
+
+.contextKeys {
+  color: rgba(var(--snow-rgb), 0.5);
+  font-size: 0.85em;
+  letter-spacing: 0.04em;
+}
+
+.contextRule {
+  height: 1px;
+  margin: fluid-ui(0.3rem) fluid-ui(0.2rem);
+  background: rgba(var(--snow-rgb), 0.12);
+}
+
+// Statická karta ve Studiu: vpravo nahoře jsou šipky — číslo karty (pole
+// dokumentu) stojí nad štítkem.
+.cardPrimary .swapNumber {
+  position: static;
+  margin-bottom: 0.8vh;
+}
+
+/* ---------- Na šířku: statistiky jako dlaždice pod textem (2026-11-12) ----------
+   Přání klientky: lišta přes celou šířku dole rušila — statistiky jsou
+   malé dlaždice v mřížce 3 + 2 pod textem „Tvořím reklamní grafiku…",
+   v levém sloupci (končí před fotkou). Portrét a karty tím získaly spodek
+   — stojí o kus výš, panel Vrstvy těsněji pod hlavičkou.
+   Lišta zůstává v DOM, kde byla (výběr, tah a mazání umělou myší měří její
+   živý obdélník — choreography.ts), jen se jinak umístí: absolutně v .info
+   (sticky = obsahující blok) u levého sloupce. Levý sloupec si pod textem
+   nechá místo (padding-bottom = výška mřížky). Na výšku platí blok xs-v. */
+$stat-tile-h: 7.4vh;
+$stat-gap: 1vh;
+$stats-grid-h: calc(#{$stat-tile-h} * 2 + #{$stat-gap});
+
+// Telefon na šířku (do 520px výšky) si nechává lištu dole — dlaždice by se
+// do levého sloupce nevešly.
+@media (orientation: landscape) and (min-height: 520.02px) {
+  .intro {
+    gap: 3vh;
+    // 3vh původní odsazení + mřížka statistik.
+    padding-bottom: calc(3vh + #{$stats-grid-h});
+  }
+
+  .lead {
+    margin-bottom: 2.6vh;
+  }
+
+  // Lišta → mřížka: levý okraj = okraj obsahu (5vw) + odsazení sloupce
+  // (2vw), šířka sloupce bez odsazení (20 % z 90vw − 2vw).
+  .statsBar {
+    left: 7vw;
+    bottom: calc(2vh + 3vh);
+    width: 16vw;
+    height: $stats-grid-h;
+  }
+
+  .statsBarFill {
+    display: none;
+  }
+
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: $stat-gap;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+  }
+
+  // Dlaždice: tmavá plocha jako panely nástroje. Nahoře ikona a hodnota
+  // v řádku, pod nimi popisek (statText je `contents` — jeho dvě části
+  // jdou přímo do mřížky dlaždice). Tři na řádek (3 + 2).
+  .stat {
+    flex: 0 0 calc((100% - 2 * #{$stat-gap}) / 3);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 0.45vw;
+    row-gap: 0.7vh;
+    height: $stat-tile-h;
+    min-width: 0;
+    padding: 1vh 0.6vw;
+    border: 1px solid rgba(var(--snow-rgb), 0.14);
+    border-radius: 0.9vh;
+    background: rgba(24, 24, 26, 0.72);
+    backdrop-filter: blur(10px);
+
+    &:first-child,
+    &:last-child {
+      padding: 1vh 0.6vw;
+    }
+
+    .statBadge {
+      width: 1.8vh;
+      height: 1.8vh;
+      border-radius: 0.45vh;
+
+      // Bez ikony ze Studia jen prázdný čtvereček — v úzké dlaždici by
+      // bral místo hodnotě.
+      &:empty {
+        display: none;
+      }
+    }
+
+    .statText {
+      display: contents;
+    }
+
+    .statValue {
+      font-size: clamp(0.66rem, min(#{fit-vh(2vh)}, 1.15vw), 2.6rem);
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .statLabel {
+      grid-column: 1 / -1;
+      align-self: start;
+      font-size: clamp(0.5rem, fit-vh(1.2vh), 1.6rem);
+      line-height: 1.2;
+      white-space: normal;
+    }
+  }
+
+  .stat + .stat > .sketchFill,
+  .stat + .stat > .sketchOutline {
+    border-left: 0;
+  }
+
+  // Bez lišty dole: portrét i karty o kus výš.
+  .portrait {
+    translate: 0 -4vh;
+  }
+
+  .cardsBuild {
+    translate: 0 -4vh;
+  }
+
+  // Okno sekce (Služby) má karty už o 10vh výš — celkem zůstává 10vh.
+  .infoPopup.infoPopup .cardsBuild {
+    translate: none;
+  }
+
+  // Panel Vrstvy těsně pod hlavičkou (dřív 30px mezera).
+  .toolPanels {
+    top: calc(var(--frame-y) + #{fluid(5.75rem)} + 1vh + #{fluid(8px, 0)});
   }
 }

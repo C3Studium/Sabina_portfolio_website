@@ -603,6 +603,8 @@ function ParticleField({
     buffers: THREE.WebGLRenderTarget[];
     front: number;
     seeded: boolean;
+    /** Shadery kroku a přemapování přeložené předem (viz useFrame). */
+    warmed: boolean;
     /** Obdélník fotky, ve kterém stav simulace naposledy ležel. */
     rect: THREE.Vector4;
     release: () => void;
@@ -749,6 +751,7 @@ function ParticleField({
       buffers,
       front: 0,
       seeded: false,
+      warmed: false,
       rect: new THREE.Vector4(0, 0, 1, 1),
       release: () => {
         buffers.forEach((buffer) => buffer.dispose());
@@ -882,6 +885,19 @@ function ParticleField({
       renderer.setRenderTarget(null);
       active.seeded = true;
       active.rect.copy(step.uImageRect.value);
+    }
+
+    // Shader kroku se jinak přeloží až v prvním živém snímku — u částic
+    // připravených předem (zastavených pod oponou přechodu) by překlad
+    // (~50 ms) padl přesně do prolnutí stránky. Proto hned v prvním snímku.
+    if (!active.warmed) {
+      const keep = active.quad.material;
+      for (const material of [active.step, active.remap]) {
+        active.quad.material = material;
+        renderer.compile(active.scene, active.camera);
+      }
+      active.quad.material = keep;
+      active.warmed = true;
     }
 
     // Fotka změnila velikost nebo polohu v plátně (resize, otočení,

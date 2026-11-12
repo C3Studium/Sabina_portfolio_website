@@ -20,6 +20,7 @@ import { editable } from "@c3studium/valecms/edit";
 import { useGate } from "@/motion/LoadProvider";
 import { PrivacySections, type LegalSection } from "../terms";
 import { CURTAIN, ENTERS, RISE, group, scrollToY } from "../entrance";
+import { viewportHeight } from "@/lib/fluid";
 import styles from "./styles.module.scss";
 
 /** Co stránka říká bez Studia: hlava a oddíly. Výchozí = ochrana soukromí;
@@ -143,7 +144,7 @@ export default function PrivacyContent({
   // Ve kterém oddílu čtenář je: poslední, jehož vršek přešel sondu.
   useEffect(() => {
     const handleScroll = () => {
-      const probe = window.scrollY + window.innerHeight * 0.35;
+      const probe = window.scrollY + viewportHeight() * 0.35;
       let current = SECTIONS[0].id;
       for (let i = 0; i < sectionRefs.current.length; i++) {
         const el = sectionRefs.current[i];
@@ -169,7 +170,7 @@ export default function PrivacyContent({
   const scrollToId = (id: string, shrink = 0) => {
     const el = document.getElementById(id);
     if (!el) return;
-    const inset = Math.min(Math.max(window.innerHeight * 0.22, 108), 240);
+    const inset = Math.min(Math.max(viewportHeight() * 0.22, 108), 240);
     scrollToY(layoutTop(el) - inset - shrink);
   };
 

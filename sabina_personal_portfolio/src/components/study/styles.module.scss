@@ -4516,3 +4516,78 @@ $ui-small: max(0.44cqw, calc(8.5px / #{$px}));
 .canvasFrame[data-small][data-tall] .edPeople {
   display: none;
 }
+
+/* ---------- Dotyk: plátno bez 3D ---------- */
+
+// iPhone / iPad: žádný 3D kontext v plátně. Každý 3D prvek (zvednutí vrstev
+// `translate: 0 0 Z`, rozložený banner, nástup artboardů) dělal z celého
+// artboardu GPU vrstvu v PLNÉM rozlišení bez ohledu na zoom kamery:
+// 1000 × 1800 × 3² × 4 B × 2 ≈ 129 MB na artboard. V přehledu (nástup,
+// konec) jsou vidět všechny → přes limit iOS a Safari stránku shodí
+// („Web Page Crashed"). Naměřeno na iPhonu: 356 MB s jedním artboardem,
+// bez 3D 48 MB se všemi pěti. Efekty zůstávají ve 2D: vrstvy se při
+// přejezdu posunou nad sebe po ploše, banner se rozloží do vějíře.
+@media (hover: none) and (pointer: coarse) {
+  .canvasFrame {
+    perspective: none;
+  }
+
+  .worldFade,
+  .lens,
+  .lens * {
+    transform-style: flat;
+  }
+
+  .world {
+    will-change: auto;
+  }
+
+  // Nástup artboardů bez animace: i animované krytí je GPU vrstva v plné velikosti.
+  .board,
+  .canvasFrame[data-go] .board {
+    opacity: 1;
+    animation: none;
+  }
+
+  // Žádné CSS animace ani přechody uvnitř plátna. Každá běžící (nástup řádku
+  // nadpisu, blikající kurzor psaní, nálepka, točící se tvary) je na iOS
+  // GPU vrstva — a kvůli ní celý zvětšený svět taky: při scrollu přes
+  // artboardy 400–800 MB a pád. Text se dál vypisuje (to je JS), nadpisy
+  // a nálepky se jen objeví. Kamera a vrstvy jedou přes proměnné, ne přechody.
+  .lens *,
+  .lens *::before,
+  .lens *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .boardFace [data-z="1"] {
+    translate: 0 calc(var(--m) * var(--lift) * -0.4);
+  }
+
+  .boardFace [data-z="2"] {
+    translate: 0 calc(var(--m) * var(--lift) * -0.8);
+  }
+
+  .boardFace [data-z="3"] {
+    translate: 0 calc(var(--m) * var(--lift) * -1.2);
+  }
+
+  .pin {
+    translate: 0 calc(var(--m) * var(--lift) * -1.4);
+  }
+
+  .briefChip {
+    translate: 0 calc(-50% - var(--m) * var(--lift) * 1.2);
+  }
+
+  .layerStack,
+  .coverVisual .layerStack {
+    transform: none;
+  }
+
+  .layerSheet,
+  .coverVisual .layerSheet {
+    transform: translate(calc(var(--k) * var(--s) * 16px), calc(var(--k) * var(--s) * -16px));
+  }
+}

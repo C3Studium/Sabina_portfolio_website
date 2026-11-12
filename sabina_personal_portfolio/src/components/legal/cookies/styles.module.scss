@@ -110,7 +110,7 @@
     // on a touch tablet the list is over 1000px long against an 820px screen.
     // So it is bounded by the room it has and scrolls inside it, contained so
     // the flick that reaches its end does not carry on into the page.
-    max-height: calc(100dvh - 20vh);
+    max-height: calc(100svh - 20vh);
     overflow-y: auto;
     overscroll-behavior: contain;
 

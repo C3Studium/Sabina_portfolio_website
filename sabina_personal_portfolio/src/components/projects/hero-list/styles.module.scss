@@ -233,6 +233,15 @@ $text: var(--snow);
   inset: 0;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, transparent 4.5rem, #000 calc(4.5rem + 7vh));
   mask-image: linear-gradient(to bottom, transparent 0, transparent 4.5rem, #000 calc(4.5rem + 7vh));
+
+  // Dotyk: maska přes WebGL plátno je na iPhonu další celoobrazovkový
+  // průchod v každém snímku (naměřeno: z ní scéna padala pod 45 fps).
+  // Rovný ořez pod hlavičkou stojí skoro nic.
+  @media (hover: none) and (pointer: coarse) {
+    -webkit-mask-image: none;
+    mask-image: none;
+    clip-path: inset(4.5rem 0 0 0);
+  }
 }
 
 /* ---------- Popisek přiblížené karty ---------- */

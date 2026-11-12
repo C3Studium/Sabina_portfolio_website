@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { AppProps } from "next/app";
 import { Poppins, Caveat } from "next/font/google";
 import Lenis from "lenis";
+import { cancelFrame, frame } from "framer-motion";
 import Header from "@/components/layout/header";
 import { SeoProvider, SiteHead } from "@/components/seo";
 import Footer from "@/components/layout/footer";
@@ -96,6 +97,13 @@ function App({ Component, pageProps, router }: AppProps) {
   }, []);
 
   useEffect(() => {
+    // Jen dotyk (telefon, tablet bez myši): žádný Lenis. Prstem se stejně
+    // scrolluje nativně (syncTouch je vypnutý), Lenis by jen přidal
+    // nepasivní touch listenery na window — iOS pak před každým tahem čeká
+    // na hlavní vlákno a scroll se při práci stránky „chytá". Všechna místa,
+    // která Lenis používají, mají nativní náhradu (scrollTo, overflow).
+    if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) return;
+
     // Initialize Lenis for smooth scrolling
     const lenis = new Lenis({
       duration: 1.2,
@@ -127,19 +135,15 @@ function App({ Component, pageProps, router }: AppProps) {
       preloadWatch.observe(html, { attributes: true, attributeFilter: ["data-preload"] });
     }
 
-    // rAF handle si držíme, aby smyčka šla při odmountování zastavit —
-    // jinak by běžela dál a sahala na už zničenou instanci.
-    let rafId = 0;
-
-    function raf(time: number) {
-      lenis.raf(time);
-      rafId = requestAnimationFrame(raf);
-    }
-
-    rafId = requestAnimationFrame(raf);
+    // Lenis jede ve smyčce framer-motion, v kroku `setup` — před `read`,
+    // kde useScroll měří. Posun i scroll animace tak sedí na stejný snímek
+    // (vlastní rAF by mohl běžet až po framer a animace by o snímek
+    // zaostávaly za scrollem). Návod: motion.dev/docs/lenis.
+    const raf = (data: { timestamp: number }) => lenis.raf(data.timestamp);
+    frame.setup(raf, true);
 
     return () => {
-      cancelAnimationFrame(rafId);
+      cancelFrame(raf);
       preloadWatch?.disconnect();
       lenis.destroy();
       if (window.lenisInstance === lenis) {

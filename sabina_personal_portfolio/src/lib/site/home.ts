@@ -32,7 +32,17 @@ type Doc = { id?: string }
 
 export type StackItem = Doc & { title: string; icon: DocImage | null }
 export type StatItem = Doc & { value: string; label: string; icon: DocImage | null }
-export type Service = Doc & { title: string; icon: DocImage | null; lead: string; points: string[] }
+/** Karta služby. Prázdné `number` / `label` / `cta` = záloha komponenty
+ *  (pořadí, „Co nabízím", „Zobrazit příklady"). */
+export type Service = Doc & {
+    number: string
+    label: string
+    title: string
+    icon: DocImage | null
+    lead: string
+    points: string[]
+    cta: string
+}
 export type ProcessDetail = { label: string; value: string }
 export type ProcessStep = Doc & {
     stage: string
@@ -133,10 +143,13 @@ export const getServices = async ({ read = readPublished as Reader }: Options = 
             const title = stringValue(data.title)
             return {
                 ...provenance(data),
+                number: stringValue(data.number),
+                label: stringValue(data.label),
                 title,
                 icon: asImage(data.icon, ''),
                 lead: stringValue(data.lead),
                 points: asStrings(data.points),
+                cta: stringValue(data.cta),
             }
         })
         .filter((item) => item.title)

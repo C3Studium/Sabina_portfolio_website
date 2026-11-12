@@ -8,7 +8,7 @@
 
 import { useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion, type MotionValue } from "framer-motion";
+import { AnimatePresence, motion, useTransform, type MotionValue } from "framer-motion";
 import type { Shortcut } from "./choreography";
 import styles from "./styles.module.scss";
 
@@ -184,6 +184,58 @@ function ShortcutToast({ active }: { active: Shortcut }) {
         </motion.div>
       ) : null}
     </AnimatePresence>
+  );
+}
+
+/**
+ * Kontextová nabídka (pravé tlačítko) jako v editoru — umělá myš v ní
+ * v heru klikne na „Smazat", ať je jasné, proč 3D scéna zmizela. Polohu
+ * (levý horní roh u špičky kurzoru), průhlednost a zvýraznění položky
+ * píše choreografie; bod položky „Smazat" si měří přes data-context-delete.
+ */
+export function ContextMenu({
+  x,
+  y,
+  opacity,
+  hot,
+}: {
+  x: MotionValue<number>;
+  y: MotionValue<number>;
+  opacity: MotionValue<number>;
+  hot: MotionValue<number>;
+}) {
+  const mac = useMac();
+  const mod = mac ? "⌘" : "Ctrl";
+  const scale = useTransform(opacity, [0, 1], [0.94, 1]);
+  // Na zeleném zvýraznění uhlový text, jinak zelený (palette: uhlová jen
+  // na světlém).
+  const hotColor = useTransform(hot, (v) => (v > 0.5 ? "var(--charcoal)" : "var(--green)"));
+  const hotKeys = useTransform(hot, (v) => (v > 0.5 ? "rgba(var(--charcoal-rgb), 0.6)" : "rgba(var(--snow-rgb), 0.5)"));
+  return (
+    <Portal>
+      <motion.div className={styles.contextMenu} style={{ x, y, opacity, scale }} aria-hidden="true">
+        <span className={styles.contextItem}>
+          <span>Kopírovat</span>
+          <span className={styles.contextKeys}>{mod} C</span>
+        </span>
+        <span className={styles.contextItem}>
+          <span>Duplikovat</span>
+          <span className={styles.contextKeys}>{mod} D</span>
+        </span>
+        <span className={styles.contextItem}>
+          <span>Seskupit</span>
+          <span className={styles.contextKeys}>{mod} G</span>
+        </span>
+        <span className={styles.contextRule} />
+        <span className={styles.contextItem} data-danger="" data-context-delete="">
+          <motion.span className={styles.contextHot} style={{ opacity: hot }} />
+          <motion.span style={{ color: hotColor }}>Smazat</motion.span>
+          <motion.span className={styles.contextKeys} style={{ color: hotKeys }}>
+            {mac ? "⌫" : "Delete"}
+          </motion.span>
+        </span>
+      </motion.div>
+    </Portal>
   );
 }
 

@@ -15,6 +15,38 @@
 import { Mesh, Plane, Program, RenderTarget, Renderer, Texture, Triangle } from "ogl";
 import type { OverlayState } from "../OrbitCards/engine";
 import { MARGIN, drawCardLayer } from "./hover";
+import { isTouchDevice, releaseContext, sceneImage } from "@/lib/device";
+
+// Bitmapa z blobu smí jít do WebGL jen tam, kde prohlížeč umí
+// `imageOrientation: "flipY"` — starší Safari volbu ignoruje a karty by
+// stály vzhůru nohama. Ověří se jednou (plátno 1 × 2: červená nad modrou).
+let flipCheck: Promise<boolean> | null = null;
+const bitmapFlipWorks = () =>
+  (flipCheck ??= (async () => {
+    try {
+      const probe = document.createElement("canvas");
+      probe.width = 1;
+      probe.height = 2;
+      const pctx = probe.getContext("2d");
+      if (!pctx) return false;
+      pctx.fillStyle = "#f00";
+      pctx.fillRect(0, 0, 1, 1);
+      pctx.fillStyle = "#00f";
+      pctx.fillRect(0, 1, 1, 1);
+      const flipped = await createImageBitmap(probe, { imageOrientation: "flipY" });
+      const read = document.createElement("canvas");
+      read.width = 1;
+      read.height = 2;
+      const rctx = read.getContext("2d", { willReadFrequently: true });
+      if (!rctx) return false;
+      rctx.drawImage(flipped, 0, 0);
+      flipped.close();
+      const top = rctx.getImageData(0, 0, 1, 1).data;
+      return top[2] > 200 && top[0] < 50;
+    } catch {
+      return false;
+    }
+  })());
 
 export interface FlexItem {
   src: string;
@@ -340,7 +372,8 @@ export function createFlexCarousel(
   callbacks: FlexCallbacks,
 ): FlexEngine | null {
   const renderer = new Renderer({
-    dpr: Math.min(window.devicePixelRatio || 1, 2),
+    // Na dotyku nižší rozlišení plátna (iPhone má DPR 3; paměť GPU).
+    dpr: Math.min(window.devicePixelRatio || 1, isTouchDevice() ? 1.5 : 2),
     alpha: true,
     premultipliedAlpha: true,
     antialias: false,
@@ -494,6 +527,48 @@ export function createFlexCarousel(
   const focus = { index: -1, pending: -1, t: 0, v: 0, target: 0 };
   let instances: Instance[] = [];
 
+  // Nahrání obrázků do GPU: soubor se stáhne a dekóduje mimo hlavní vlákno
+  // (createImageBitmap z blobu — PNG banneru 1440 × 2560 by jinak texImage2D
+  // rozbaloval synchronně, desítky ms za kus). Bitmapa je rovnou otočená
+  // a bez přednásobení (WebGL u ImageBitmap UNPACK_* ignoruje). Nahrává se
+  // nejvýš jedna za snímek — víc naráz by trhlo.
+  const uploads: (() => void)[] = [];
+  let pumping = 0;
+  const pump = () => {
+    pumping = 0;
+    uploads.shift()?.();
+    if (uploads.length && alive) pumping = requestAnimationFrame(pump);
+  };
+  const enqueueUpload = (job: () => void) => {
+    uploads.push(job);
+    if (!pumping) pumping = requestAnimationFrame(pump);
+  };
+
+  // Průměrná barva obrázku (podklad, než se karta prolne) z bitmapy 8 × 8 —
+  // dekódování i zmenšení dělá prohlížeč na pozadí (zdroj je blob).
+  const averageColor = async (source: Blob | HTMLImageElement): Promise<number[]> => {
+    try {
+      const small = await createImageBitmap(source, { resizeWidth: 8, resizeHeight: 8, resizeQuality: "low" });
+      const probe = document.createElement("canvas");
+      probe.width = 8;
+      probe.height = 8;
+      const ctx = probe.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return [0.5, 0.5, 0.5];
+      ctx.drawImage(small, 0, 0);
+      small.close();
+      const data = ctx.getImageData(0, 0, 8, 8).data;
+      const avg = [0, 0, 0];
+      for (let i = 0; i < data.length; i += 4) {
+        avg[0] += data[i];
+        avg[1] += data[i + 1];
+        avg[2] += data[i + 2];
+      }
+      return avg.map((v) => v / 64 / 255);
+    } catch {
+      return [0.5, 0.5, 0.5];
+    }
+  };
+
   const loadSlot = (item: FlexItem, index: number): Slot => {
     const texture = new Texture(gl, {
       generateMipmaps: true,
@@ -518,50 +593,79 @@ export function createFlexCarousel(
       layerKey: "",
       dispose: () => {},
     };
-    const image = new Image();
-    image.crossOrigin = "anonymous";
-    image.decoding = "async";
-    image.onload = () => {
-      if (!alive || !slots.includes(slot)) return;
-      texture.image = image;
-      texture.update();
-      slot.image = [image.naturalWidth || 1, image.naturalHeight || 1];
-      slot.aspect = slot.image[0] / slot.image[1];
-      try {
-        const probe = document.createElement("canvas");
-        probe.width = 8;
-        probe.height = 8;
-        const ctx = probe.getContext("2d", { willReadFrequently: true });
-        if (ctx) {
-          ctx.drawImage(image, 0, 0, 8, 8);
-          const data = ctx.getImageData(0, 0, 8, 8).data;
-          const avg = [0, 0, 0];
-          for (let i = 0; i < data.length; i += 4) {
-            avg[0] += data[i];
-            avg[1] += data[i + 1];
-            avg[2] += data[i + 2];
-          }
-          slot.color = avg.map((v) => v / 64 / 255);
+    // Na dotyku obrázek přes optimalizátor Nextu (PNG bannerů má 3–6 MB).
+    const src = sceneImage(item.src, 750);
+    let bitmap: ImageBitmap | null = null;
+    const live = () => alive && slots.includes(slot);
+    const show = (source: ImageBitmap | HTMLImageElement, width: number, height: number, color: number[]) =>
+      enqueueUpload(() => {
+        if (!live()) return;
+        texture.image = source as HTMLImageElement;
+        texture.update();
+        // Data jsou v GPU — bitmapa (desítky MB u velkého PNG) už není potřeba.
+        // Textura se znovu nenahrává (obrázek se nemění).
+        if (source === bitmap) {
+          bitmap.close();
+          bitmap = null;
         }
-      } catch {
-        slot.color = [0.5, 0.5, 0.5];
-      }
-      slot.loaded = true;
-      dirty = true;
-      start();
-    };
-    image.onerror = () => {
+        slot.image = [width || 1, height || 1];
+        slot.aspect = slot.image[0] / slot.image[1];
+        slot.color = color;
+        slot.loaded = true;
+        dirty = true;
+        start();
+      });
+    const fail = () => {
       if (!alive) return;
       slot.failed = true;
       dirty = true;
       start();
     };
-    image.src = item.src;
+    // Záloha bez createImageBitmap (nebo když fetch neprojde): <img>,
+    // dekódovaný předem přes decode().
+    const viaImage = () => {
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+      image.decoding = "async";
+      image.onload = async () => {
+        if (!live()) return;
+        await image.decode().catch(() => {});
+        const color = await averageColor(image);
+        if (live()) show(image, image.naturalWidth, image.naturalHeight, color);
+      };
+      image.onerror = fail;
+      image.src = src;
+    };
+    if (typeof window.createImageBitmap !== "function") viaImage();
+    else
+      void (async () => {
+        try {
+          if (!(await bitmapFlipWorks())) throw new Error("flipY");
+          const response = await fetch(src, { mode: "cors", credentials: "omit" });
+          if (!response.ok) throw new Error(String(response.status));
+          const blob = await response.blob();
+          const [decoded, color] = await Promise.all([
+            createImageBitmap(blob, { imageOrientation: "flipY", premultiplyAlpha: "none" }),
+            averageColor(blob),
+          ]);
+          if (!live()) {
+            decoded.close();
+            return;
+          }
+          bitmap = decoded;
+          show(decoded, decoded.width, decoded.height, color);
+        } catch {
+          if (live()) viaImage();
+        }
+      })();
     slot.dispose = () => {
-      image.onload = null;
-      image.onerror = null;
       gl.deleteTexture(texture.texture);
       gl.deleteTexture(slot.layerTexture.texture);
+      // Paměť plátna hned (iOS ji počítá do limitu až do GC).
+      slot.layerCanvas.width = 0;
+      slot.layerCanvas.height = 0;
+      bitmap?.close();
+      bitmap = null;
     };
     return slot;
   };
@@ -1412,11 +1516,15 @@ export function createFlexCarousel(
       window.removeEventListener("pointermove", onHover);
       document.documentElement.removeEventListener("pointerleave", onPageLeave);
       document.removeEventListener("visibilitychange", onVisibility);
+      cancelAnimationFrame(pumping);
+      uploads.length = 0;
       slots.forEach((slot) => slot.dispose());
       slots = [];
 
-      gl.getExtension("WEBGL_lose_context")?.loseContext();
       if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+      // Uvolnění kontextu stojí desítky ms a odchod běží během přechodu
+      // stránek — až v klidu (plátno už v DOMu není).
+      releaseContext(() => gl.getExtension("WEBGL_lose_context")?.loseContext());
     },
   };
 }

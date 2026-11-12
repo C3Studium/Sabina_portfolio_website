@@ -14,6 +14,7 @@ import { useRouter } from "next/router";
 import { NAV_ITEMS, currentNavIndex } from "../nav-items";
 import { MENU_OPEN_EVENT, openSection, type SectionKey } from "../section-popup/open";
 import Menu from "../menu";
+import { frameThrottle } from "@/lib/frame-throttle";
 import styles from "./styles.module.scss";
 
 // Hover hlavičky dělá kurzor: nad logem, odkazem i tlačítkem se jeho tečka
@@ -110,9 +111,7 @@ function useContactZone(active: boolean) {
   const [away, setAway] = useState(false);
   useEffect(() => {
     if (!active) return;
-    let frame = 0;
     const check = () => {
-      frame = 0;
       const shown = Array.from(document.querySelectorAll<HTMLElement>("[data-contact-zone]")).some((el) => {
         const r = el.getBoundingClientRect();
         if (!r.height || r.bottom < 0 || r.top > window.innerHeight) return false;
@@ -124,15 +123,14 @@ function useContactZone(active: boolean) {
       });
       setAway(shown);
     };
-    const onScroll = () => {
-      if (!frame) frame = requestAnimationFrame(check);
-    };
+    // Nejvýš ~8× za sekundu — čte layout a krytí předků (viz frame-throttle).
+    const onScroll = frameThrottle(check, 120);
     check();
     const timer = window.setInterval(onScroll, 500);
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
     return () => {
-      cancelAnimationFrame(frame);
+      onScroll.cancel();
       window.clearInterval(timer);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
@@ -189,20 +187,15 @@ export default function Header({ onContactClick, contactOpen = false, onContactC
   const { pathname } = useRouter();
   const [activeNav, setActiveNav] = useState(-1);
   useEffect(() => {
-    let raf = 0;
-    const update = () => {
-      raf = 0;
-      setActiveNav(currentNavIndex(pathname));
-    };
+    const update = () => setActiveNav(currentNavIndex(pathname));
     update();
     if (pathname !== "/") return;
-    const onScroll = () => {
-      if (!raf) raf = requestAnimationFrame(update);
-    };
+    // Měří sekce — nejvýš ~8× za sekundu, ne každý snímek scrollu.
+    const onScroll = frameThrottle(update, 120);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       window.removeEventListener("scroll", onScroll);
-      cancelAnimationFrame(raf);
+      onScroll.cancel();
     };
   }, [pathname]);
 

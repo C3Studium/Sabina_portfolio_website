@@ -812,6 +812,18 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
         schedule();
       });
       intersectionObserver.observe(root);
+      // Daleko od výhledu (víc než půl obrazovky) se 3D scéna karet vypne
+      // (`data-away` → display: none). Každá karta je 3D vrstva v plném
+      // rozlišení (na iPhonu ~44 MB) a Safari je drží i daleko pod sekcí —
+      // na zbytku úvodní stránky to bylo +176 MB paměti GPU.
+      const awayObserver = new IntersectionObserver(
+        (entries) => {
+          const near = entries[entries.length - 1]?.isIntersecting ?? true;
+          root.toggleAttribute("data-away", !near);
+        },
+        { rootMargin: "50% 0px" },
+      );
+      awayObserver.observe(root);
       root.addEventListener("pointermove", onMove);
       root.addEventListener("pointerleave", onLeave);
       root.addEventListener("pointerdown", onDown);
@@ -832,6 +844,7 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
         state.queue.forEach((id) => window.clearTimeout(id));
         resizeObserver.disconnect();
         intersectionObserver.disconnect();
+        awayObserver.disconnect();
         root.removeEventListener("pointermove", onMove);
         root.removeEventListener("pointerleave", onLeave);
         root.removeEventListener("pointerdown", onDown);

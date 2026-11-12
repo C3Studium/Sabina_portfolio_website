@@ -369,20 +369,88 @@ const pairUp = (a: Glyph[], b: Glyph[], reach: number) => {
   return { pairs, taken };
 };
 
+/* ---------- Sdílený kontext WebGL ---------- */
+
+// Všechny TextMorphy na stránce kreslí JEDNÍM kontextem WebGL. Dřív měl
+// každý vlastní (hlavička, hero, CTA, kurzor… = 9 na úvodní stránce) a s
+// 3D scénami stránka přetekla přes limit prohlížeče (16) — ten pak bral
+// nejstarší kontexty a karusel v heru zčernal; na iPhonu to s pamětí
+// shazovalo celou stránku. Instance kreslí do levého dolního rohu
+// sdíleného plátna a hned si výsledek zkopíruje do vlastního 2D plátna.
+type MorphUser = { onLost: () => void; onRestored: () => void };
+type SharedGl = {
+  renderer: THREE.WebGLRenderer;
+  canvas: HTMLCanvasElement;
+  users: Set<MorphUser>;
+  lost: boolean;
+  release: number;
+};
+let sharedGl: SharedGl | null = null;
+// Po odchodu posledního uživatele se kontext uvolní až po chvíli — přechod
+// stránek odpojí a hned zase připojí tytéž TextMorphy (hlavička).
+const SHARED_RELEASE_MS = 3000;
+
+const acquireGl = (user: MorphUser): SharedGl | null => {
+  if (!sharedGl) {
+    const canvas = document.createElement("canvas");
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ canvas, alpha: true, premultipliedAlpha: true, antialias: false });
+    } catch {
+      return null;
+    }
+    renderer.setClearColor(0x000000, 0);
+    renderer.setPixelRatio(1);
+    const gl: SharedGl = { renderer, canvas, users: new Set(), lost: false, release: 0 };
+    canvas.addEventListener("webglcontextlost", (event) => {
+      event.preventDefault();
+      gl.lost = true;
+      gl.users.forEach((u) => u.onLost());
+    });
+    canvas.addEventListener("webglcontextrestored", () => {
+      gl.lost = false;
+      gl.users.forEach((u) => u.onRestored());
+    });
+    sharedGl = gl;
+  }
+  window.clearTimeout(sharedGl.release);
+  sharedGl.users.add(user);
+  return sharedGl;
+};
+
+const releaseGl = (user: MorphUser) => {
+  const gl = sharedGl;
+  if (!gl) return;
+  gl.users.delete(user);
+  if (gl.users.size) return;
+  window.clearTimeout(gl.release);
+  gl.release = window.setTimeout(() => {
+    if (sharedGl !== gl || gl.users.size) return;
+    sharedGl = null;
+    gl.renderer.dispose();
+    if (!gl.lost) gl.renderer.forceContextLoss();
+    gl.canvas.width = 0;
+    gl.canvas.height = 0;
+  }, SHARED_RELEASE_MS);
+};
+
 /* ---------- Engine ---------- */
 
 export function createMorph(root: HTMLElement, settings: MorphSettings): Morph | null {
+  // Vlastní plátno je 2D — jen sem kopíruje výsledek ze sdíleného WebGL.
   const canvas = document.createElement("canvas");
   canvas.setAttribute("aria-hidden", "true");
   canvas.style.cssText = "position:absolute;pointer-events:none;display:block";
-  let renderer: THREE.WebGLRenderer;
-  try {
-    renderer = new THREE.WebGLRenderer({ canvas, alpha: true, premultipliedAlpha: true, antialias: false });
-  } catch {
-    return null;
-  }
+  const out = canvas.getContext("2d");
+  const user: MorphUser = { onLost: () => onLost(), onRestored: () => onRestored() };
+  const gl = out ? acquireGl(user) : null;
+  if (!gl) return null;
+  const renderer = gl.renderer;
   root.appendChild(canvas);
-  renderer.setClearColor(0x000000, 0);
+  // Rozměr výsledku v pixelech (= výřez sdíleného plátna).
+  let pixelW = 1;
+  let pixelH = 1;
+  const glSize = new THREE.Vector2();
 
   const mask = document.createElement("canvas");
   const mctx = mask.getContext("2d", { willReadFrequently: true });
@@ -453,10 +521,9 @@ export function createMorph(root: HTMLElement, settings: MorphSettings): Morph |
   // Prohlížeč smí WebGL kontext vzít (moc současných scén — bere nejstarší).
   // Pak se plátno schová (jinak ukáže ikonu ztraceného kontextu) a slova se
   // vyměňují bez přelití. Po obnovení kontextu zase normálně.
-  let lost = false;
+  let lost = gl.lost;
   let finish: (() => void) | null = null;
-  const onLost = (event: Event) => {
-    event.preventDefault();
+  function onLost() {
     lost = true;
     canvas.style.display = "none";
     running?.stop();
@@ -464,16 +531,14 @@ export function createMorph(root: HTMLElement, settings: MorphSettings): Morph |
     const done = finish;
     finish = null;
     done?.();
-  };
-  const onRestored = () => {
+  }
+  function onRestored() {
     lost = false;
     canvas.style.display = "block";
     empty.needsUpdate = true;
     glyphTexture.needsUpdate = true;
     build(true);
-  };
-  canvas.addEventListener("webglcontextlost", onLost);
-  canvas.addEventListener("webglcontextrestored", onRestored);
+  }
 
   const sizers = () => Array.from(root.querySelectorAll<HTMLElement>("[data-morph-word]"));
 
@@ -647,8 +712,10 @@ export function createMorph(root: HTMLElement, settings: MorphSettings): Morph |
     canvas.style.top = `${-padY}px`;
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
-    renderer.setPixelRatio(1);
-    renderer.setSize(Math.max(1, Math.round(width * ratio)), Math.max(1, Math.round(height * ratio)), false);
+    pixelW = Math.max(1, Math.round(width * ratio));
+    pixelH = Math.max(1, Math.round(height * ratio));
+    canvas.width = pixelW;
+    canvas.height = pixelH;
     uniforms.uSize.value.set(width, height);
     for (const word of words) word.texture?.dispose();
     words = [];
@@ -814,13 +881,22 @@ export function createMorph(root: HTMLElement, settings: MorphSettings): Morph |
     uniforms.uPixel.value = 1 / ratio;
     uniforms.uCap.value = cap;
     uniforms.uTintAmount.value = clamp(settings.tint, 0, 1);
+    // Sdílené plátno jen roste (na největší morf); kreslí se do výřezu
+    // vlevo dole (počátek WebGL) a ten se zkopíruje k sobě.
+    renderer.getSize(glSize);
+    if (glSize.x < pixelW || glSize.y < pixelH) renderer.setSize(Math.max(glSize.x, pixelW), Math.max(glSize.y, pixelH), false);
+    renderer.setRenderTarget(null);
+    renderer.setViewport(0, 0, pixelW, pixelH);
     renderer.render(scene, camera);
+    if (out) {
+      out.clearRect(0, 0, pixelW, pixelH);
+      out.drawImage(gl.canvas, 0, gl.canvas.height - pixelH, pixelW, pixelH, 0, 0, pixelW, pixelH);
+    }
   };
 
   const clear = () => {
-    if (destroyed || lost) return;
-    renderer.setRenderTarget(null);
-    renderer.clear();
+    if (destroyed) return;
+    out?.clearRect(0, 0, canvas.width, canvas.height);
   };
 
   // Přeměření při změně velikosti a po dorazení písma.
@@ -859,16 +935,16 @@ export function createMorph(root: HTMLElement, settings: MorphSettings): Morph |
     destroy: () => {
       destroyed = true;
       running?.stop();
-      canvas.removeEventListener("webglcontextlost", onLost);
-      canvas.removeEventListener("webglcontextrestored", onRestored);
       resizer.disconnect();
       for (const word of words) word.texture?.dispose();
       empty.dispose();
       glyphTexture.dispose();
       material.dispose();
       quad.geometry.dispose();
-      renderer.dispose();
-      renderer.forceContextLoss();
+      releaseGl(user);
+      // Uvolnit paměť plátna hned (iOS ji počítá do limitu, než zasáhne GC).
+      canvas.width = 0;
+      canvas.height = 0;
       canvas.remove();
     },
   };

@@ -84,6 +84,11 @@ $card-line: rgba(var(--snow-rgb), 0.12);
   z-index: 2;
 }
 
+// Částice připravené před bránou `go` (index.tsx) — zatím neviditelné.
+.portraitParticlesHold {
+  visibility: hidden;
+}
+
 /* ---------- Levá lišta ---------- */
 
 // V návrhu běží od 30,6vh (kroužek) po 196vh (tečka), tedy skoro celou

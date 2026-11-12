@@ -16,15 +16,19 @@ import { DOLLY_TRAVEL_VH, STEP_HOLDS, STEP_HOLD_VH } from "@/components/home/des
 /** Úseků dolly: kroky 01–06, výzva (07) a CTA (08). */
 export const SEGMENTS = 8;
 
-/** Délky úseků vůči sobě; index 0 = úsek k dlaždici 1 (krok 01). */
-export const WEIGHTS = [1.5, 1, 1.2, 1.2, 1.8, 2, 0.8, 0.8];
+/** Délky úseků vůči sobě; index 0 = úsek k dlaždici 1 (krok 01). Výzva
+ *  a CTA mají delší úsek (pomalejší nástup) — přidaná váha je v jízdě dolly
+ *  navíc (designer-timeline.ts SLOW_END), ostatní kroky se nezrychlí. */
+export const WEIGHTS = [1.5, 1, 1.2, 1.2, 1.8, 2, 1.4, 1.6];
 export const TOTAL_WEIGHT = WEIGHTS.reduce((sum, w) => sum + w, 0);
 
-/** Let kamery k další dlaždici — stejně dlouhý v každém úseku (v jednotkách váhy). */
+/** Let kamery k další dlaždici (v jednotkách váhy) — u kroků stejně
+ *  dlouhý, k výzvě a k CTA pomalejší. */
 const TRAVEL_UNITS = 0.35;
+const TRAVEL_SLOW: Record<number, number> = { 7: 0.6, 8: 0.6 };
 
 /** Jakou část úseku k dlaždici `tile` (1–8) kamera letí. */
-export const travelOf = (tile: number) => TRAVEL_UNITS / (WEIGHTS[tile - 1] ?? 1);
+export const travelOf = (tile: number) => (TRAVEL_SLOW[tile] ?? TRAVEL_UNITS) / (WEIGHTS[tile - 1] ?? 1);
 
 const glide = (t: number) => t * t * (3 - 2 * t);
 

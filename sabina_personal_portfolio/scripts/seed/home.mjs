@@ -118,16 +118,20 @@ export const blocks = [
 
     /* ------------------------------------------------------- Služby -- */
     // Dnes má text a body jen první karta; další tři jsou na webu jen číslo
-    // a název. Doplnit se dají ve Studiu.
+    // a název. Doplnit se dají ve Studiu. Číslo, štítek a odkaz jsou pole
+    // karty (prázdné = pořadí, „Co nabízím", „Zobrazit příklady").
     doc('service', 'service.ads', {
+        number: '01',
+        label: 'Co nabízím',
         title: 'Reklamní grafika',
         lead: 'Tvořím vizuály, které fungují napříč kanály – od bannerů po sociální sítě.',
         points: ['Bannery', 'Carousel formáty', 'Sociální sítě', 'Branding vizuály'],
+        cta: 'Zobrazit příklady',
         order: 1,
     }),
-    doc('service', 'service.social', { title: 'Sociální sítě', lead: '', points: [], order: 2 }),
-    doc('service', 'service.branding', { title: 'Branding', lead: '', points: [], order: 3 }),
-    doc('service', 'service.web', { title: 'Webové prvky', lead: '', points: [], order: 4 }),
+    doc('service', 'service.social', { number: '02', label: 'Co nabízím', title: 'Sociální sítě', lead: '', points: [], cta: 'Zobrazit příklady', order: 2 }),
+    doc('service', 'service.branding', { number: '03', label: 'Co nabízím', title: 'Branding', lead: '', points: [], cta: 'Zobrazit příklady', order: 3 }),
+    doc('service', 'service.web', { number: '04', label: 'Co nabízím', title: 'Webové prvky', lead: '', points: [], cta: 'Zobrazit příklady', order: 4 }),
 
     /* ------------------------------------------------------- Proces -- */
     doc('processStep', 'process.start', {

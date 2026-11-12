@@ -5,7 +5,7 @@ import TypeText from "@/components/common/type-text";
 import DesignCursor from "@/components/common/design-cursor";
 import CardSwap, { Card } from "@/components/3D/CardSwap";
 import { BuildGrid, DrawFrame, NavPill, SketchText, span, useRemoved } from "./reveal";
-import { DesignSelection, FlightImage, ToolPanels } from "./designer";
+import { ContextMenu, DesignSelection, FlightImage, ToolPanels } from "./designer";
 import { useDesigner } from "./choreography";
 import { markTyped } from "@/components/home/typing";
 import Image from "next/image";
@@ -35,6 +35,7 @@ const FALLBACK = {
   lead: "Tvořím reklamní grafiku, která zaujme, komunikuje a přináší výsledky.",
   toolsLabel: "Nástroje, se kterými pracuji",
   cta: "Domluvit spolupráci",
+  // Karty služeb: štítek a odkaz, když jsou pole karty prázdná.
   cardLabel: "Co nabízím",
   cardCta: "Zobrazit příklady",
   portrait: {
@@ -53,15 +54,30 @@ const FALLBACK_STACK: StackItem[] = ["Figma", "Adobe", "Canva Pro", "AI nástroj
 
 const FALLBACK_SERVICES: Service[] = [
   {
+    number: "",
+    label: "",
     title: "Reklamní grafika",
     icon: null,
     lead: "Tvořím vizuály, které fungují napříč kanály – od bannerů po sociální sítě.",
     points: ["Bannery", "Carousel formáty", "Sociální sítě", "Branding vizuály"],
+    cta: "",
   },
-  { title: "Sociální sítě", icon: null, lead: "", points: [] },
-  { title: "Branding", icon: null, lead: "", points: [] },
-  { title: "Webové prvky", icon: null, lead: "", points: [] },
+  ...["Sociální sítě", "Branding", "Webové prvky"].map((title) => ({
+    number: "",
+    label: "",
+    title,
+    icon: null,
+    lead: "",
+    points: [],
+    cta: "",
+  })),
 ];
+
+// Karta služby: číslo, štítek a odkaz jsou pole jejího dokumentu; prázdné
+// = pořadí karty, „Co nabízím", „Zobrazit příklady".
+const cardNumber = (service: Service, index: number) => service.number?.trim() || String(index + 1).padStart(2, "0");
+const cardLabelOf = (service: Service) => service.label?.trim() || FALLBACK.cardLabel;
+const cardCtaOf = (service: Service) => service.cta?.trim() || FALLBACK.cardCta;
 
 const FALLBACK_STATS: StatItem[] = [
   { value: "500+", label: "vytvořených bannerů", icon: null },
@@ -75,7 +91,8 @@ const FALLBACK_STATS: StatItem[] = [
 const STACKED_MAX = 3;
 
 // Kde v `items` bloku `index.info` co bydlí — musí sedět na src/lib/cms/home.ts.
-const AT = { toolsLabel: 0, cta: 1, cardLabel: 2, cardCta: 3 };
+// Položky 2–3 (štítek a odkaz karet) se už nečtou — jsou to pole karet.
+const AT = { toolsLabel: 0, cta: 1 };
 
 // Blok `index.info`, jak ho tvaruje src/lib/cms/home.ts. `docId` dorazí jen
 // v editačním rámu Studia.
@@ -85,8 +102,6 @@ export type InfoCopy = {
   lead?: string;
   toolsLabel?: string;
   cta?: string;
-  cardLabel?: string;
-  cardCta?: string;
   portrait?: CmsImage | null;
 };
 
@@ -150,8 +165,6 @@ export default function Info({
   };
   const lead = text(copy?.lead, FALLBACK.lead);
   const toolsLabel = text(copy?.toolsLabel, FALLBACK.toolsLabel);
-  const cardLabel = text(copy?.cardLabel, FALLBACK.cardLabel);
-  const cardCta = text(copy?.cardCta, FALLBACK.cardCta);
   const portrait = picture(copy?.portrait, FALLBACK.portrait);
 
   const tools = or(stack, FALLBACK_STACK);
@@ -409,7 +422,7 @@ export default function Info({
         <div ref={cardsRef} className={styles.cardsBuild}>
         {still ? null : (
           <>
-            <DrawFrame draw={cardsDraw} marks={cardsMarks} fade={cardsFrameFade} label={cardLabel} pad={CARDS_PAD} />
+            <DrawFrame draw={cardsDraw} marks={cardsMarks} fade={cardsFrameFade} label={cardLabelOf(primary)} pad={CARDS_PAD} />
             <BuildGrid opacity={cardsGrid} />
           </>
         )}
@@ -436,8 +449,11 @@ export default function Info({
               </button>
             </div>
 
-            <p className={styles.cardLabel} {...edit(`items.${AT.cardLabel}.label`)}>
-              {cardLabel}
+            <span className={styles.swapNumber} {...editPrimary("number")}>
+              {cardNumber(primary, 0)}
+            </span>
+            <p className={styles.cardLabel} {...editPrimary("label")}>
+              {cardLabelOf(primary)}
             </p>
             <h3 className={styles.cardTitle} {...editPrimary("title")}>
               {cardTitle.length ? `${cardTitle.join(" ")} ` : null}
@@ -479,7 +495,7 @@ export default function Info({
 
             {/* „Zobrazit příklady" vede vždy na portfolio — cíl není obsah. */}
             <Link className={styles.cardCta} href="/projects">
-              <span {...edit(`items.${AT.cardCta}.label`)}>{cardCta}</span>
+              <span {...editPrimary("cta")}>{cardCtaOf(primary)}</span>
               <span className={styles.cardCtaArrow} aria-hidden="true">
                 <ArrowIcon />
               </span>
@@ -494,9 +510,9 @@ export default function Info({
               style={{ "--stack-index": index } as CSSProperties}
               {...editableDoc(service.id ?? null, "service")}
             >
-              {/* Číslo je pořadí karty, ne pole: „02" je druhá služba. */}
-              <span className={styles.cardNumber}>
-                {String(index + 2).padStart(2, "0")}
+              {/* Číslo je pole karty; prázdné = pořadí („02" je druhá služba). */}
+              <span className={styles.cardNumber} {...editableIn(service.id ?? null)("number")}>
+                {cardNumber(service, index + 1)}
               </span>
               <span
                 className={styles.cardStackedTitle}
@@ -543,8 +559,8 @@ export default function Info({
                   return (
                     // Nad kartou kurzor „Táhnout" jako nad 3D scénou v heru — karty se dají táhnout.
                     <Card key={service.id ?? index} className={styles.swapCard} data-cursor="drag">
-                      <span className={styles.swapNumber}>{String(index + 1).padStart(2, "0")}</span>
-                      <p className={styles.cardLabel}>{cardLabel}</p>
+                      <span className={styles.swapNumber}>{cardNumber(service, index)}</span>
+                      <p className={styles.cardLabel}>{cardLabelOf(service)}</p>
                       <h3 className={styles.cardTitle}>
                         {words.length ? `${words.join(" ")} ` : null}
                         <span className={styles.accent}>{accent}</span>
@@ -561,7 +577,7 @@ export default function Info({
                         </ul>
                       ) : null}
                       <Link className={styles.cardCta} href="/projects">
-                        <span>{cardCta}</span>
+                        <span>{cardCtaOf(service)}</span>
                         <span className={styles.cardCtaArrow} aria-hidden="true">
                           <ArrowIcon />
                         </span>
@@ -639,6 +655,7 @@ export default function Info({
         <DesignSelection {...designer.marquee} variant="marquee" />
         <DesignSelection {...designer.hover} variant="hover" />
         <DesignSelection {...designer.selection} />
+        <ContextMenu {...designer.menu} />
         <DesignCursor {...designer.cursor} name="Sabina" big text={designer.textCursor} />
       </>
     )}

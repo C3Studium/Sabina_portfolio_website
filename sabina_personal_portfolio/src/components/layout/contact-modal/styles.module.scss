@@ -493,7 +493,7 @@ button.channelLink {
   .panel {
     position: relative;
     width: min(100%, 52rem);
-    max-height: calc(100dvh - var(--header-bottom, 3vh) - var(--contact-bar-space, 3vh));
+    max-height: calc(100svh - var(--header-bottom, 3vh) - var(--contact-bar-space, 3vh));
     border-radius: 5px;
   }
 
@@ -1843,5 +1843,15 @@ button.channelLink {
   .channelIcon {
     width: 1.25rem;
     height: 1.25rem;
+  }
+}
+
+// Dotyk: bez rozmazání podkladu. Celoplošný blur(22px) musí iPhone
+// přepočítat v každém snímku, kdy se pod ním něco hýbe (bannery, karty,
+// přelití výzvy) — modal se pak trhá. Místo něj tmavší clona.
+@media (hover: none) and (pointer: coarse) {
+  .backdrop {
+    background: rgba(12, 12, 12, 0.78);
+    backdrop-filter: none;
   }
 }

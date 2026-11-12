@@ -16,6 +16,18 @@ import * as THREE from "three";
 // stránky (FlexCarousel), jen na vlastním 2D plátně nad kartou.
 import { MARGIN as LABEL_MARGIN, drawCardLayer } from "../FlexCarousel/hover";
 import { createGlyphLayer } from "./glyphs";
+import { ATLAS_LIMIT, atlasSlot, decodeForAtlas, decodedNow, type Decoded } from "./bitmaps";
+import { isTouchDevice, releaseContext, sceneImage } from "@/lib/device";
+
+// Telefon/tablet (lib/device.ts): menší atlas, nižší rozlišení plátna, bez
+// vyhlazování, obrázky přes optimalizátor Nextu a jen pár plných fotek
+// v GPU. Na iPhonu jinak scéna s atlasem 4096² shazovala záložku.
+// K tomu lehčí scéna, aby jela i na starších iPhonech: plátno v rozlišení
+// 1× (ne 1,5×), nejvýš 28 karet na dráze, atlas 1024² (4 MB místo 16),
+// plné fotky v šířce 640 a bez sazby při posunu (druhé plátno přes celou
+// obrazovku). Obrázků je na dotyku polovina (projects/hero-list).
+const TOUCH = { atlas: 1024, dpr: 1, image: 640, photos: 2, cards: 28 };
+const DESKTOP_PHOTOS = 8;
 
 export type DepthRibbonPath = "loop" | "knot" | "wave" | "ring";
 export type DepthRibbonTour = "cycle" | "ride" | "overview";
@@ -450,6 +462,7 @@ export const createRibbon = (
   wheelHost: HTMLElement = stage,
 ): RibbonController | null => {
   const doc = root.ownerDocument;
+  const touch = isTouchDevice();
   const canvas = doc.createElement("canvas");
   canvas.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block";
   let renderer: THREE.WebGLRenderer;
@@ -457,7 +470,7 @@ export const createRibbon = (
     renderer = new THREE.WebGLRenderer({
       canvas,
       alpha: true,
-      antialias: true,
+      antialias: !touch,
       premultipliedAlpha: true,
       powerPreference: "high-performance",
     });
@@ -751,7 +764,7 @@ export const createRibbon = (
   // Počet karet na křivce. V pořadí `sequence` zaokrouhlený na celá kola položek.
   const cardTotal = () => {
     const settings = settingsRef.current;
-    const count = clamp(Math.round(settings.count), 12, MAX_CARDS);
+    const count = clamp(Math.round(touch ? Math.min(settings.count, TOUCH.cards) : settings.count), 12, MAX_CARDS);
     if (settings.order !== "sequence") return count;
     const items = Math.max(1, Math.min(itemsRef.current.length, MAX_ITEMS));
     const rounds = Math.max(Math.ceil(12 / items), Math.round(count / items));
@@ -979,12 +992,20 @@ export const createRibbon = (
     items.forEach((item, index) => {
       if (item.width && item.height) shapes[index] = item.width / item.height;
     });
+    window.clearTimeout(flushTimer);
+    flushTimer = 0;
+    drawnSince = [];
     const count = Math.max(items.length, 1);
     const cols = Math.ceil(Math.sqrt(count));
     const rows = Math.ceil(count / cols);
     // Čím méně položek, tím větší slot — strop drží atlas v limitu GPU.
-    const limit = Math.min(renderer.capabilities.maxTextureSize || 4096, 4096);
-    const slot = Math.max(128, Math.min(1024, Math.floor(limit / Math.max(cols, rows))));
+    const limit = Math.min(renderer.capabilities.maxTextureSize || ATLAS_LIMIT, touch ? TOUCH.atlas : ATLAS_LIMIT);
+    const slot = atlasSlot(count, limit);
+    // Starý atlas pryč i z paměti (iOS: limit paměti pláten).
+    if (atlasCanvas) {
+      atlasCanvas.width = 0;
+      atlasCanvas.height = 0;
+    }
     const canvasAtlas = doc.createElement("canvas");
     canvasAtlas.width = cols * slot;
     canvasAtlas.height = rows * slot;
@@ -1003,7 +1024,42 @@ export const createRibbon = (
     cardUniforms.uAtlas.value = atlasTexture;
     cardUniforms.uGrid.value.set(cols, rows);
     cardUniforms.uInset.value = 1.5 / slot;
+    // Obrázky do atlasu: přednostně předem dekódované bitmapy (bitmaps.ts —
+    // stažené a zmenšené mimo hlavní vlákno, často už na předchozí stránce).
+    // Hotové se přiloží hned a atlas se nahraje jednou; ostatní, jak dorazí,
+    // po dávkách (flushAtlas). <img> zůstává kvůli přiblížené kartě (plné
+    // rozlišení) a jako záloha, když bitmapa nejde.
+    const at = (index: number) => [(index % cols) * slot, Math.floor(index / cols) * slot] as const;
+    const place = (index: number, decoded: Decoded) => {
+      if (decoded.aspect) shapes[index] = decoded.aspect;
+      const [x, y] = at(index);
+      context?.drawImage(decoded.bitmap, x, y, slot, slot);
+    };
+    let ready = 0;
     images = items.map((item, index) => {
+      const hint = item.width && item.height ? item.width / item.height : null;
+      const url = touch ? sceneImage(item.src, TOUCH.image) : item.src;
+      const now = decodedNow(url, slot);
+      let viaImage = now === null;
+      if (now && context) {
+        place(index, now);
+        // Hotové hned: bez vlastního prolnutí karty — scénu prolne nástup.
+        loaded[index] = 1;
+        fading[index] = true;
+        ready++;
+      } else if (now === undefined) {
+        void decodeForAtlas(url, slot, hint).then((decoded) => {
+          if (destroyed || atlasCanvas !== canvasAtlas || !context) return;
+          if (!decoded) {
+            // Bitmapa nejde — atlas z <img>, až se načte.
+            viaImage = true;
+            if (image.complete && image.naturalWidth) image.onload?.(new Event("load"));
+            return;
+          }
+          place(index, decoded);
+          queueAtlas(index);
+        });
+      }
       const image = new Image();
       image.crossOrigin = "anonymous";
       image.decoding = "async";
@@ -1013,15 +1069,37 @@ export const createRibbon = (
         if (image.naturalWidth && image.naturalHeight) {
           shapes[index] = image.naturalWidth / image.naturalHeight;
         }
+        if (!viaImage) return;
         // Celý obrázek přes celý slot (bez ořezu) — poměr vrátí karta.
-        context.drawImage(image, (index % cols) * slot, Math.floor(index / cols) * slot, slot, slot);
-        if (atlasTexture) atlasTexture.needsUpdate = true;
-        fading[index] = true;
-        schedule();
+        const [x, y] = at(index);
+        context.drawImage(image, x, y, slot, slot);
+        queueAtlas(index);
       };
-      image.src = item.src;
+      image.src = url;
       return image;
     });
+    if (ready && atlasTexture) atlasTexture.needsUpdate = true;
+  };
+
+  // Nahrání atlasu do GPU po dávkách: celý atlas (až 4096²) se nahrává
+  // naráz, takže ne po každém obrázku — dorazivší se sbírají a nahrají
+  // spolu (ATLAS_BATCH s), karta se rozsvítí až s nahráním.
+  const ATLAS_BATCH = 120;
+  let flushTimer = 0;
+  let drawnSince: number[] = [];
+  const flushAtlas = () => {
+    flushTimer = 0;
+    if (destroyed || !atlasTexture) return;
+    atlasTexture.needsUpdate = true;
+    drawnSince.forEach((index) => {
+      fading[index] = true;
+    });
+    drawnSince = [];
+    schedule();
+  };
+  const queueAtlas = (index: number) => {
+    drawnSince.push(index);
+    if (!flushTimer) flushTimer = window.setTimeout(flushAtlas, ATLAS_BATCH);
   };
 
   const refreshColors = () => {
@@ -1038,7 +1116,7 @@ export const createRibbon = (
     // (přechod, nástup), uložil se zmenšený rozměr, a protože transformace
     // ResizeObserver nespustí, zůstal: plátno se natáhlo na skutečný box,
     // ale popisek karty (2D) počítal se zmenšeným — seděl menší a vlevo nahoře.
-    const nextDpr = Math.min(window.devicePixelRatio || 1, Math.max(settings.dpr, 0.5));
+    const nextDpr = Math.min(window.devicePixelRatio || 1, Math.max(touch ? Math.min(settings.dpr, TOUCH.dpr) : settings.dpr, 0.5));
     const nextWidth = Math.max(1, root.clientWidth);
     const nextHeight = Math.max(1, root.clientHeight);
     if (nextWidth === width && nextHeight === height && nextDpr === dpr) return false;
@@ -1261,7 +1339,7 @@ export const createRibbon = (
 
   const drawGlyphs = (dt: number) => {
     const settings = settingsRef.current;
-    const live = settings.glyphs && settings.view === "row" && !settings.editing && !settings.reduced && cardCount > 0;
+    const live = settings.glyphs && !touch && settings.view === "row" && !settings.editing && !settings.reduced && cardCount > 0;
     if (live) {
       const half = clamp(settings.cardSize, 0.2, 1.5) * 0.5;
       // Při posunu: čím rychleji, tím víc glyfů kolem řady.
@@ -1423,7 +1501,32 @@ export const createRibbon = (
     texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
     texture.needsUpdate = true;
     imageTextures.set(which, texture);
+    // Plné fotky v GPU jen pár posledních — nejstarší (mimo právě zobrazenou) ven.
+    const keep = touch ? TOUCH.photos : DESKTOP_PHOTOS;
+    for (const [key, old] of imageTextures) {
+      if (imageTextures.size <= keep) break;
+      if (key === which || old === photoUniforms.uImage.value) continue;
+      old.dispose();
+      imageTextures.delete(key);
+    }
     renderer.initTexture(texture);
+  };
+
+  // Předehřátí při najetí myší: obrázek v plném rozlišení se nejdřív
+  // dekóduje na pozadí (decode) a teprve pak nahraje — synchronní rozbalení
+  // velkého PNG při texImage2D by zaseklo snímek pod rukou.
+  const decoding = new Set<number>();
+  const prewarmSoon = (which: number) => {
+    const image = images[which];
+    if (!image || !image.complete || !image.naturalWidth || imageTextures.has(which) || decoding.has(which)) return;
+    decoding.add(which);
+    image
+      .decode()
+      .catch(() => {})
+      .then(() => {
+        decoding.delete(which);
+        if (!destroyed && images[which] === image) prewarm(which);
+      });
   };
 
   const focusCard = (index: number) => {
@@ -1522,7 +1625,7 @@ export const createRibbon = (
       if (candidate !== hovered) {
         hovered = candidate;
         root.style.cursor = candidate >= 0 && settings.focusOnClick ? "pointer" : "";
-        if (candidate >= 0) prewarm(assignment[candidate] ?? 0);
+        if (candidate >= 0) prewarmSoon(assignment[candidate] ?? 0);
         hoverAt = time;
       }
     } else if (!pointer.inside || (focus && focus.target === 1)) {
@@ -2119,6 +2222,7 @@ export const createRibbon = (
       destroyed = true;
       if (raf) cancelAnimationFrame(raf);
       window.clearTimeout(pressTimer);
+      window.clearTimeout(flushTimer);
       observer?.disconnect();
       resizer.disconnect();
       stage.removeEventListener("pointerdown", onDown);
@@ -2144,8 +2248,20 @@ export const createRibbon = (
       threadMaterial.dispose();
       photoMaterial.dispose();
       renderer.dispose();
-      if (!renderer.getContext().isContextLost()) renderer.forceContextLoss();
       canvas.remove();
+      // Uvolnění kontextu WebGL stojí desítky ms a odchod běží během přechodu
+      // stránek — až v klidu (plátno už v DOMu není, scéna je zrušená).
+      releaseContext(() => {
+        if (!renderer.getContext().isContextLost()) renderer.forceContextLoss();
+      });
+      // Paměť 2D pláten hned (iOS ji jinak počítá do limitu až do GC).
+      if (atlasCanvas) {
+        atlasCanvas.width = 0;
+        atlasCanvas.height = 0;
+        atlasCanvas = null;
+      }
+      label.width = 0;
+      label.height = 0;
       label.remove();
       glyphLayer.destroy();
     },
