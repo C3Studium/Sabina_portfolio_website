@@ -1,9 +1,18 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode, type Ref } from "react";
 import { useRefRegistry } from "@/providers/RefContext";
 import Image from "next/image";
-import { motion, useMotionValueEvent, useScroll, useTransform, type MotionValue } from "framer-motion";
+import {
+  animate,
+  motion,
+  useMotionValue,
+  useMotionValueEvent,
+  useScroll,
+  useTransform,
+  type MotionValue,
+} from "framer-motion";
 import TypeText from "@/components/common/type-text";
 import ScrollPlaceholder from "@/components/common/scroll-placeholder";
+import { InspectHint, InspectRoot } from "@/components/study/inspect-hint";
 import DollyGallery from "@/components/3D/DollyGallery";
 import DollyLine, { type DollyAnchor, type DollyLineHandle } from "@/components/3D/DollyGallery/DollyLine";
 import { CheckIcon } from "./wave";
@@ -34,6 +43,7 @@ import {
   chipDup,
   lineHead,
   segAt,
+  SEGMENTS,
   stepAt,
   swatchDup,
 } from "./steps";
@@ -637,6 +647,7 @@ function DeliverFormat({
   still,
   storyRatio,
   formatRef,
+  hint,
 }: {
   index: number;
   variant: string;
@@ -650,6 +661,8 @@ function DeliverFormat({
   still: boolean;
   storyRatio: MotionValue<string>;
   formatRef: (node: HTMLElement | null) => void;
+  /** Proklik do inspektoru (InspectHint) — leží přes celý formát. */
+  hint?: ReactNode;
 }) {
   const kind = (["story", "portrait", "square"] as const)[index];
   const mark = S5.marks[index];
@@ -699,6 +712,7 @@ function DeliverFormat({
       <div className={styles.cropMarks}>
         {format}
         <motion.span className={styles.cropFrame} style={still ? undefined : { opacity: markIn }} aria-hidden="true" />
+        {hint}
       </div>
       {caption ? (
         <SketchText as="p" progress={progress} from={captionAt[0]} to={captionAt[1]} still={still} className={styles.deliverCaption}>
@@ -822,13 +836,81 @@ const subscribeNarrow = (notify: () => void) => {
 };
 const readNarrow = () => window.matchMedia(NARROW).matches;
 
+/** Zastávka v okně sekce: dlaždice kamery, číslo na tlačítku a název. */
+type NavStop = { tile: number; number: string; title: string };
+
+/**
+ * Okno sekce: zastávky 0 (úvod), 1–5 (kroky) a 6 (další projekty) jako
+ * tlačítka místo scrollu — kamera dolly k nim přeletí. Šipky ← → jdou na
+ * sousední zastávku, Home zpět na úvod.
+ */
+function StepNav({
+  stops,
+  active,
+  onSelect,
+}: {
+  stops: NavStop[];
+  active: number;
+  onSelect: (tile: number) => void;
+}) {
+  // Šipky jdou po zastávkách, ne po dlaždicích — mezi 6 a CTA je dlaždice
+  // výzvy bez vlastního tlačítka.
+  useEffect(() => {
+    const at = Math.max(0, stops.findIndex((stop) => stop.tile === active));
+    const go = (index: number) => onSelect(stops[Math.min(Math.max(index, 0), stops.length - 1)].tile);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "ArrowRight") go(at + 1);
+      else if (event.key === "ArrowLeft") go(at - 1);
+      else if (event.key === "Home") go(0);
+      else return;
+      event.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [active, onSelect, stops]);
+
+  return (
+    <nav className={styles.stepNav} aria-label="Kroky spolupráce">
+      {stops.map((stop) => {
+        const current = stop.tile === active;
+        return (
+          <button
+            key={stop.tile}
+            type="button"
+            className={current ? `${styles.stepNavItem} ${styles.isCurrent}` : styles.stepNavItem}
+            aria-current={current ? "step" : undefined}
+            aria-label={`${stop.number}. ${stop.title}`}
+            onClick={() => onSelect(stop.tile)}
+          >
+            <span className={styles.stepNavNumber}>{stop.number}</span>
+            <span className={styles.stepNavTitle}>{stop.title}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+// Krok je postavený od tohoto průběhu svého úseku (ručně psaná poznámka,
+// NOTE v steps.ts, končí v 0,97). Štítky pak naskočí za HINT_DELAY s,
+// víc štítků v kroku po HINT_STAGGER s.
+const BUILT = 0.97;
+const HINT_DELAY = 0.15;
+const HINT_STAGGER = 0.45;
+
 export default function Process({
   copy = null,
   steps: docs = null,
   cta = null,
+  popup = false,
 }: {
   copy?: ProcessCopy | null;
   steps?: ProcessStep[] | null;
+  /**
+   * Okno sekce (layout/section-popup): bez přišpendlení a bez scrollu —
+   * kroky stojí hotové a kameru posílají tlačítka 1–5 (StepNav).
+   */
+  popup?: boolean;
   /** CTA jako poslední dlaždice dolly (components/home/cta) — dostane průběh
    *  svého úseku (nástup) a jestli má stát hotové. */
   cta?: ((progress: MotionValue<number>, still: boolean) => ReactNode) | null;
@@ -918,8 +1000,8 @@ export default function Process({
   );
   const editing = Boolean(copy?.docId);
   const narrow = useSyncExternalStore(subscribeNarrow, readNarrow, () => false);
-  // Hotový stav bez stavby a bez myši: Studio a úzké okno.
-  const still = editing || narrow;
+  // Hotový stav bez stavby a bez myši: Studio, úzké okno a okno sekce.
+  const still = editing || narrow || popup;
   const tablet = useMedia(PORTRAIT_TABLET);
   const dollyLayout = tablet ? DOLLY_TABLET : DOLLY;
 
@@ -944,6 +1026,17 @@ export default function Process({
     target: containerRef,
     offset: ["start start", "end end"],
   });
+  // Okno sekce: kamera (v dlaždicích) podle tlačítek, ne podle scrollu.
+  const camera = useMotionValue(0);
+  const [stop, setStop] = useState(0);
+  const flyTo = useCallback(
+    (tile: number) => {
+      setStop(tile);
+      const distance = Math.abs(tile - camera.get());
+      animate(camera, tile, { duration: Math.min(0.8 + distance * 0.25, 1.8), ease: [0.65, 0, 0.35, 1] });
+    },
+    [camera],
+  );
 
   // Kamera dolly (v dlaždicích: 0 = úvod, 1–6 kroky, 7 výzva, 8 CTA).
   // Rozjede se až po umělé myši (napíše nadpis a text, přidá nápovědu —
@@ -951,13 +1044,16 @@ export default function Process({
   const STEPS = cta ? 8 : 7;
   // Průběh úseků (0 → SEGMENTS): v každém kamera odletí k další dlaždici
   // a pak u ní stojí, zatímco se krok staví (steps.ts).
-  const seg = useTransform(
-    scrollYProgress,
-    (p) => segAt((p - PROCESS.dollyStart) / (PROCESS.dollyEnd - PROCESS.dollyStart)),
+  // V okně jsou všechny kroky hotové (úseky na konci).
+  const seg = useTransform(scrollYProgress, (p) =>
+    popup ? SEGMENTS : segAt((p - PROCESS.dollyStart) / (PROCESS.dollyEnd - PROCESS.dollyStart)),
   );
-  const dolly = useTransform(seg, (v) => Math.min(cameraAt(v), STEPS));
-  // Linka roste plynule se scrollem (kotvy v LINE, lineHead v steps.ts).
-  const lineGrow = useTransform(seg, lineHead);
+  const dolly = useTransform([seg, camera] as const, ([v, c]: number[]) =>
+    popup ? c : Math.min(cameraAt(v), STEPS),
+  );
+  // Linka roste plynule se scrollem (kotvy v LINE, lineHead v steps.ts);
+  // v okně s kamerou.
+  const lineGrow = useTransform([seg, camera] as const, ([v, c]: number[]) => lineHead(popup ? c : v));
   // Průběh jednotlivých kroků v jejich úsecích.
   const sp1 = useTransform(seg, (v) => stepAt(v, 1));
   const sp2 = useTransform(seg, (v) => stepAt(v, 2));
@@ -967,6 +1063,15 @@ export default function Process({
   const sp6 = useTransform(seg, (v) => stepAt(v, 6));
   const sp7 = useTransform(seg, (v) => stepAt(v, 7));
   const sp8 = useTransform(seg, (v) => stepAt(v, 8));
+  // Štítky „Rozbalit detail" až po stavbě kroku — dřív by blikaly nad
+  // prázdnou kompozicí (a z dálky). Krok je hotový, když jeho průběh
+  // dojede na BUILT; pak má ještě pauzu (STEP_HOLD_VH), kdy se štítky ukážou.
+  const [builtUpTo, setBuiltUpTo] = useState(0);
+  useMotionValueEvent(seg, "change", (v) => {
+    const next = Math.floor(v + (1 - BUILT));
+    if (next !== builtUpTo) setBuiltUpTo(next);
+  });
+  const shown = (step: number) => still || builtUpTo >= step;
   // 06 Další projekty: dokument kroku „06", co chybí, dodá kód.
   const sixDoc = docOf("06");
   const more: Step = {
@@ -1048,8 +1153,10 @@ export default function Process({
   );
 
   // Co už myš napsala (podle scrollu, stejné časy jako její pohyb).
-  const [typed, setTyped] = useState({ headline: false, lead: false, hint: false });
+  // V okně se nadpis a text napíšou hned po otevření.
+  const [typed, setTyped] = useState({ headline: popup, lead: popup, hint: popup });
   useMotionValueEvent(scrollYProgress, "change", (v) => {
+    if (popup) return;
     const next = {
       headline: v >= PROCESS.headlineClick,
       lead: v >= PROCESS.leadClick,
@@ -1076,7 +1183,15 @@ export default function Process({
   ]);
 
   return (
-    <section ref={containerRef} className={styles.container} id="proces" data-cursor="user" data-scroll-label="Proces">
+    // Proklik obrázků do inspektoru (InspectHint) — inspektor kreslí portál.
+    <InspectRoot>
+    <section
+      ref={containerRef}
+      className={popup ? `${styles.container} ${styles.containerPopup}` : styles.container}
+      id={popup ? undefined : "proces"}
+      data-cursor="user"
+      data-scroll-label="Proces"
+    >
       {/* Odkaz „Spolupráce" v menu: místo ve scrollu, kde dorazí CTA. Pro
           posuvník stránky je to samostatná sekce (CTA je jen animačně
           poslední dlaždice dolly, obsahově vlastní sekce). */}
@@ -1167,7 +1282,9 @@ export default function Process({
                   )}
                 </p>
 
-                {/* Nápověda posunu pod textem — menší; přidá ji umělá myš. */}
+                {/* Nápověda posunu pod textem — menší; přidá ji umělá myš.
+                    V okně se neposouvá, kroky vedou tlačítka. */}
+                {popup ? null : (
                 <motion.div
                   ref={hintRef}
                   className={styles.hint}
@@ -1181,6 +1298,7 @@ export default function Process({
                     labelProps={edit(`items.${AT.scrollHint}.label`)}
                   />
                 </motion.div>
+                )}
 
               </div>
 
@@ -1398,6 +1516,8 @@ export default function Process({
                       <Image src={shots[0].src} alt={shots[0].alt} width={shots[0].width} height={shots[0].height} sizes="18vw" />
                     </LayeredReveal>
                   </div>
+                  {/* Proklik do inspektoru: vrstvy, lupa, pixely. */}
+                  <InspectHint image={shots[0]} disabled={editing || !shown(3)} delay={HINT_DELAY} />
                 </div>
                 {(["top", "bottom"] as const).map((where, n) => (
                   <DupImage
@@ -1524,6 +1644,7 @@ export default function Process({
                       sizes="17vw"
                     />
                   )}
+                  <InspectHint image={shots[3]} disabled={editing || !shown(4)} delay={HINT_DELAY} />
                 </Block>
               </div>
 
@@ -1578,6 +1699,13 @@ export default function Process({
                       still={still}
                       storyRatio={storyRatio}
                       formatRef={stepRef(["s5-story", "s5-portrait", "s5-square"][index])}
+                      hint={
+                        <InspectHint
+                          image={shot}
+                          disabled={editing || !shown(5)}
+                          delay={HINT_DELAY + index * HINT_STAGGER}
+                        />
+                      }
                       image={<Image src={shot.src} alt={shot.alt} width={shot.width} height={shot.height} sizes="15vw" />}
                       copy={
                         index === 2 ? (
@@ -1635,6 +1763,7 @@ export default function Process({
                       />
                     </LayeredReveal>
                   </div>
+                  <InspectHint image={moreBanner} disabled={editing || !shown(6)} delay={HINT_DELAY} />
                 </div>
 
                 <Drawn
@@ -1798,6 +1927,20 @@ export default function Process({
             ...(cta ? [<div key="cta">{cta(sp8, still)}</div>] : []),
           ]}
         />
+
+        {popup ? (
+          <StepNav
+            stops={[
+              { tile: 0, number: "0", title: "Úvod" },
+              ...steps.map((step, index) => ({ tile: index + 1, number: String(index + 1), title: step.title })),
+              { tile: 6, number: "6", title: more.title },
+              // 7: CTA na konci (dlaždice 8 — za výzvou), jen když ho okno dostalo.
+              ...(cta ? [{ tile: 8, number: "7", title: "Spolupráce" }] : []),
+            ]}
+            active={stop}
+            onSelect={flyTo}
+          />
+        ) : null}
       </div>
 
       {/* Umělá myš v krocích (designer.ts): panel Vrstvy se zkratkami,
@@ -1828,5 +1971,6 @@ export default function Process({
       <DesignSelection {...designer.selection} />
       <DesignCursor {...designer.cursor} name="Sabina" big text={designer.ui.text} />
     </section>
+    </InspectRoot>
   );
 }

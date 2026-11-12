@@ -38,10 +38,27 @@ $ink: var(--charcoal);
   flex-direction: column;
   gap: clamp(0.3125rem, 0.65vh, 0.5rem);
   padding: 0.7rem 0.55rem;
-  border: 1px solid rgba(242, 247, 255, 0.16);
   border-radius: 6px;
-  background: rgba(var(--charcoal-rgb), 0.5);
-  box-shadow: 0 0.6rem 1.6rem rgba(0, 0, 0, 0.22);
+  // V klidu jen čárky — podklad (vrstva ::before) se rozsvítí až při
+  // najetí, dotyku nebo tahu (.sidebar[data-open]).
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border: 1px solid rgba(var(--snow-rgb), 0.16);
+    border-radius: inherit;
+    background: rgba(var(--charcoal-rgb), 0.5);
+    box-shadow: 0 0.6rem 1.6rem rgba(0, 0, 0, 0.22);
+    opacity: 0;
+    transition: opacity 0.22s ease;
+    pointer-events: none;
+  }
+
+  .sidebar[data-open] &::before {
+    opacity: 1;
+  }
+
   // V klidu stažená na polovinu k pravé hraně, aktivní v plné šířce —
   // scaleX píše pružina (index.tsx); tohle je stav do jejího prvního snímku.
   transform: scaleX(0.5);

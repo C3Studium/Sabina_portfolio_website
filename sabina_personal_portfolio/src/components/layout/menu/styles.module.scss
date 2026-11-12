@@ -1,156 +1,296 @@
 @use "../../../styles/system/_shortcuts.scss" as *;
 
-// Menu pro okna bez navigace v hlavičce (index.tsx). Vzhled jako kontaktní
-// modal na výšku: rozmazané pozadí a světlá karta uprostřed.
+// Menu pro okna bez navigace v hlavičce (index.tsx): tmavý list přes celé
+// okno — tečková mřížka plátna, pravítko, měřicí rámeček kolem položky.
 // Sazba ve třech barvách: bílá, zelená a uhlově černá (žádné šedé).
 
 $accent: var(--green);
 $ink: var(--charcoal);
+$text: var(--snow);
+$pad: clamp(1.25rem, 6vw, 3.5rem);
 
-.backdrop {
+.sheet {
   position: fixed;
   inset: 0;
   z-index: 100;
-  display: grid;
-  place-items: center;
-  padding: 3vh 16px;
-  background: rgba(12, 12, 12, 0.5);
-  backdrop-filter: blur(22px) saturate(0.85);
+  overflow: hidden auto;
+  color: $text;
+  background:
+    radial-gradient(70% 45% at 85% 100%, rgba(var(--green-rgb), 0.16), transparent 70%),
+    radial-gradient(rgba(var(--snow-rgb), 0.1) 1px, transparent 1.4px) 0 0 / 22px 22px,
+    #141414;
+  overscroll-behavior: contain;
 }
 
-.panel {
-  position: relative;
+.content {
   display: flex;
   flex-direction: column;
-  gap: clamp(1.5rem, 4vh, 3rem);
-  width: min(100%, 40rem);
-  max-height: 94vh;
-  overflow: hidden auto;
-  padding: clamp(2rem, 5vh, 3.5rem) clamp(1.5rem, 6vw, 3.5rem);
-  border-radius: 14px;
-  color: $ink;
-  // Stejná karta jako kontaktní modal.
-  background: linear-gradient(150deg, #e2e0dc 0%, #d7d5d0 48%, #ccc9c4 100%);
-  box-shadow: 0 4vh 10vh rgba(8, 8, 8, 0.45);
+  min-height: 100%;
+  padding: clamp(1.25rem, 3vh, 2rem) $pad calc(clamp(1.5rem, 4vh, 3rem) + env(safe-area-inset-bottom));
 }
 
-.glow {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background: radial-gradient(
-    60% 46% at 50% 40%,
-    rgba(var(--snow-rgb), 0.55),
-    rgba(var(--snow-rgb), 0.16) 58%,
-    transparent 78%
-  );
+/* ---------- Horní lišta ---------- */
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 3rem;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: $accent;
+  box-shadow: 0 0 10px rgba(var(--green-rgb), 0.7);
 }
 
 .close {
-  position: absolute;
-  top: clamp(1rem, 2.4vh, 1.75rem);
-  right: clamp(1rem, 4vw, 1.75rem);
-  z-index: 2;
   display: grid;
   place-items: center;
-  width: 2.6rem;
-  height: 2.6rem;
+  width: 3rem;
+  height: 3rem;
   padding: 0;
-  border: 1px solid rgba(var(--charcoal-rgb), 0.22);
+  border: 1px solid rgba(var(--snow-rgb), 0.3);
   border-radius: 50%;
-  background: rgba(var(--snow-rgb), 0.45);
-  color: $ink;
+  background: rgba(var(--snow-rgb), 0.04);
+  color: $text;
   cursor: pointer;
-  transition: background 0.24s ease, border-color 0.24s ease;
+  transition:
+    background 0.24s ease,
+    border-color 0.24s ease,
+    color 0.24s ease,
+    rotate 0.4s ease;
 
   svg {
-    width: 42%;
-    height: 42%;
+    width: 40%;
+    height: 40%;
   }
 
-  &:hover {
+  &:focus-visible {
     background: $accent;
     border-color: $accent;
+    color: $ink;
+  }
+
+  @media (hover: hover) {
+    &:hover {
+      background: $accent;
+      border-color: $accent;
+      color: $ink;
+      rotate: 90deg;
+    }
   }
 }
 
+// Pravítko: linka s dílky po 10 px, každý pátý delší.
+.ruler {
+  display: block;
+  height: 10px;
+  margin-top: clamp(1rem, 2.4vh, 1.75rem);
+  border-top: 1px solid rgba(var(--snow-rgb), 0.35);
+  background:
+    repeating-linear-gradient(90deg, rgba(var(--snow-rgb), 0.5) 0 1px, transparent 1px 50px) top left / 100% 9px no-repeat,
+    repeating-linear-gradient(90deg, rgba(var(--snow-rgb), 0.3) 0 1px, transparent 1px 10px) top left / 100% 5px no-repeat;
+}
+
+/* ---------- Položky ---------- */
+
 .nav {
-  position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
-  margin-top: clamp(1.5rem, 3vh, 2.5rem);
+  margin: clamp(1.5rem, 5vh, 3.5rem) 0;
 }
 
 .link {
-  display: flex;
-  align-items: baseline;
-  gap: 1.1rem;
-  padding: clamp(0.7rem, 1.6vh, 1.1rem) 0;
-  border-bottom: 1px solid rgba(var(--charcoal-rgb), 0.14);
-  color: $ink;
+  display: grid;
+  grid-template-columns: 2.4rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: clamp(0.7rem, 1.9vh, 1.3rem) 0;
+  border-bottom: 1px dashed rgba(var(--snow-rgb), 0.18);
+  color: $text;
   text-decoration: none;
+  outline: none;
+  transition: color 0.25s ease;
 
-  &:last-child {
-    border-bottom: 0;
+  &:first-child {
+    border-top: 1px dashed rgba(var(--snow-rgb), 0.18);
+  }
+
+  &[data-active] {
+    color: $accent;
   }
 }
 
 .linkIndex {
-  min-width: 2ch;
-  font-size: clamp(0.75rem, 1.3vh, 0.95rem);
+  font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.16em;
+  opacity: 0.7;
+
+  [data-active] > & {
+    opacity: 1;
+  }
+}
+
+// Maska — položka vyjede zespodu. Rezerva nahoře a dole pro rámeček.
+.mask {
+  display: block;
+  overflow: hidden;
+  padding: 0.5rem 0.75rem;
+  margin: -0.5rem -0.75rem;
 }
 
 .linkLabel {
   position: relative;
-  font-size: clamp(1.75rem, 4.2vh, 3rem);
+  display: inline-block;
+  font-size: clamp(2rem, min(9.5vw, 6.2vh), 4.25rem);
   font-weight: 300;
-  line-height: 1.1;
+  line-height: 1.05;
   letter-spacing: -0.01em;
+}
 
-  // Podtržení zelenou linkou při hoveru i z klávesnice.
-  &::after {
-    content: "";
+// Měřicí rámeček kolem položky (jako MeasureText): čárkovaný obvod,
+// zelené rohové body, u aktuální položky štítek „Jste tady".
+.frame {
+  position: absolute;
+  inset: -0.18em -0.3em -0.1em;
+  border: 1px dashed rgba(var(--snow-rgb), 0.7);
+  pointer-events: none;
+
+  i {
     position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -0.12em;
-    height: 2px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
     background: $accent;
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform 0.3s ease;
+
+    &:nth-of-type(1) {
+      left: -3.5px;
+      top: -3.5px;
+    }
+
+    &:nth-of-type(2) {
+      right: -3.5px;
+      top: -3.5px;
+    }
+
+    &:nth-of-type(3) {
+      right: -3.5px;
+      bottom: -3.5px;
+    }
+
+    &:nth-of-type(4) {
+      left: -3.5px;
+      bottom: -3.5px;
+    }
+  }
+
+  b {
+    position: absolute;
+    left: calc(100% + 0.6rem);
+    top: 50%;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    background: $accent;
+    color: $ink;
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    line-height: 1.4;
+    text-transform: uppercase;
+    white-space: nowrap;
+    translate: 0 -50%;
   }
 }
 
-.link:hover .linkLabel::after,
-.link:focus-visible .linkLabel::after {
-  transform: scaleX(1);
+.linkArrow {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 1px solid rgba(var(--snow-rgb), 0.25);
+  border-radius: 50%;
+  opacity: 0.5;
+  transition:
+    opacity 0.25s ease,
+    border-color 0.25s ease,
+    translate 0.3s ease;
+
+  svg {
+    width: 45%;
+    height: 45%;
+  }
+
+  .link:hover &,
+  .link:focus-visible & {
+    opacity: 1;
+    border-color: $accent;
+    color: $accent;
+    translate: 0.25rem 0;
+  }
 }
 
-// Stejná výzva jako v hlavičce: tmavý box, zelené písmo, šipka v kroužku.
+/* ---------- Spodek ---------- */
+
+.bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: auto;
+}
+
+.where {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+
+  span {
+    margin-left: 0.4rem;
+    color: $accent;
+  }
+}
+
+// Výzva přes šířku: zelená plocha, uhlové písmo (jako lišta dole na telefonu).
 .cta {
-  position: relative;
-  z-index: 1;
-  align-self: flex-start;
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.85rem;
-  padding: 1rem 1.35rem;
+  width: 100%;
+  max-width: 34rem;
+  padding: 0.9rem 0.9rem 0.9rem 1.4rem;
   border: 0;
-  border-radius: 5px;
-  background: $ink;
-  color: $accent;
+  border-radius: 8px;
+  background: $accent;
+  color: $ink;
   font-family: inherit;
-  font-size: 1rem;
-  font-weight: 500;
-  letter-spacing: 0.15em;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   white-space: nowrap;
   cursor: pointer;
+  transition: background 0.24s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: $text;
+  }
 }
 
 .ctaArrow {
@@ -158,30 +298,40 @@ $ink: var(--charcoal);
   place-items: center;
   width: 2.6rem;
   height: 2.6rem;
-  border: 1px solid $accent;
+  border: 1px solid $ink;
   border-radius: 50%;
 
   svg {
-    width: 1.3rem;
-    height: 1.3rem;
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+}
+
+// Nízké okno (telefon na šířku): menší položky, dvě v řadě nevadí.
+@media (max-height: 520px) and (orientation: landscape) {
+  .nav {
+    margin: 1rem 0;
+  }
+
+  .link {
+    padding: 0.4rem 0;
+  }
+
+  .linkLabel {
+    font-size: clamp(1.5rem, 7vh, 2.4rem);
+  }
+}
+
+@media (max-width: 380px) {
+  .cta {
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .close,
-  .linkLabel::after {
+  .linkArrow {
     transition: none;
-  }
-}
-
-// Úzký telefon: výzva přes šířku karty, menší proklad písma — jinak by
-// „Domluvit spolupráci" přetekla přes pravý okraj karty.
-@media (max-width: 420px) {
-  .cta {
-    align-self: stretch;
-    justify-content: space-between;
-    padding: 0.9rem 1rem;
-    font-size: 0.9rem;
-    letter-spacing: 0.1em;
   }
 }

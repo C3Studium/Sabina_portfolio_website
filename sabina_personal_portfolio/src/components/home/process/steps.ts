@@ -11,6 +11,7 @@
 // jsou podíly jeho úseku (s ∈ 0–1); let končí v travelOf(krok).
 
 import { clamp01, type Window } from "@/components/home/info/choreography";
+import { DOLLY_TRAVEL_VH, STEP_HOLDS, STEP_HOLD_VH } from "@/components/home/designer-timeline";
 
 /** Úseků dolly: kroky 01–06, výzva (07) a CTA (08). */
 export const SEGMENTS = 8;
@@ -27,13 +28,20 @@ export const travelOf = (tile: number) => TRAVEL_UNITS / (WEIGHTS[tile - 1] ?? 1
 
 const glide = (t: number) => t * t * (3 - 2 * t);
 
-/** Průběh scrollu dolly (0–1) → úseky (0 → SEGMENTS), podle vah. */
+/** Pauza na konci úseku (krok hotový, kamera stojí) v jednotkách váhy —
+ *  STEP_HOLD_VH (designer-timeline.ts) při tempu jízdy dolly. CTA ji nemá. */
+const HOLD = STEP_HOLD_VH / (DOLLY_TRAVEL_VH / TOTAL_WEIGHT);
+const PACED_WEIGHT = TOTAL_WEIGHT + HOLD * STEP_HOLDS;
+
+/** Průběh scrollu dolly (0–1) → úseky (0 → SEGMENTS), podle vah. Po
+ *  každém kroku (úseky 1–STEP_HOLDS) průběh chvíli stojí na celém čísle. */
 export const segAt = (p: number) => {
-  const target = clamp01(p) * TOTAL_WEIGHT;
+  const target = clamp01(p) * PACED_WEIGHT;
   let acc = 0;
   for (let i = 0; i < SEGMENTS; i++) {
-    if (target <= acc + WEIGHTS[i]) return i + (target - acc) / WEIGHTS[i];
-    acc += WEIGHTS[i];
+    const length = WEIGHTS[i] + (i < STEP_HOLDS ? HOLD : 0);
+    if (target <= acc + length) return i + Math.min((target - acc) / WEIGHTS[i], 1);
+    acc += length;
   }
   return SEGMENTS;
 };

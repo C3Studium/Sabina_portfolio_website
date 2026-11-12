@@ -1,4 +1,6 @@
 import type { Project } from "@/lib/site/projects";
+import { STUDY_TEMPLATE } from "@/components/study/content";
+import { STUDY_JORDAN, STUDY_VIKIO, STUDY_VLNENE_ZBOZI } from "@/components/study/studies";
 
 // Šest projektů, jak stály v kódu před napojením na Studio — a stojí tu dál
 // jako záloha: bez databáze (nebo s prázdnou) web vypadá stejně. Řadu karet
@@ -27,6 +29,7 @@ export const FALLBACK_PROJECTS: Project[] = [
     tagline: "Bannerová kampaň",
     perex: "",
     goals: [],
+    shared: [],
     body: "",
     bodyText: "",
     cover: picture(
@@ -40,18 +43,20 @@ export const FALLBACK_PROJECTS: Project[] = [
     order: 1,
     featured: true,
     cardCta: "Zjistit víc",
+    study: null,
   },
   {
     slug: "vecicky",
-    title: "Věcicky",
+    title: "Věcičky",
     tagline: "Sezónní kampaň",
     perex: "",
     goals: [],
+    shared: [],
     body: "",
     bodyText: "",
     cover: picture(
       "/assets/banners/vecicky_banner16.png",
-      "Sezónní kampaň pro e-shop s dětskou módou Věcicky",
+      "Sezónní kampaň pro e-shop s dětskou módou Věcičky",
       1468,
       2587,
     ),
@@ -60,6 +65,8 @@ export const FALLBACK_PROJECTS: Project[] = [
     order: 2,
     featured: true,
     cardCta: "Zjistit víc",
+    // Případová studie Věciček — záloha bez databáze (ve Studiu záložka „Případová studie").
+    study: STUDY_TEMPLATE,
   },
   {
     slug: "bruzek",
@@ -67,6 +74,7 @@ export const FALLBACK_PROJECTS: Project[] = [
     tagline: "Digitální kampaň",
     perex: "",
     goals: [],
+    shared: [],
     body: "",
     bodyText: "",
     cover: picture(
@@ -80,6 +88,7 @@ export const FALLBACK_PROJECTS: Project[] = [
     order: 3,
     featured: true,
     cardCta: "Zjistit víc",
+    study: null,
   },
   {
     slug: "wooline",
@@ -87,6 +96,7 @@ export const FALLBACK_PROJECTS: Project[] = [
     tagline: "Obsah pro e-shop",
     perex: "",
     goals: [],
+    shared: [],
     body: "",
     bodyText: "",
     cover: picture(
@@ -100,6 +110,7 @@ export const FALLBACK_PROJECTS: Project[] = [
     order: 4,
     featured: false,
     cardCta: "",
+    study: null,
   },
   {
     slug: "mistr-pet",
@@ -107,6 +118,7 @@ export const FALLBACK_PROJECTS: Project[] = [
     tagline: "Promo vizuály",
     perex: "",
     goals: [],
+    shared: [],
     body: "",
     bodyText: "",
     cover: picture(
@@ -120,6 +132,7 @@ export const FALLBACK_PROJECTS: Project[] = [
     order: 5,
     featured: false,
     cardCta: "",
+    study: null,
   },
   {
     slug: "samurai",
@@ -127,6 +140,7 @@ export const FALLBACK_PROJECTS: Project[] = [
     tagline: "Uvedení produktu",
     perex: "",
     goals: [],
+    shared: [],
     body: "",
     bodyText: "",
     cover: picture(
@@ -140,6 +154,59 @@ export const FALLBACK_PROJECTS: Project[] = [
     order: 6,
     featured: true,
     cardCta: "Chci vědět víc",
+    study: null,
+  },
+  // Další případové studie — jen v záloze (a ve Studiu po scripts/cms-studies.mjs).
+  {
+    slug: "vlnene-zbozi",
+    title: "Vlněné zboží",
+    tagline: "Reklamní bannery",
+    perex: "",
+    goals: [],
+    shared: [],
+    body: "",
+    bodyText: "",
+    cover: picture("/assets/banners/vlnenezbozi_banner2.png", "Reklamní bannery pro e-shop s výrobky z ovčí vlny Vlněné zboží", 1080, 1350),
+    gallery: [],
+    tone: "dark",
+    order: 7,
+    featured: false,
+    cardCta: "",
+    study: STUDY_VLNENE_ZBOZI,
+  },
+  {
+    slug: "vikio",
+    title: "VIKIO",
+    tagline: "Reklamní bannery",
+    perex: "",
+    goals: [],
+    shared: [],
+    body: "",
+    bodyText: "",
+    cover: picture("/assets/banners/vikio_banner8.png", "Reklamní bannery pro e-shop s nábytkem VIKIO", 1055, 1876),
+    gallery: [],
+    tone: "light",
+    order: 8,
+    featured: false,
+    cardCta: "",
+    study: STUDY_VIKIO,
+  },
+  {
+    slug: "jordan",
+    title: "Jordan",
+    tagline: "Reklamní bannery",
+    perex: "",
+    goals: [],
+    shared: [],
+    body: "",
+    bodyText: "",
+    cover: picture("/assets/banners/jordan_banner3.png", "Reklamní vizuály pro čokoládovnu Jordan", 205, 256),
+    gallery: [],
+    tone: "dark",
+    order: 9,
+    featured: false,
+    cardCta: "",
+    study: STUDY_JORDAN,
   },
 ];
 

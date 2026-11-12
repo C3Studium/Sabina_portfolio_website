@@ -1,0 +1,94 @@
+// Konstrukční kresba (geometry.tsx). Barvy podle varianty přes proměnné:
+// --line (linky), --dot (body), --accent (trojúhelník a bod).
+
+.geo {
+  --line: var(--charcoal);
+  --dot: var(--charcoal);
+  --accent: var(--green);
+  display: block;
+  overflow: visible;
+  pointer-events: none;
+  animation: geo-in 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  &[data-variant="dim"] {
+    --line: rgba(var(--snow-rgb), 0.11);
+    --dot: rgba(var(--snow-rgb), 0.18);
+    --accent: rgba(var(--snow-rgb), 0.16);
+  }
+
+  // Linky drží sílu 1 px při jakékoli velikosti kresby.
+  * {
+    vector-effect: non-scaling-stroke;
+  }
+}
+
+@keyframes geo-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+.solid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.dashed {
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-dasharray: 6 6;
+}
+
+.dotted {
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+
+.measure {
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-dasharray: 5 5;
+  animation: drift 3s linear infinite;
+}
+
+.accent {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.dot {
+  fill: var(--dot);
+}
+
+.accentDot {
+  fill: var(--accent);
+}
+
+// Poloměr obíhá střed kruhu.
+.hand {
+  transform-box: view-box;
+  transform-origin: 150px 200px;
+  animation: orbit 16s linear infinite;
+}
+
+@keyframes orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes drift {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .geo,
+  .hand,
+  .measure {
+    animation: none;
+  }
+}

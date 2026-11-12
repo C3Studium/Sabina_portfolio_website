@@ -61,6 +61,7 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   display: flex;
   flex-direction: column;
   overflow: hidden auto;
+  overscroll-behavior: contain;
   color: $ink;
   // Světlejší sourozenec podkladu sekcí — modal má být nadhled nad
   // stránkou, ne její pokračování, ale zůstává ve stejné rodině tónů.
@@ -95,120 +96,6 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   background-size: 4px 4px;
   mask-image: radial-gradient(36% 50% at 34% 52%, transparent 50%, #000 68%, transparent 88%);
   -webkit-mask-image: radial-gradient(36% 50% at 34% 52%, transparent 50%, #000 68%, transparent 88%);
-}
-
-/* ---------- Horní lišta ---------- */
-
-.bar {
-  position: relative;
-  z-index: 7;
-  display: flex;
-  align-items: center;
-  // NE space-between: v návrhu sedí navigace hned vedle značky a všechno
-  // volné místo je až za ní, před křížkem (margin-left: auto).
-  justify-content: flex-start;
-  gap: clamp(2rem, 7vw, 11rem);
-  flex-shrink: 0;
-  height: $header-height;
-  padding-inline: $gutter;
-}
-
-// Rozměry 1:1 z layout/header — modal musí na značku navazovat bez skoku.
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.7rem;
-  flex-shrink: 0;
-}
-
-.brandMark {
-  width: auto;
-  height: 2.15rem;
-}
-
-.brandText {
-  display: flex;
-  flex-direction: column;
-  line-height: 1;
-}
-
-.brandName {
-  font-size: 1.32rem;
-  font-weight: 500;
-  letter-spacing: 0.19em;
-  text-transform: uppercase;
-}
-
-.brandSurname {
-  margin-top: 0.24rem;
-  font-size: 0.62rem;
-  font-weight: 300;
-  letter-spacing: 0.235em;
-  text-transform: uppercase;
-  align-self: flex-end;
-}
-
-.nav {
-  display: flex;
-  align-items: center;
-  gap: clamp(1.1rem, 2.6vw, 2.5rem);
-}
-
-.navLink {
-  font-size: 0.68rem;
-  font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  transition: color 0.22s ease;
-
-  &:hover {
-    color: $accent;
-  }
-}
-
-// Aktivní položka nemění barvu, jen dostane accentovou tečku pod sebou.
-.isActive {
-  position: relative;
-
-  &::after {
-    content: "";
-    position: absolute;
-    left: 50%;
-    bottom: -0.55rem;
-    width: 0.22rem;
-    height: 0.22rem;
-    border-radius: 50%;
-    background: $accent;
-    transform: translateX(-50%);
-  }
-}
-
-.close {
-  margin-left: auto;
-  display: grid;
-  place-items: center;
-  width: 2.6rem;
-  height: 2.6rem;
-  flex-shrink: 0;
-  padding: 0;
-  border: 1px solid rgba(var(--charcoal-rgb), 0.22);
-  border-radius: 50%;
-  background: rgba(var(--snow-rgb), 0.45);
-  color: $ink;
-  cursor: pointer;
-  transition: background 0.24s ease, border-color 0.24s ease, transform 0.24s ease;
-
-  svg {
-    width: 42%;
-    height: 42%;
-  }
-
-  &:hover {
-    background: $accent;
-    border-color: $accent;
-    transform: rotate(90deg);
-  }
 }
 
 /* ---------- Tělo ---------- */
@@ -350,15 +237,114 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   color: $ink-muted;
 }
 
+// Šipka v kroužku: uhlová; u kopírovatelných kontaktů na myši při najetí
+// zelená v černém kroužku a vedle popisek. Na dotyku ikona kopírování.
 .channelArrow {
+  position: relative;
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  color: $accent;
-  transition: transform 0.22s ease;
+  width: clamp(1.6rem, 3.6vh, 4.6rem);
+  height: clamp(1.6rem, 3.6vh, 4.6rem);
+  border-radius: 50%;
+  color: $ink;
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s ease;
 
-  a.channelLink:hover & {
-    transform: translateX(3px);
+  svg {
+    width: 46%;
+    height: 46%;
+  }
+}
+
+.arrowGlyph,
+.copyGlyph {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.copyGlyph {
+  display: none;
+}
+
+// Tlačítko kopírování vypadá jako řádek, ne jako tlačítko.
+button.channelLink {
+  width: 100%;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: copy;
+}
+
+// Popisek kontaktu a nápověda kopírování přes sebe v jedné buňce: při
+// najetí (a po zkopírování) popisek odjede nahoru, nápověda přijede zdola.
+.channelLabelSlot {
+  display: grid;
+  overflow: hidden;
+
+  > * {
+    grid-area: 1 / 1;
+    transition:
+      opacity 0.25s ease,
+      transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+.channelHint {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: $ink;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(100%);
+}
+
+@mixin hint-shown {
+  .channelLabelSlot > .channelLabel:not(.channelHint) {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+
+  .channelHint {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+[data-copied] {
+  @include hint-shown;
+}
+
+[data-copied] .channelArrow {
+  background: $ink;
+  color: $accent;
+}
+
+@media (hover: hover) {
+  button.channelLink:hover {
+    @include hint-shown;
+
+    .channelArrow {
+      background: $ink;
+      color: $accent;
+    }
+  }
+}
+
+// Dotyk: místo šipky ikona kopírování; „Zkopírováno" jen po klepnutí.
+@media (hover: none) {
+  [data-copy] .arrowGlyph {
+    display: none;
+  }
+
+  [data-copy] .copyGlyph {
+    display: grid;
   }
 }
 
@@ -413,19 +399,22 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
     position: absolute;
     // V rámu obsahu (globals.scss): přes celou výšku, na širším okně než
     // 16 : 9 uprostřed, kolem rozmazané pozadí.
-    inset: 2vh calc(var(--frame-x) + 1.6vw);
-    border-radius: 0.75vw;
+    // Shora až pod hlavičkou webu (--header-bottom měří modal, index.tsx)
+    // — ta stojí nad modalem a její výzva ho zavírá.
+    inset: var(--header-bottom, 2vh) calc(var(--frame-x) + 1.6vw) 2vh;
+    border-radius: min(0.75vw, 5px);
   }
 
   // Levý sloupec: úvod a pod ním kontakty; vpravo formulář přes obě řady.
   .body {
-    grid-template-columns: 0.85fr 1fr;
+    // Kontakty úzký sloupec, formulář zabere zbytek až k pravému okraji.
+    grid-template-columns: minmax(0, 0.46fr) minmax(0, 1fr);
     grid-template-rows: auto 1fr;
     grid-template-areas:
       "intro form"
       "channels form";
-    column-gap: 8vw;
-    padding: 6vh 7.5vw;
+    column-gap: 4.5vw;
+    padding: 6vh 4.5vw 6vh 6.5vw;
   }
 
   .formLead {
@@ -441,45 +430,35 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
     border-top: 1px solid $line;
   }
 
+  // Kontakty menší a vzdušnější.
   .channelLink {
-    gap: 1.1vw;
-    padding: 1.8vh 0;
-  }
-
-  a.channelLink:hover {
-    color: $accent;
+    gap: 1vw;
+    padding: 2.6vh 0;
   }
 
   .channelIcon {
-    width: clamp(1.6rem, 4.4vh, 5.8rem);
-    height: clamp(1.6rem, 4.4vh, 5.8rem);
+    width: clamp(1.5rem, 3.8vh, 5rem);
+    height: clamp(1.5rem, 3.8vh, 5rem);
   }
 
   .channelLabel {
-    font-size: clamp(0.5rem, 1.16vh, 1.55rem);
+    font-size: clamp(0.48rem, 1.02vh, 1.4rem);
+    white-space: nowrap;
   }
 
   .channelValue {
-    margin-top: 0.6vh;
-    font-size: clamp(0.75rem, 1.94vh, 2.55rem);
+    margin-top: 0.8vh;
+    white-space: pre;
+    font-size: clamp(0.68rem, 1.6vh, 2.1rem);
   }
 
   .channelNote {
-    margin-top: 0.5vh;
-    font-size: clamp(0.48rem, 1.14vh, 1.5rem);
-  }
-
-  .channelArrow svg {
-    width: clamp(0.7rem, 1.9vh, 2.5rem);
-    height: clamp(0.7rem, 1.9vh, 2.5rem);
+    margin-top: 0.6vh;
+    font-size: clamp(0.46rem, 1.05vh, 1.4rem);
   }
 
   // Užší okno na šířku (telefon, menší tablet): navigace se nevejde.
   @media (max-width: 1100px) {
-    .nav {
-      display: none;
-    }
-
     .body {
       column-gap: 5vw;
       padding: 4vh 5vw;
@@ -491,25 +470,6 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
     }
   }
 
-  // Nízké okno na šířku (telefon): menší lišta, ať zbude místo na obsah.
-  @media (max-height: 520px) {
-    .bar {
-      height: 3.6rem;
-    }
-
-    .brandMark {
-      height: 1.6rem;
-    }
-
-    .brandName {
-      font-size: 1rem;
-    }
-
-    .close {
-      width: 2.2rem;
-      height: 2.2rem;
-    }
-  }
 }
 
 /* ---------- Na výšku: karta uprostřed ---------- */
@@ -518,15 +478,23 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   .backdrop {
     display: grid;
     place-items: center;
-    padding: 3vh 16px;
+    // Shora pod hlavičkou, na telefonu dole místo pro lištu „Zavřít".
+    padding: var(--header-bottom, 3vh) 16px var(--contact-bar-space, 3vh);
+  }
+
+  // Telefon: dole stojí lišta „Zavřít" (layout/header, .contactBar).
+  @media (max-width: 599.98px) {
+    .backdrop {
+      --contact-bar-space: calc(3.7rem + 8vw + env(safe-area-inset-bottom, 0px));
+    }
   }
 
   // Vysoká jen podle obsahu, na nízké obrazovce se posouvá uvnitř.
   .panel {
     position: relative;
     width: min(100%, 52rem);
-    max-height: 94vh;
-    border-radius: 14px;
+    max-height: calc(100dvh - var(--header-bottom, 3vh) - var(--contact-bar-space, 3vh));
+    border-radius: 5px;
   }
 
   .glow {
@@ -541,25 +509,6 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   .grain {
     mask-image: radial-gradient(62% 50% at 50% 40%, transparent 50%, #000 68%, transparent 88%);
     -webkit-mask-image: radial-gradient(62% 50% at 50% 40%, transparent 50%, #000 68%, transparent 88%);
-  }
-
-  // Z lišty zbude jen křížek v rohu karty.
-  .bar {
-    position: absolute;
-    top: 2.4vh;
-    right: 4vw;
-    height: auto;
-    padding: 0;
-  }
-
-  .brand,
-  .nav {
-    display: none;
-  }
-
-  .close {
-    width: 2.4rem;
-    height: 2.4rem;
   }
 
   // Formulář a pod ním kontakty; úvod se neukazuje.
@@ -605,7 +554,7 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
     background: rgba(var(--snow-rgb), 0.32);
   }
 
-  a.channelLink:hover {
+  button.channelLink:hover {
     border-color: $accent;
     background: rgba(var(--snow-rgb), 0.6);
   }
@@ -638,6 +587,8 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
     position: absolute;
     top: 1.2vh;
     right: 2.4vw;
+    width: 1.9rem;
+    height: 1.9rem;
 
     svg {
       width: clamp(0.7rem, 1.6vh, 1.2rem);
@@ -1106,48 +1057,6 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
 // (Vše v styles/system/_mixins.scss.) Zařízení s jinou výškou (tablet,
 // telefon na šířku) mají vlastní bloky pod tímhle.
 @include xxs-h {
-  .bar {
-    gap: clamp(ease-floor(2rem), 7vw, 11rem);
-  }
-
-  .brand {
-    gap: fluid(0.7rem);
-  }
-
-  .brandMark {
-    height: fluid(2.15rem);
-  }
-
-  .brandName {
-    font-size: fluid(1.32rem, null, 11px);
-  }
-
-  .brandSurname {
-    margin-top: fluid(0.24rem);
-    font-size: fluid(0.62rem, null, 11px);
-  }
-
-  .nav {
-    gap: clamp(ease-floor(1.1rem), 2.6vw, 2.5rem);
-  }
-
-  .navLink {
-    font-size: fluid(0.68rem, null, 11px);
-  }
-
-  .isActive {
-    &::after {
-      bottom: fluid(-0.55rem);
-      width: fluid(0.22rem);
-      height: fluid(0.22rem);
-    }
-  }
-
-  .close {
-    width: fluid(2.6rem);
-    height: fluid(2.6rem);
-  }
-
   .eyebrow {
     font-size: clamp(ease-floor(0.55rem, 9px), fit-vh(1.24vh), 1.65rem);
   }
@@ -1247,12 +1156,9 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
   // Na nízkém notebooku (1280 × 620) se formulář nevešel do panelu — tlačítko
   // Odeslat bylo pod spodní hranou. Ubírá se z výšek, šířky zůstávají:
   // lišta jako hlavička webu, menší vnitřní okraj, nižší pole a zpráva.
-  .bar {
-    height: fluid($header-height);
-  }
-
   .body {
-    padding: fluid-scale(6vh, 0.5) 7.5vw;
+    // Vpravo menší okraj — formulář sahá skoro k hraně panelu.
+    padding: fluid-scale(6vh, 0.5) 4.5vw fluid-scale(6vh, 0.5) 7vw;
   }
 
   .channelLink {
@@ -1270,5 +1176,619 @@ $gutter: clamp(1.5rem, 4vw, 3.25rem);
 
   .submit {
     padding: fluid-scale(2vh, 0.8) 1.4vw;
+  }
+}
+
+/* ---------- Bauhaus rozvržení ---------- */
+// Panel jako mřížka plochých modulů, ne karta s obsahem:
+//  - vlevo plný uhlový sloupec přes celou výšku — zelený kruh, prstenec
+//    přes něj, krátký pruh a nadpis dole (sněhový text, zelené zvýraznění),
+//  - vpravo poptávka na světlé ploše,
+//  - pod ní kontakty jako pás čtyř stejných modulů s vlasovými linkami,
+//    od uhlového sloupce až k pravé hraně panelu.
+// Na výšku tytéž moduly pod sebou: uhlový pás, poptávka, kontakty 2 × 2.
+// Blok stojí na konci souboru schválně — přebíjí starší rozvržení výš.
+
+$line-strong: rgba(var(--charcoal-rgb), 0.85);
+$snow-soft: rgba(var(--snow-rgb), 0.72);
+
+// Ploché plochy: měkký světlý tvar a zrno patřily starému složení.
+.glow,
+.grain {
+  display: none;
+}
+
+.panel {
+  background: #dbd9d4;
+}
+
+.body {
+  column-gap: 0;
+  row-gap: 0;
+  padding: 0;
+}
+
+// Sloupec NEořezává (z-index 2 nad formulářem) — rozložený banner je ale
+// nastavený tak, aby zůstal v něm; ořezává se jen podklad (.introBg).
+.intro {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: visible;
+  isolation: isolate;
+  background: $ink;
+  color: var(--snow);
+}
+
+.introBg {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+// Konstrukční kresba (geometry.tsx) v uhlovém sloupci.
+.introGeo {
+  position: absolute;
+  height: auto;
+}
+
+// Kresba patří formuláři: sloupec ji ořízne (clip — ne hidden, ten by
+// zrušil přilepení tlačítek kroků).
+.formCol {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+}
+
+.shapeBar {
+  display: block;
+  flex-shrink: 0;
+  background: var(--snow);
+  transform-origin: left center;
+}
+
+.intro .eyebrow {
+  color: $snow-soft;
+}
+
+.intro .eyebrowArrow {
+  color: var(--snow);
+}
+
+.intro .headline {
+  color: var(--snow);
+}
+
+.intro .lead {
+  max-width: none;
+  margin: 0;
+  color: $snow-soft;
+}
+
+// Kontakty: moduly s vlasovou linkou, ikona a šipka nahoře, text dole.
+.channels {
+  display: grid;
+  margin: 0;
+  border-top: 1px solid $line-strong;
+}
+
+.channel + .channel {
+  border-top: 0;
+}
+
+.channelLink,
+button.channelLink {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "icon . arrow"
+    "text text text";
+  align-items: start;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.channelIcon {
+  grid-area: icon;
+}
+
+.channelText {
+  grid-area: text;
+  margin: 0;
+}
+
+.channelArrow {
+  grid-area: arrow;
+  position: static;
+}
+
+.channelValue {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (hover: hover) {
+  button.channelLink:hover {
+    border-color: transparent;
+    background: rgba(var(--snow-rgb), 0.45);
+  }
+}
+
+/* Na šířku: uhlový sloupec | poptávka nad pásem kontaktů. */
+@media (orientation: landscape) {
+  .body {
+    grid-template-columns: minmax(0, 0.34fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "intro form"
+      "intro channels";
+    padding: 0;
+  }
+
+  .intro {
+    padding: 5vh 2.6vw 5.4vh;
+  }
+
+  .intro .eyebrow {
+    position: absolute;
+    top: 5vh;
+    left: 2.6vw;
+    margin: 0;
+  }
+
+  // Kresba v sloupci velká a oříznutá za nadpisem.
+  .introGeo {
+    bottom: -4%;
+    left: -34%;
+    width: 160%;
+  }
+
+  // Rozložený banner (layer-stack) v horní části sloupce.
+  .intro {
+    --stack-top: 38%;
+    --stack-left: 36%;
+    --stack-size: 46%;
+    --stack-gap: 5vh;
+  }
+
+  .shapeBar {
+    width: 3.2vw;
+    height: 0.5vh;
+    margin-bottom: 3vh;
+  }
+
+  .intro .headline {
+    margin: 0 0 2.4vh;
+    font-size: clamp(1.15rem, 4.8vh, 6.2rem);
+  }
+
+  .intro .lead {
+    font-size: clamp(0.65rem, 1.45vh, 1.95rem);
+  }
+
+  .formCol {
+    padding: 4.6vh 3.4vw 2.6vh;
+  }
+
+  .channels {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .channel + .channel {
+    border-left: 1px solid $line;
+  }
+
+  .channelLink,
+  button.channelLink {
+    row-gap: 1.1vh;
+    padding: 1.8vh 1.4vw 2vh;
+  }
+
+  // pre-wrap: mezery v „Po – Pá   9:00" zůstanou; kde je modul úzký, hodnota
+  // se zalomí (e-mail za zavináčem, viz ChannelRow) — nikdy se neořízne.
+  .channelValue {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: pre-wrap;
+  }
+
+  // E-mail je nejdelší hodnota — jeho modul o něco širší.
+  .channels {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+/* Na výšku: moduly pod sebou. */
+@media (orientation: portrait) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "intro"
+      "form"
+      "channels";
+    padding: 0;
+  }
+
+  .intro {
+    display: flex;
+    min-height: clamp(11rem, 26vh, 18rem);
+    padding: 3vh 6vw 3.2vh;
+  }
+
+  .intro .eyebrow {
+    position: absolute;
+    top: 3vh;
+    left: 6vw;
+    margin: 0;
+    font-size: 0.62rem;
+  }
+
+  // Na výšku Bauhaus tvary jen ve spodní části formuláře (za kartami a
+  // tlačítky), ukotvené vpravo dole.
+  .formCol .formBg {
+    inset: auto 0 0 auto;
+    height: 62%;
+  }
+
+  .introGeo {
+    top: -30%;
+    left: -10%;
+    width: 120%;
+  }
+
+  // Banner vpravo v pásu, nadpis vlevo.
+  .intro {
+    --stack-top: 54%;
+    --stack-left: 64%;
+    --stack-size: clamp(5rem, 18%, 10rem);
+    --stack-gap: clamp(0.6rem, 2.6vw, 1.4rem);
+  }
+
+  .shapeBar {
+    width: 2.6rem;
+    height: 3px;
+    margin-bottom: 1.6vh;
+  }
+
+  .intro .headline {
+    margin: 0 0 1.4vh;
+    font-size: clamp(1.25rem, 5.4vw, 2.6rem);
+  }
+
+  .intro .lead {
+    max-width: 34rem;
+    font-size: clamp(0.78rem, 2vw, 0.95rem);
+  }
+
+  .formCol {
+    padding: 3.4vh 6vw 1.6vh;
+  }
+
+  .channels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    margin: 0;
+  }
+
+  .channel:nth-child(even) {
+    border-left: 1px solid $line;
+  }
+
+  .channel:nth-child(n + 3) {
+    border-top: 1px solid $line;
+  }
+
+  .channelLink,
+  button.channelLink {
+    row-gap: 1.2vh;
+    padding: 2vh 6vw 2.2vh;
+  }
+
+  .channelArrow {
+    width: 1.9rem;
+    height: 1.9rem;
+  }
+
+  // Telefon: kontakty pod sebou, úvodní odstavec pryč — nadpis stačí.
+  @media (max-width: 560px) {
+    .intro .lead {
+      display: none;
+    }
+
+    .channels {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .channel:nth-child(even) {
+      border-left: 0;
+    }
+
+    .channel + .channel {
+      border-top: 1px solid $line;
+    }
+
+    .channelLink,
+    button.channelLink {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas: "icon text arrow";
+      align-items: center;
+      column-gap: 4vw;
+      padding: 1.8vh 6vw;
+    }
+  }
+}
+
+/* ---------- Bauhaus: hlavička formuláře ---------- */
+// Nadtitulek „Poslat zprávu" opakoval úvod a linka zabírala výšku: pryč.
+// Na šířku nadpis vlevo a text vpravo v jedné řadě, pod nimi poptávka.
+.formEyebrow,
+.formTitleRule {
+  display: none;
+}
+
+.formTitle {
+  margin: 0;
+}
+
+.briefWrap {
+  margin-top: 3vh;
+}
+
+@media (orientation: landscape) {
+  // Víc vzduchu nad krokem — karty mají sedět uprostřed formuláře.
+  .briefWrap {
+    margin-top: 3.6vh;
+  }
+}
+
+@media (orientation: landscape) {
+  .formCol {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+    column-gap: 3vw;
+    align-content: start;
+
+    > * {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .formTitle {
+    grid-column: 1;
+    align-self: end;
+  }
+
+  .formLead {
+    grid-column: 2;
+    align-self: end;
+    max-width: none;
+    margin: 0;
+  }
+}
+
+@media (orientation: portrait) {
+  .intro {
+    justify-content: flex-start;
+  }
+
+  .intro .eyebrow {
+    position: static;
+    margin: 0 0 2.4vh;
+  }
+
+  .formLead {
+    margin: 1.2vh 0 0;
+  }
+
+  .briefWrap {
+    margin-top: 2.6vh;
+  }
+}
+
+// Bauhaus pozadí formuláře: mřížka formuláře by ho (jako umístěné dítě
+// s grid-column) zavřela do obsahové plochy — tady přes celý sloupec.
+.formCol > .formBg {
+  grid-column: auto;
+  grid-row: auto;
+}
+
+// Pole na plné výplni — tvary v pozadí formuláře přes ně neprosvítají.
+.formCol .field {
+  background: #e9e8e4;
+}
+
+@media (orientation: landscape) {
+  .briefWrap:has([class*="contactStep"]) {
+    margin-top: 3vh;
+  }
+}
+
+/* ---------- Responzivita na šířku (Bauhaus rozvržení) ---------- */
+
+@media (orientation: landscape) {
+  // Rozestup vrstev podle šířky (vw je šířka rámu) — stoh tak roste se
+  // sloupcem, ne s výškou okna, a ani při kolébání nevyjede ze sloupce.
+  .intro {
+    --stack-size: 42%;
+    // Vlastní proměnné plugin rámu nepřepisuje — vw rámu ručně.
+    --stack-gap: calc(2.4 * var(--vw));
+  }
+}
+
+// Nízký notebook: těsnější svislé rozestupy a nižší pás kontaktů.
+@media (orientation: landscape) and (max-height: 800px) and (min-height: 521px) {
+  .formCol {
+    padding-top: 3.6vh;
+    padding-bottom: 2vh;
+  }
+
+  .briefWrap {
+    margin-top: 3.6vh;
+  }
+
+  .channelLink,
+  button.channelLink {
+    row-gap: 0.6vh;
+    padding: 1.4vh 1.4vw 1.6vh;
+  }
+
+  .channelNote {
+    display: none;
+  }
+}
+
+// Tablet na šířku (do 1100 px): užší uhlový sloupec a menší nadpis.
+@media (orientation: landscape) and (max-width: 1100px) {
+  .body {
+    grid-template-columns: minmax(0, 0.3fr) minmax(0, 1fr);
+  }
+
+  .intro .headline {
+    font-size: clamp(1rem, 2.8vw, 2.4rem);
+  }
+
+  .intro .lead {
+    font-size: clamp(0.62rem, 1.25vw, 0.85rem);
+  }
+
+  .formTitle {
+    font-size: clamp(0.95rem, 2.2vw, 1.6rem);
+  }
+
+  .formCol {
+    padding-left: 3vw;
+    padding-right: 3vw;
+  }
+
+  .briefWrap {
+    margin-top: 3vh;
+  }
+
+  .channelLink,
+  button.channelLink {
+    padding: 1.6vh 1.6vw 1.8vh;
+  }
+
+  .channelValue {
+    font-size: clamp(0.7rem, 1.4vw, 0.95rem);
+  }
+}
+
+// Telefon na šířku: v uhlovém sloupci jen nadtitulek a nadpis (vrstvy
+// i odstavec by byly drobné), formulář bez úvodního textu, kontakty 2 × 2.
+@media (orientation: landscape) and (max-height: 520px) {
+  .body {
+    grid-template-columns: minmax(0, 0.28fr) minmax(0, 1fr);
+  }
+
+  .intro {
+    padding: 16px 14px 18px;
+    // Sloupec je vysoký jako celý posouvaný obsah — nadpis nahoru, ať je
+    // vidět hned.
+    justify-content: flex-start;
+  }
+
+  .intro .eyebrow {
+    position: static;
+    margin: 0 0 14px;
+    font-size: 0.5rem;
+  }
+
+  .intro .lead,
+  .intro > [aria-hidden="true"]:not(.shapeBar) {
+    display: none;
+  }
+
+  .shapeBar {
+    width: 1.6rem;
+    height: 2px;
+    margin-bottom: 10px;
+  }
+
+  .intro .headline {
+    margin: 0;
+    font-size: clamp(0.85rem, 2.6vw, 1.3rem);
+  }
+
+  .formCol {
+    padding: 16px 18px 10px;
+  }
+
+  .formTitle {
+    font-size: 1rem;
+  }
+
+  .formLead {
+    display: none;
+  }
+
+  .briefWrap {
+    margin-top: 12px;
+  }
+
+  .privacy {
+    font-size: 0.6rem;
+  }
+
+  .channels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .channel:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .channel:nth-child(n + 3) {
+    border-top: 1px solid $line;
+  }
+
+  // Ikona a šipka nahoře, text pod nimi přes celou šířku modulu.
+  .channelLink,
+  button.channelLink {
+    row-gap: 6px;
+    padding: 10px 14px 12px;
+  }
+
+  .channelIcon {
+    width: 1.6rem;
+    height: 1.6rem;
+  }
+
+  .channelLabel {
+    font-size: 0.5rem;
+    white-space: normal;
+  }
+
+  .channelValue {
+    font-size: 0.75rem;
+  }
+
+  .channelNote {
+    display: none;
+  }
+
+  .channelArrow {
+    width: 1.6rem;
+    height: 1.6rem;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 800px) and (min-height: 521px), (orientation: landscape) and (max-width: 1100px) and (min-height: 521px) {
+  .briefWrap:has([class*="contactStep"]) {
+    margin-top: 1.8vh;
+  }
+}
+
+// Nejnižší notebook (1280 × 620): o kousek menší okraje formuláře.
+@media (orientation: landscape) and (max-height: 680px) and (min-height: 521px) {
+  .formCol {
+    padding-top: 3vh;
+    padding-bottom: 1.2vh;
   }
 }

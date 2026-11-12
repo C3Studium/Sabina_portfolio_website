@@ -147,6 +147,8 @@ type ScrollPlaceholderProps = {
   labelProps?: Record<string, string | undefined>;
   /** "vertical" = tečka shora dolů a svislý popisek, "horizontal" = zleva doprava. */
   orientation?: "vertical" | "horizontal";
+  /** Menší varianta (svislá lišta na stránce Projekty): kratší linka, drobný popisek. */
+  compact?: boolean;
   className?: string;
 };
 
@@ -154,6 +156,7 @@ export default function ScrollPlaceholder({
   label,
   labelProps,
   orientation = "vertical",
+  compact = false,
   className,
 }: ScrollPlaceholderProps) {
   const horizontal = orientation === "horizontal";
@@ -308,7 +311,9 @@ export default function ScrollPlaceholder({
 
   return (
     <span
-      className={[styles.hint, horizontal ? styles.horizontal : undefined, className].filter(Boolean).join(" ")}
+      className={[styles.hint, horizontal ? styles.horizontal : undefined, compact ? styles.compact : undefined, className]
+        .filter(Boolean)
+        .join(" ")}
     >
       <span className={styles.rail}>
         <span className={styles.track} />

@@ -41,21 +41,47 @@ $card-line: rgba(var(--snow-rgb), 0.12);
   background: transparent;
 }
 
-// Velký světlý kruh vpravo (střed v návrhu x 750, y 295, poloměr 230 px)
-// a ztmavení k pravému dolnímu rohu za portrétem.
+// Ztmavení k pravému dolnímu rohu za portrétem. (Světlý kruh za portrétem
+// je pryč — místo něj bannery a částice.)
 .stage {
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background:
-    radial-gradient(
-      27vw 49vh at 74vw 50vh,
-      rgba(var(--snow-rgb), 0.5),
-      rgba(var(--snow-rgb), 0.2) 62%,
-      transparent 78%
-    ),
-    radial-gradient(58% 46% at 88% 104%, rgba(12, 12, 12, 0.55), transparent 72%);
+  background: radial-gradient(58% 46% at 88% 104%, rgba(12, 12, 12, 0.55), transparent 72%);
+}
+
+// Bannery za portrétem (index.tsx, IntroBanners): pole, podle kterého se
+// rozmístí (kolem horní poloviny postavy), a plátno přes první obrazovku.
+.bannerArea {
+  position: absolute;
+  top: 18vh;
+  left: 63vw;
+  width: 27vw;
+  height: 78vh;
+  pointer-events: none;
+}
+
+.bannersLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.backgroundBanners {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0.6;
+}
+
+// Částice portrétu (rozměr a polohu si komponenta měří sama).
+.portraitParticles {
+  z-index: 2;
 }
 
 /* ---------- Levá lišta ---------- */
@@ -98,7 +124,7 @@ $card-line: rgba(var(--snow-rgb), 0.12);
   flex: 1;
   width: 1px;
   min-height: 2vh;
-  background: rgba(var(--charcoal-rgb), 0.28);
+  background: rgba(var(--snow-rgb), 0.22);
 }
 
 .railIndex {
@@ -125,7 +151,41 @@ $card-line: rgba(var(--snow-rgb), 0.12);
   height: clamp(0.3rem, 0.7vw, 0.9rem);
   flex-shrink: 0;
   border-radius: 50%;
-  background: $ink;
+  background: $text;
+}
+
+// Nástup lišty (index.tsx, `data-in`): postupně shora dolů podle --i.
+.rail > * {
+  transition:
+    transform 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.6s ease;
+  transition-delay: calc(var(--i, 0) * 70ms + 0.1s);
+}
+
+.rail:not([data-in]) {
+  > .railRing,
+  > .railDot {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  > .railLine {
+    transform: scaleY(0);
+  }
+
+  > .railIndex {
+    transform: translateY(1.2vh);
+    opacity: 0;
+  }
+
+  > .railLabel {
+    transform: rotate(180deg) translateY(1.2vh);
+    opacity: 0;
+  }
+}
+
+.railLine {
+  transform-origin: top center;
 }
 
 /* ---------- Nadpis ---------- */
@@ -168,6 +228,16 @@ $card-line: rgba(var(--snow-rgb), 0.12);
   color: $accent;
 }
 
+// Řádek nadpisu jako blok — vyjíždí zvlášť (index.tsx, RiseLines).
+.headlineRow {
+  display: block;
+}
+
+.headlineRise {
+  display: inline-block;
+  will-change: transform, opacity;
+}
+
 // Mezery kolem linky jsou schválně těsné — subtext se tím zvedne blíž
 // ke středu a pod ním zůstane vzduch až ke kartám.
 .introRule {
@@ -175,7 +245,9 @@ $card-line: rgba(var(--snow-rgb), 0.12);
   width: 2.9vw;
   height: 1px;
   margin-bottom: 1.1vh;
-  background: rgba(var(--charcoal-rgb), 0.45);
+  background: rgba(var(--snow-rgb), 0.45);
+  // Natahuje se zleva (index.tsx).
+  transform-origin: left center;
 }
 
 // Odstup ke kartám je zapsaný jako margin-bottom, ne jen jako prázdné
@@ -210,6 +282,11 @@ $card-line: rgba(var(--snow-rgb), 0.12);
   mask-image: linear-gradient(to bottom, #000 92%, transparent 100%);
 }
 
+// Obal fotky pro nástup (index.tsx) — rám .portrait má vlastní transform.
+.portraitReveal {
+  height: 100%;
+}
+
 .portraitImage {
   width: auto;
   height: 100%;
@@ -237,6 +314,14 @@ $card-line: rgba(var(--snow-rgb), 0.12);
   gap: 2.4vh;
 }
 
+// Obal měření karet (MeasureText, index.tsx) — řady pod sebou jako dřív
+// obal .cards; .cards drží jen polohu.
+.cardsMeasure {
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+}
+
 .rowTop {
   display: grid;
   grid-template-columns: repeat(3, 17.8vw);
@@ -251,33 +336,263 @@ $card-line: rgba(var(--snow-rgb), 0.12);
   height: 34.4vh;
 }
 
+// Karta (cards.tsx, BuildCard): obal drží rozměr, rámeček stavby a měření
+// (MeasureText), perspektivu pro náklon. Vzhled má .cardFace (ta se
+// natáčí a odhaluje při stavbě), rozvržení obsahu .cardContent.
 .card {
   position: relative;
-  display: flex;
-  flex-direction: column;
+  perspective: 1100px;
+}
+
+.cardFace {
+  position: relative;
+  height: 100%;
   overflow: hidden;
-  padding: 2.08vh 1.12vw;
   border: 1px solid rgba(var(--snow-rgb), 0.06);
   border-radius: 0.6vw;
   background: $card;
   color: $card-text;
   box-shadow: 0 2.4vh 5vh rgba(8, 8, 8, 0.35);
+  transform-style: preserve-3d;
+  // Perspektiva pro kresbu uvnitř (natáčí se víc než karta).
+  perspective: 700px;
+  will-change: transform;
+  transition:
+    border-color 0.4s ease,
+    box-shadow 0.4s ease;
+
+  .card:hover & {
+    border-color: rgba(var(--green-rgb), 0.22);
+    box-shadow: 0 3vh 6vh rgba(8, 8, 8, 0.45);
+  }
 }
 
-// Linková kresba v pravém horním rohu — jen textura, proto tak potlačená.
-.cardArt {
+.cardContent {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 2.08vh 1.12vw;
+}
+
+// Kresba přes celou kartu — vpravo dole, větší než karta, ořízne ji plocha.
+// Dvakrát: tlumená sněhová vrstva a nad ní zelená, kterou odkrývá jen
+// „baterka" pod kurzorem (--mx / --my z cards.tsx, poloměr --spot).
+@property --spot {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 0%;
+}
+
+// Obal kresby — natáčí se v perspektivě a posouvá za kurzorem (cards.tsx).
+.cardArtRig {
   position: absolute;
-  top: -2vh;
-  right: -1.6vw;
-  width: 9.6vw;
-  color: rgba(242, 247, 255, 0.07);
+  inset: 0;
+  transform-origin: 78% 50%;
+  pointer-events: none;
+}
+
+.cardArt,
+.cardArtGlow {
+  position: absolute;
+  top: 50%;
+  right: -12%;
+  height: 135%;
+  aspect-ratio: 1;
+  transform: translateY(-46%);
   pointer-events: none;
 
   svg {
+    display: block;
     width: 100%;
-    height: auto;
+    height: 100%;
+    overflow: visible;
   }
 }
+
+.cardArt {
+  color: rgba(var(--snow-rgb), 0.05);
+}
+
+.cardArtGlow {
+  color: rgba(var(--green-rgb), 0.5);
+  --spot: 0%;
+  mask-image: radial-gradient(
+    circle at var(--mx, 70%) var(--my, 40%),
+    #000 0%,
+    rgba(0, 0, 0, 0.35) calc(var(--spot) * 0.55),
+    transparent var(--spot)
+  );
+  -webkit-mask-image: radial-gradient(
+    circle at var(--mx, 70%) var(--my, 40%),
+    #000 0%,
+    rgba(0, 0, 0, 0.35) calc(var(--spot) * 0.55),
+    transparent var(--spot)
+  );
+  transition: --spot 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+
+  .card:hover & {
+    --spot: 34%;
+  }
+}
+
+// Dokreslení tahem po stavbě karty (`data-built`, cards.tsx).
+.artDraw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 1.8s cubic-bezier(0.65, 0, 0.35, 1);
+
+  [data-built] & {
+    stroke-dashoffset: 0;
+  }
+}
+
+// Pohyb kreseb běží pořád stejně rychle (změna délky animace by skočila);
+// hover jen rozsvítí baterku a natočí kartu.
+
+// Glóbus: poledníky se stahují a roztahují (scaleX 1 → −1 → 1), každý
+// s jiným posunem — vypadá to, že se otáčí.
+.artMeridian {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: art-spin 10s ease-in-out infinite;
+  opacity: 0;
+  transition: opacity 1s ease 0.6s;
+
+  [data-built] & {
+    opacity: 1;
+  }
+}
+
+@keyframes art-spin {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+
+  50% {
+    transform: scaleX(-1);
+  }
+}
+
+// Disky: vznášejí se nad sebou; najetím se plynule rozestoupí.
+.artDiscSlot {
+  transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+
+  .card:hover &[data-disc="0"] {
+    transform: translateY(-6px);
+  }
+
+  .card:hover &[data-disc="2"] {
+    transform: translateY(6px);
+  }
+}
+
+.artDisc {
+  animation: art-float 4.5s ease-in-out infinite;
+}
+
+@keyframes art-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3.5px);
+  }
+}
+
+// Rozeta: tečkovaný okraj se pomalu otáčí, stuha se lehce houpe.
+.artRing {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: art-turn 24s linear infinite;
+  opacity: 0;
+  transition: opacity 1s ease 0.6s;
+
+  [data-built] & {
+    opacity: 1;
+  }
+}
+
+.artRibbon {
+  transform-origin: 60px 72px;
+  animation: art-sway 5s ease-in-out infinite;
+}
+
+// Spirála: celá se pomalu točí a po ní pořád tečou tečky ven.
+.artSpiral {
+  transform-box: view-box;
+  transform-origin: 60px 60px;
+  animation: art-turn 40s linear infinite;
+}
+
+.artFlow {
+  animation: art-flow 6s linear infinite;
+  opacity: 0;
+  transition: opacity 1s ease 0.6s;
+
+  [data-built] & {
+    opacity: 1;
+  }
+}
+
+@keyframes art-flow {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+// Terč: z prostředka jdou vlny ven, zaměřovač se pomalu otáčí.
+.artPulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: art-pulse 3.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  // Vlny až po stavbě karty.
+  visibility: hidden;
+
+  [data-built] & {
+    visibility: visible;
+  }
+}
+
+.artCross {
+  transform-box: view-box;
+  transform-origin: 60px 60px;
+  animation: art-turn 30s linear infinite;
+}
+
+@keyframes art-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: scale(2.9);
+    opacity: 0;
+  }
+}
+
+@keyframes art-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes art-sway {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
 
 .cardBadge {
   position: relative;
@@ -295,6 +610,43 @@ $card-line: rgba(var(--snow-rgb), 0.12);
   svg {
     width: 46%;
     height: 46%;
+  }
+}
+
+// Ikona v kroužku: na hover zezelená kroužek a ikona se překreslí tahem
+// (nový prvek při každém najetí, cards.tsx).
+.cardBadge {
+  transition:
+    border-color 0.4s ease,
+    box-shadow 0.4s ease,
+    background-color 0.4s ease;
+
+  .card:hover & {
+    border-color: rgba(var(--green-rgb), 0.75);
+    background-color: rgba(var(--green-rgb), 0.08);
+    box-shadow: 0 0 0 0.35rem rgba(var(--green-rgb), 0.06);
+  }
+}
+
+.cardBadgeIcon {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+
+  &[data-redraw] svg * {
+    stroke-dasharray: 1;
+    animation: badge-draw 0.9s cubic-bezier(0.65, 0, 0.35, 1) both;
+  }
+}
+
+@keyframes badge-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+
+  to {
+    stroke-dashoffset: 0;
   }
 }
 
@@ -367,6 +719,12 @@ $card-line: rgba(var(--snow-rgb), 0.12);
   list-style: none;
 }
 
+// Místo štítku v mřížce (přeskládání, framer layout); vzhled má .tag uvnitř
+// (odtlačování kurzorem).
+.tagSlot {
+  display: flex;
+}
+
 .tag {
   display: flex;
   align-items: center;
@@ -392,74 +750,349 @@ $card-line: rgba(var(--snow-rgb), 0.12);
   }
 }
 
-/* ---------- Responsivita ---------- */
-
-// Pod 1100 px absolutní rozvržení ani 200vh nedávají smysl — stránka se
-// rozbalí do běžného toku, lišta a portrét odpadnou.
-@media (max-width: 1100px) {
+/* ---------- Na výšku: tablet i telefon (xs-v, od 320px; základ je tablet 1128 × 1440) ---------- */
+// Kompozice jako hero na výšku: nadpis vlevo nahoře, portrét vpravo za ním
+// (nakreslí se, bannery jako pozadí obrazovky — index.tsx), pod tím karty
+// v běžném toku: tři nahoře, panely přes šířku (text | štítky). Lišta
+// vlevo odpadá. Píše se před blok na šířku (generátor přepisuje od své
+// značky dál).
+@include xs-v {
   .about {
     height: auto;
     min-height: 100svh;
-    padding: 16vh 5vw 8vh;
+    padding: calc(5.75rem + 6vh) 6vw 10vh;
   }
 
-  .rail,
-  .portrait {
+  .rail {
     display: none;
   }
 
-  .intro,
-  .cards {
-    position: static;
-    inset: auto;
-    width: auto;
+  .intro {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 62vw;
+  }
+
+  .eyebrow {
+    font-size: 1.35vh;
   }
 
   .headline {
-    font-size: clamp(2.4rem, 13vw, 5.5rem);
+    font-size: 12.5vw;
+  }
+
+  .introRule {
+    width: 8vw;
   }
 
   .lead {
-    font-size: clamp(1rem, 4vw, 1.6rem);
+    margin: 0;
+    font-size: 2.05vh;
+  }
+
+  // Portrét vpravo nahoře za nadpisem, spodek vybledne do karet.
+  .portrait {
+    top: calc(5.75rem + 2vh);
+    left: auto;
+    right: -10vw;
+    height: 60vh;
+    transform: none;
+    mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+  }
+
+  // Pole bannerů kolem portrétu; plátno přes první obrazovku a vršek do
+  // textu vybledne (jako hero na výšku).
+  .bannerArea {
+    top: 10vh;
+    left: 40vw;
+    width: 55vw;
+    height: 56vh;
+  }
+
+  .bannersLayer {
+    mask-image: linear-gradient(180deg, transparent 0, transparent 30%, #000 60%, #000 72%, transparent 92%);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, transparent 30%, #000 60%, #000 72%, transparent 92%);
+  }
+
+  .backgroundBanners {
+    opacity: 0.45;
   }
 
   .cards {
-    margin-top: 8vh;
-    gap: 3vw;
+    position: relative;
+    top: auto;
+    left: auto;
+    margin-top: 12vh;
+    gap: 1.6vh;
   }
 
-  .rowTop,
-  .rowBottom {
-    grid-template-columns: 1fr;
-    gap: 3vw;
+  .rowTop {
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-rows: minmax(32vh, auto);
+    gap: 1.6vw;
     height: auto;
   }
 
-  .card {
-    padding: 3vh 6vw;
-    border-radius: 1.4vw;
+  .rowBottom {
+    grid-template-columns: 1fr;
+    gap: 1.6vh;
+    height: auto;
+  }
+
+  .cardContent {
+    padding: 2.4vh 2.6vw;
+  }
+
+  .cardFace {
+    border-radius: 1vw;
+  }
+
+  .cardBadge {
+    width: 4.2vh;
+    height: 4.2vh;
+    margin-bottom: 1.6vh;
+  }
+
+  .cardLabel {
+    font-size: 1.15vh;
+  }
+
+  .cardTitle {
+    font-size: 2.5vh;
+  }
+
+  .cardSubtitle {
+    font-size: 1.45vh;
+  }
+
+  .cardBody {
+    padding-top: 1.6vh;
+    font-size: 1.3vh;
+  }
+
+  .panel {
+    grid-template-columns: 1fr 1.15fr;
+    gap: 4vw;
+    min-height: 26vh;
+  }
+
+  .tags {
+    gap: 1.1vh 1.4vw;
+  }
+
+  .tag {
+    gap: 1vw;
+    padding: 0.8vh 1.4vw;
+    font-size: 1.3vh;
+  }
+
+  .tagMarker svg {
+    width: 1.25vh;
+    height: 1.25vh;
+  }
+}
+
+/* ---------- Telefon na výšku (pod 600px) ---------- */
+// Kompozice z tabletu, karty pod sebou a panely se štítky pod textem;
+// rozměry ve vw (telefon je úzký, ne nízký). Dole místo pro lištu s výzvou.
+@media (max-width: 599.98px) and (orientation: portrait) {
+  .about {
+    padding: calc(5.75rem + 4vh) 5vw 14vh;
+  }
+
+  .intro {
+    width: 72vw;
+  }
+
+  .eyebrow {
+    font-size: 2.6vw;
+  }
+
+  .headline {
+    font-size: 15vw;
+  }
+
+  .lead {
+    font-size: 4.1vw;
+  }
+
+  .portrait {
+    right: -24vw;
+    height: 46vh;
+  }
+
+  .bannerArea {
+    top: 8vh;
+    left: 30vw;
+    width: 66vw;
+    height: 44vh;
+  }
+
+  .cards {
+    margin-top: 9vh;
+    gap: 3vw;
+  }
+
+  .rowTop {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+    gap: 3vw;
+  }
+
+  .rowBottom {
+    gap: 3vw;
+  }
+
+  .cardContent {
+    padding: 3.2vh 6vw;
+  }
+
+  .cardFace {
+    border-radius: 3vw;
+  }
+
+  .cardBadge {
+    width: 10vw;
+    height: 10vw;
+  }
+
+  .cardLabel {
+    font-size: 2.7vw;
+  }
+
+  .cardTitle {
+    font-size: 6vw;
+  }
+
+  .cardSubtitle {
+    font-size: 3.6vw;
+  }
+
+  .cardBody {
+    font-size: 3.4vw;
   }
 
   .panel {
     grid-template-columns: 1fr;
     gap: 3vh;
+    min-height: 0;
   }
 
-  .cardLabel,
-  .cardBody,
+  .tags {
+    gap: 2vw;
+  }
+
   .tag {
-    font-size: clamp(0.75rem, 2.4vw, 1rem);
+    gap: 2vw;
+    padding: 1.6vw 3vw;
+    font-size: 3.2vw;
+  }
+
+  .tagMarker svg {
+    width: 3vw;
+    height: 3vw;
+  }
+}
+
+@include reduced-motion {
+  .artMeridian,
+  .artDisc,
+  .artRing,
+  .artRibbon,
+  .artSpiral,
+  .artFlow,
+  .artPulse,
+  .artCross {
+    animation: none;
+  }
+
+  .artPulse {
+    display: none;
+  }
+
+  .artDraw {
+    stroke-dashoffset: 0;
+    transition: none;
+  }
+
+  .artMeridian,
+  .artRing,
+  .artFlow {
+    opacity: 1;
+  }
+}
+
+/* ---------- Responzivita na šířku (telefon → notebook → monitor) ---------- */
+// Všechno na šířku od telefonu po monitor. Základ je malý notebook (md,
+// 1200px); k monitoru (2560) hodnoty rostou po přímce a dávají tam přesně
+// původní hodnotu, pod md (tablet, telefon) klesají v poměru šířky:
+//  - fluid()  pevné rem, písmo ne pod 11px,
+//  - fluid-ui() totéž pro panely nástroje (Vrstvy, Text, toast) — celé,
+//    jedním poměrem ($fluid ui-ratio),
+//  - fit-vh() drží písmo ve vh v poměru k vw sloupcům i na užší obrazovce.
+// (Vše v styles/system/_mixins.scss.) Zařízení s jinou výškou (tablet,
+// telefon na šířku) mají vlastní bloky pod tímhle.
+@include xxs-h {
+  .railRing {
+    width: clamp(ease-floor(0.7rem), 1.5vw, 1.9rem);
+    height: clamp(ease-floor(0.7rem), 1.5vw, 1.9rem);
+  }
+
+  .railIndex {
+    font-size: clamp(ease-floor(0.65rem, 9px), fit-vh(1.9vh), 2.5rem);
+  }
+
+  .railLabel {
+    font-size: clamp(ease-floor(0.5rem, 9px), fit-vh(1.35vh), 1.8rem);
+  }
+
+  .railDot {
+    width: clamp(ease-floor(0.3rem), 0.7vw, 0.9rem);
+    height: clamp(ease-floor(0.3rem), 0.7vw, 0.9rem);
+  }
+
+  .eyebrow {
+    font-size: clamp(ease-floor(0.55rem, 9px), fit-vh(1.5vh), 2rem);
+  }
+
+  .headline {
+    font-size: clamp(ease-floor(2.2rem, 9px), fit-vh(14.5vh), 20rem);
+  }
+
+  .lead {
+    font-size: clamp(ease-floor(0.63rem, 9px), fit-vh(2.73vh), 3.5rem);
+  }
+
+  .cardBadge {
+    width: clamp(ease-floor(1.28rem), 4.48vh, 5.6rem);
+    height: clamp(ease-floor(1.28rem), 4.48vh, 5.6rem);
+  }
+
+  .cardLabel {
+    font-size: clamp(ease-floor(0.35rem, 9px), fit-vh(1.37vh), 1.82rem);
   }
 
   .cardTitle {
-    font-size: clamp(1.2rem, 5vw, 2rem);
+    font-size: clamp(ease-floor(0.63rem, 9px), fit-vh(3.22vh), 4.2rem);
   }
 
   .cardSubtitle {
-    font-size: clamp(0.85rem, 3vw, 1.2rem);
+    font-size: clamp(ease-floor(0.42rem, 9px), fit-vh(1.75vh), 2.24rem);
   }
 
-  .cardArt {
-    width: 34vw;
+  .cardBody {
+    font-size: clamp(ease-floor(0.39rem, 9px), fit-vh(1.51vh), 1.96rem);
+  }
+
+  .tag {
+    font-size: clamp(ease-floor(0.35rem, 9px), fit-vh(1.37vh), 1.82rem);
+  }
+
+  .tagMarker {
+    svg {
+      width: clamp(ease-floor(0.35rem), 1.33vh, 1.75rem);
+      height: clamp(ease-floor(0.35rem), 1.33vh, 1.75rem);
+    }
   }
 }

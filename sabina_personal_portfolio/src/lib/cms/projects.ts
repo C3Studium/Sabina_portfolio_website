@@ -11,7 +11,13 @@ import { projectSlug } from './slug.ts'
 // Klíče bloků téhle stránky. Tvar `<stránka>.<sekce>` = `page` v getSiteCopy.
 // Komponenty i seed se odkazují jen na ně; keys.ts je pouze rozcestník.
 export const PROJECTS = {
+    // Původní nadpis „Práce, která funguje" — stránka ho už nečte (nahradil
+    // ho `intro`), klíč zůstává kvůli seedu a starému záznamu v databázi.
     list: 'projects.list',
+    // Text pod scénou: 4 výzva, 5 nadpis sdílených detailů, 6 poznámka
+    // o mlčenlivosti. Položky 0–3 (dřívější nadtitulek a kroky postupu)
+    // v záznamu zůstaly, stránka je nečte.
+    intro: 'projects.intro',
     // Drobné popisky obou rout: 0 nápověda posunu, 1 odkaz karty, 2 štítek
     // nad názvem v detailu, 3 popisek odkazu na další projekt, 4 nadpis cílů.
     labels: 'projects.labels',
@@ -43,11 +49,6 @@ const sources = {
     projects: { type: 'project' },
 }
 
-// Deklarace `f.labels` v types/index.d.ts se rozchází s během (chce `path`,
-// běh bere `{ from, count, pad }` a bez argumentu vrací všechny popisky).
-// Klíč jako ne-literál sáhne na obecný podpis, ne na ten rozjetý.
-const allLabels = f['labels' as string]
-
 export const projectsPage = definePage({
     route: '/projects',
     title: 'Projekty',
@@ -55,19 +56,15 @@ export const projectsPage = definePage({
     sources,
     blocks: [
         defineBlock({
-            at: 'list',
-            key: PROJECTS.list,
-            title: 'Seznam — nadpis a úvod',
+            at: 'intro',
+            key: PROJECTS.intro,
+            title: 'Úvod — postup a sdílené detaily',
             fields: {
-                title: f.text('title'),
-                // Nadpis je dva řádky zalomené natvrdo („Práce," / „která") a
-                // zvýrazněný konec („funguje") stojí zvlášť — accent je pole
-                // proto, aby šel přepsat bez hledání hvězdiček uvnitř textu.
-                headline: f.rawLines('headline'),
-                accent: f.accent(),
-                // Úvod je čtyři řádky pod sebou a počet řádků je obsah, ne
-                // sazba — proto položky, ne odstavec.
-                lead: allLabels(),
+                // Položky 0–3 (nadtitulek a kroky postupu) se nečtou — smlouvy
+                // s klienty nedovolí ukazovat postup; pořadí zbytku zůstává.
+                cta: label(4),
+                sharedTitle: label(5),
+                note: label(6),
                 docId: f.docId(),
             },
         }),

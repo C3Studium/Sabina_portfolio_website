@@ -1,0 +1,85 @@
+// Bauhaus pozadí formuláře (bauhaus-bg.tsx). Nástup až po stavbě
+// formuláře ($after): zelené oblouky se objeví, uhlový se dokreslí; pak
+// čárky na zelených pomalu plují (pathLength 100 → délky v procentech).
+
+$after: 1.5s;
+$ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+.bg {
+  position: absolute;
+  inset: 0;
+  z-index: -100;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+
+  * {
+    vector-effect: non-scaling-stroke;
+  }
+}
+
+.dashBold,
+.dashThin {
+  stroke: var(--green);
+  opacity: 0;
+}
+
+.dashBold {
+  stroke-width: 3;
+  stroke-dasharray: 2 1.4;
+  animation:
+    show 0.8s ease $after forwards,
+    drift 40s linear $after infinite;
+}
+
+.dashThin {
+  stroke-width: 1.5;
+  stroke-dasharray: 0.6 1.2;
+  animation:
+    show 0.8s ease calc($after + 0.25s) forwards,
+    drift-back 30s linear $after infinite;
+}
+
+.line {
+  stroke: var(--charcoal);
+  stroke-width: 1.2;
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: 1;
+  animation: draw 1.4s $ease calc($after + 0.3s) forwards;
+}
+
+@keyframes show {
+  to {
+    opacity: 1;
+  }
+}
+
+// Posun o celé násobky vzoru čárek — smyčka bez skoku.
+@keyframes drift {
+  to {
+    stroke-dashoffset: -34;
+  }
+}
+
+@keyframes drift-back {
+  to {
+    stroke-dashoffset: 18;
+  }
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashBold,
+  .dashThin,
+  .line {
+    animation: none;
+    opacity: 1;
+    stroke-dashoffset: 0;
+  }
+}

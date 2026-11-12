@@ -54,6 +54,99 @@ const seedKey = (group?: string) =>
 // Seznam ve Studiu ve stejném pořadí jako na webu.
 const BY_ORDER = [{ name: 'order', title: 'Podle pořadí', by: [{ field: 'order', direction: 'asc' }] }]
 
+/* ------------------------------------------------------ případová studie -- */
+
+// Případová studie projektu (components/study) — záložka „Případová studie"
+// v projektu. Plátno má pět zastávek: Titulní, tři kapitoly a Výstupy
+// (editor) a na konci výzvu. Kapitoly mají pevné rozvržení (balíček karet,
+// pás, kolotoč), obsah je volný: nadpis, text, krátké poznámky a díla.
+//
+// Text: odstavce odděluje prázdný řádek, **dvě hvězdičky** = tučně,
+// *jedna* = zeleně. Stejná úmluva jako hvězdičky v blocích textů.
+// Studie se na stránce projektu ukáže, jakmile má Titulní aspoň jedno dílo.
+const STUDY_TEXT = 'Odstavce oddělte prázdným řádkem. **Dvě hvězdičky** = tučně, *jedna* = zeleně.'
+
+const studyWork = {
+    type: 'object',
+    name: 'work',
+    title: 'Dílo',
+    fields: [
+        defineField({ name: 'image', title: 'Obrázek', type: 'image', validation: (rule) => rule.required() }),
+        defineField({
+            name: 'name',
+            title: 'Název',
+            type: 'string',
+            description: 'Např. „Jarní novinky".',
+            validation: (rule) => rule.required().max(60),
+        }),
+        defineField({
+            name: 'tag',
+            title: 'Druh',
+            type: 'string',
+            description: 'Krátký štítek — „Kolekce", „Sleva", „Story". V pásu kampaní řadí díla do skupin.',
+            validation: (rule) => rule.max(30),
+        }),
+    ],
+}
+
+const studyWorks = (max: number, description: string) =>
+    defineField({
+        name: 'works',
+        title: 'Díla',
+        type: 'array',
+        of: [studyWork],
+        description,
+        validation: (rule) => rule.max(max),
+    })
+
+const studyNotes = () => defineField({
+    name: 'asides',
+    title: 'Poznámky přes díla',
+    type: 'array',
+    of: [{ type: 'string' }],
+    description: 'Krátké postřehy nalepené přes díla (lístek s páskou), nejvýš dva. ' + '**Tučně** jde i tady.',
+    validation: (rule) => rule.max(2),
+})
+
+const studyText = () => defineField({
+    name: 'text',
+    title: 'Text',
+    type: 'text',
+    options: { rows: 6 },
+    description: `Vypisuje se pod nadpisem. ${STUDY_TEXT}`,
+    validation: (rule) => rule.max(1200),
+})
+
+// Kapitola: štítek v liště, dvoubarevný nadpis, text, poznámky, díla.
+const studyChapter = (name: string, title: string, layout: string, works: { max: number; help: string }) =>
+    defineField({
+        name,
+        title,
+        type: 'object',
+        group: 'studie',
+        description: layout,
+        fields: [
+            defineField({
+                name: 'label',
+                title: 'Štítek kapitoly',
+                type: 'string',
+                description: 'Krátce — v liště kapitol a nad nadpisem, např. „Pro rodiče".',
+                validation: (rule) => rule.max(30),
+            }),
+            defineField({
+                name: 'heading',
+                title: 'Nadpis',
+                type: 'text',
+                options: { rows: 2 },
+                description: 'Každý řádek nadpisu na vlastním řádku (verzálkami). *Řádek v hvězdičkách* = zeleně, např. „*Hravé,*" a pod ním „ale pro rodiče".',
+                validation: (rule) => rule.max(140),
+            }),
+            studyText(),
+            studyNotes(),
+            studyWorks(works.max, works.help),
+        ],
+    })
+
 /* ---------------------------------------------------------------- projekty -- */
 
 // Projekt portfolia — jeden záznam je jedna karta na úvodní stránce a na
@@ -67,6 +160,7 @@ const project = defineType({
     groups: [
         { name: 'karta', title: 'Karta', default: true },
         { name: 'detail', title: 'Detail stránky' },
+        { name: 'studie', title: 'Případová studie' },
     ],
     orderings: BY_ORDER,
     fields: [
@@ -147,6 +241,16 @@ const project = defineType({
             validation: (rule) => rule.max(8),
         }),
         defineField({
+            name: 'shared',
+            title: 'Co mohu ukázat',
+            type: 'array',
+            group: 'detail',
+            of: [{ type: 'string' }],
+            description:
+                'Detaily, které klient dovolil zveřejnit — jeden na položku, např. „Klíčové vizuály kampaně". Ukazují se pod scénou na stránce Projekty u aktivního projektu.',
+            validation: (rule) => rule.max(6),
+        }),
+        defineField({
             name: 'body',
             title: 'Text',
             type: 'richText',
@@ -162,12 +266,157 @@ const project = defineType({
             description: 'Další vizuály projektu, v pořadí zobrazení.',
             validation: (rule) => rule.max(24),
         }),
+        /* ---------- Případová studie ---------- */
+        defineField({
+            name: 'studyKind',
+            title: 'Druh práce',
+            type: 'string',
+            group: 'studie',
+            description: 'Pod názvem na titulní zastávce, např. „Reklamní bannery".',
+            validation: (rule) => rule.max(60),
+        }),
+        defineField({
+            name: 'studyMeta',
+            title: 'Údaje',
+            type: 'array',
+            group: 'studie',
+            of: [
+                {
+                    type: 'object',
+                    name: 'fact',
+                    title: 'Údaj',
+                    fields: [
+                        defineField({ name: 'label', title: 'Popisek', type: 'string', validation: (rule) => rule.required().max(30) }),
+                        defineField({ name: 'value', title: 'Hodnota', type: 'string', validation: (rule) => rule.required().max(60) }),
+                    ],
+                },
+            ],
+            description: 'Řádek údajů pod názvem — Klient, Rok, Rozsah, Formáty…',
+            validation: (rule) => rule.max(5),
+        }),
+        defineField({
+            name: 'studyCover',
+            title: 'Titulní',
+            type: 'object',
+            group: 'studie',
+            description: 'Velký název vlevo, vpravo díla do hloubky (vpředu poslední).',
+            fields: [studyText(), studyNotes(), studyWorks(3, 'Tři díla do hloubky — nejlépe story. Vpředu je poslední.')],
+        }),
+        studyChapter('studyStack', 'Kapitola 2 — balíček karet', 'Díla vlevo jako balíček karet, nadpis a text vpravo.', {
+            max: 6,
+            help: 'Karty balíčku, 3–5 je ideál.',
+        }),
+        studyChapter('studyStrip', 'Kapitola 3 — pás', 'Nadpis vlevo, text vpravo, přes celou šířku pás děl a pod ním mapa druhů.', {
+            max: 14,
+            help: 'Díla v pořadí pásu. Stejný „Druh" za sebou = jedna skupina v mapě.',
+        }),
+        studyChapter('studyRing', 'Kapitola 4 — kolotoč', 'Kolotoč děl vlevo, nadpis a text vpravo.', {
+            max: 6,
+            help: 'Díla na kolotoči, 3–5 je ideál.',
+        }),
+        defineField({
+            name: 'studyOutputs',
+            title: 'Výstupy',
+            type: 'array',
+            group: 'studie',
+            of: [
+                {
+                    type: 'object',
+                    name: 'output',
+                    title: 'Výstup',
+                    fields: [
+                        defineField({ name: 'image', title: 'Obrázek', type: 'image', validation: (rule) => rule.required() }),
+                        defineField({ name: 'caption', title: 'Název', type: 'string', validation: (rule) => rule.max(60) }),
+                    ],
+                },
+            ],
+            description: 'Všechny formáty do editoru na konci — libovolné tvary. Formát (Story / Post / Banner) a rozměr se dopočítají.',
+            validation: (rule) => rule.max(40),
+        }),
+        defineField({
+            name: 'studyCta',
+            title: 'Výzva na konci',
+            type: 'object',
+            group: 'studie',
+            description: 'Po oddálení na celé plátno: věta, velké tlačítko (otevře kontakt) a stav.',
+            fields: [
+                defineField({ name: 'lead', title: 'Věta', type: 'string', description: 'Např. „Věcičky jsou hotové."', validation: (rule) => rule.max(80) }),
+                defineField({ name: 'leadAccent', title: 'Věta — zvýrazněná', type: 'string', description: 'Pod ní tučně, např. „Další studie může být ta vaše."', validation: (rule) => rule.max(80) }),
+                defineField({ name: 'button', title: 'Tlačítko', type: 'string', description: 'Dvě slova pod sebou, např. „Začněme spolu".', validation: (rule) => rule.max(30) }),
+                defineField({ name: 'status', title: 'Stav', type: 'string', description: 'Např. „Odpovím do *24 hodin*".', validation: (rule) => rule.max(60) }),
+            ],
+        }),
         seedKey('karta'),
     ],
     preview: (doc: Record<string, unknown>) => ({
         title: doc.title,
         subtitle: doc.tagline,
         media: doc.cover ?? null,
+    }),
+})
+
+/* -------------------------------------------------------------- 3D vizuály -- */
+
+// Vizuál rozložený na vrstvy pro detail díla (pohled Vrstvy). Dvě cesty:
+//   - jen Obrázek: rozloží se sám (hotový rozklad z tools/banner-layers,
+//     jinak podle barev přímo v prohlížeči),
+//   - Vrstvy: každá vrstva jako PNG s průhledností ve stejném rozměru jako
+//     celý vizuál (export vrstev z Figmy), odspodu nahoru.
+// Detail díla si vizuál najde podle obrázku — stačí nahrát tentýž soubor.
+const LAYER_KINDS = [
+    { value: 'background', title: 'Pozadí' },
+    { value: 'shape', title: 'Tvar' },
+    { value: 'object', title: 'Objekt / fotka' },
+    { value: 'text', title: 'Text' },
+    { value: 'button', title: 'Tlačítko' },
+]
+
+const visual3d = defineType({
+    name: 'visual3d',
+    title: '3D vizuály',
+    icon: 'layers',
+    description: 'Vizuály rozložené na vrstvy pro detail díla — buď jen obrázek (rozloží se sám), nebo jednotlivé vrstvy.',
+    orderings: BY_ORDER,
+    fields: [
+        defineField({
+            name: 'title',
+            title: 'Název',
+            type: 'string',
+            validation: (rule) => rule.required().max(80),
+        }),
+        defineField({
+            name: 'image',
+            title: 'Celý vizuál',
+            type: 'image',
+            description: 'Tentýž soubor jako dílo ve studii — podle něj se vizuál najde. Bez vrstev se rozloží sám.',
+            validation: (rule) => rule.required(),
+        }),
+        defineField({
+            name: 'layers',
+            title: 'Vrstvy',
+            type: 'array',
+            of: [
+                {
+                    type: 'object',
+                    name: 'layer',
+                    title: 'Vrstva',
+                    fields: [
+                        defineField({ name: 'image', title: 'Obrázek vrstvy', type: 'image', description: 'PNG s průhledností, stejný rozměr jako celý vizuál.', validation: (rule) => rule.required() }),
+                        defineField({ name: 'name', title: 'Název', type: 'string', description: 'Např. „Nadpis", „Fotka", „Tlačítko".', validation: (rule) => rule.max(40) }),
+                        defineField({ name: 'kind', title: 'Druh', type: 'select', options: { list: LAYER_KINDS }, initialValue: 'shape' }),
+                    ],
+                },
+            ],
+            description: 'Volitelné. Odspodu nahoru — první je pozadí. Prázdné = rozklad automaticky.',
+            validation: (rule) => rule.max(24),
+        }),
+        order(),
+        seedKey(),
+    ],
+    preview: (doc: Record<string, unknown>) => ({
+        title: doc.title,
+        subtitle: Array.isArray(doc.layers) && doc.layers.length ? `${doc.layers.length} vrstev` : 'Rozklad automaticky',
+        media: doc.image ?? null,
     }),
 })
 
@@ -548,7 +797,7 @@ const socialLink = defineType({
 })
 
 // Pořadí je pořadí v menu Studia.
-export const types = [siteCopy, project, heroWord, stackItem, statItem, service, processStep, reference, socialLink, review]
+export const types = [siteCopy, project, visual3d, heroWord, stackItem, statItem, service, processStep, reference, socialLink, review]
 
 // Typ, o kterém se píšou recenze (např. 'consultant'), nebo null.
 export const reviewSubjectType = null

@@ -1,37 +1,54 @@
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/router";
 import { AnimatePresence, motion } from "framer-motion";
 import { NAV_ITEMS } from "../nav-items";
+import { openSection, type SectionKey } from "../section-popup/open";
 import styles from "./styles.module.scss";
 
-// Jednoduché menu pro okna, kde se navigace do hlavičky nevejde (na výšku
-// do 1180px, na šířku pod 900px — header/styles). Vstup a odchod jako
-// kontaktní modal: rozmazané pozadí, karta se zvětší z 0,96 a položky
-// najedou po ose x jedna po druhé; odchod je tentýž pohyb obráceně a rychleji.
+// Menu pro okna, kde se navigace do hlavičky nevejde (na výšku do 1180px,
+// na šířku pod 900px — header/styles). Tmavý list přes celé okno v jazyce
+// webu: tečková mřížka plátna, pravítko, a kolem položky, na které právě
+// jste, měřicí rámeček s rohovými body a štítkem „Jste tady" (jako
+// MeasureText). Najetím rámeček přejede na jinou položku a vrátí se.
+//
+// Nástup: list se rozvine shora dolů jako roleta, položky vyjedou zpod
+// masky jedna po druhé. Odchod je jiný — obsah se rozostří a list se
+// stáhne do vodorovné čáry uprostřed (jako vypnutá obrazovka).
+
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
-const EASE_IN = [0.4, 0, 1, 1] as const;
-const BACKDROP = {
-  hidden: { opacity: 0 },
-  shown: { opacity: 1, transition: { duration: 0.3, ease: "easeOut" } },
-  exit: { opacity: 0, transition: { duration: 0.28, ease: "easeIn", delay: 0.3 } },
-} as const;
-const PANEL = {
-  hidden: { opacity: 0, scale: 0.96 },
+const EASE_IN = [0.65, 0, 0.35, 1] as const;
+
+const SHEET = {
+  hidden: { clipPath: "inset(0% 0% 100% 0%)" },
   shown: {
-    opacity: 1,
-    scale: 1,
-    transition: { duration: 0.5, ease: EASE_OUT, delayChildren: 0.12, staggerChildren: 0.055 },
+    clipPath: "inset(0% 0% 0% 0%)",
+    transition: { duration: 0.75, ease: EASE_OUT, delayChildren: 0.25, staggerChildren: 0.06 },
   },
   exit: {
-    opacity: 0,
-    scale: 0.985,
-    transition: { duration: 0.3, ease: EASE_IN, delay: 0.14, staggerChildren: 0.025, staggerDirection: -1 },
+    clipPath: "inset(50% 0% 50% 0%)",
+    transition: { duration: 0.5, ease: EASE_IN, delay: 0.18 },
   },
 } as const;
-const ITEM = {
-  hidden: { opacity: 0, x: "2.4vw" },
-  shown: { opacity: 1, x: "0vw", transition: { duration: 0.6, ease: EASE_OUT } },
-  exit: { opacity: 0, x: "1.6vw", transition: { duration: 0.22, ease: EASE_IN } },
+
+// Obsah: při odchodu se rozostří a zhasne dřív, než se list stáhne.
+const CONTENT = {
+  hidden: { opacity: 1, filter: "blur(0px)" },
+  shown: { opacity: 1, filter: "blur(0px)" },
+  exit: { opacity: 0, filter: "blur(8px)", transition: { duration: 0.22, ease: "easeIn" } },
+} as const;
+
+// Položka zpod masky.
+const RISE = {
+  hidden: { y: "105%" },
+  shown: { y: "0%", transition: { duration: 0.8, ease: EASE_OUT } },
+  exit: { y: "0%" },
+} as const;
+
+const FADE = {
+  hidden: { opacity: 0, y: 12 },
+  shown: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE_OUT } },
+  exit: { opacity: 1 },
 } as const;
 
 function CloseIcon() {
@@ -44,10 +61,30 @@ function CloseIcon() {
 
 function ArrowIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M5 12h13M12 5.5 18.5 12 12 18.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
+}
+
+// Sekce úvodní stránky v pořadí, jak jdou pod sebou: kotva → položka menu.
+const HOME_SECTIONS: [string, SectionKey][] = [
+  ["sluzby", "services"],
+  ["proces", "process"],
+  ["spoluprace", "references"],
+];
+
+/** Index položky, na které návštěvník je: stránka, nebo sekce úvodní stránky ve výhledu. */
+function currentIndex(pathname: string) {
+  const byHref = NAV_ITEMS.findIndex((item) => !item.popup && item.href !== "/" && pathname.startsWith(item.href));
+  if (byHref >= 0) return byHref;
+  if (pathname !== "/" || typeof document === "undefined") return -1;
+  let key: SectionKey | null = null;
+  for (const [id, section] of HOME_SECTIONS) {
+    const el = document.getElementById(id);
+    if (el && el.getBoundingClientRect().top <= window.innerHeight * 0.5) key = section;
+  }
+  return key ? NAV_ITEMS.findIndex((item) => item.popup === key) : -1;
 }
 
 const noop = () => () => {};
@@ -60,6 +97,122 @@ type MenuProps = {
   onContact: () => void;
   ctaLabel: string;
 };
+
+function Sheet({ id, onClose, onContact, ctaLabel }: Omit<MenuProps, "open">) {
+  const { pathname } = useRouter();
+  // Kde návštěvník je — změří se jednou při otevření.
+  const [active] = useState(() => currentIndex(pathname));
+  const [hover, setHover] = useState<number | null>(null);
+  const framed = hover ?? (active >= 0 ? active : null);
+  const where = active >= 0 ? NAV_ITEMS[active].label : "Úvod";
+
+  return (
+    <motion.div
+      id={id}
+      className={styles.sheet}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Menu"
+      variants={SHEET}
+      initial="hidden"
+      animate="shown"
+      exit="exit"
+    >
+      <motion.div className={styles.content} variants={CONTENT}>
+        <div className={styles.top}>
+          <motion.p className={styles.eyebrow} variants={FADE}>
+            <span className={styles.dot} aria-hidden="true" />
+            Menu · {String(NAV_ITEMS.length).padStart(2, "0")}
+          </motion.p>
+          <motion.button
+            type="button"
+            className={styles.close}
+            onClick={onClose}
+            aria-label="Zavřít menu"
+            variants={FADE}
+          >
+            <CloseIcon />
+          </motion.button>
+        </div>
+
+        {/* Pravítko pod horní lištou — dílky jako na plátně studie. */}
+        <motion.span className={styles.ruler} variants={FADE} aria-hidden="true" />
+
+        <nav className={styles.nav} aria-label="Hlavní navigace" onPointerLeave={() => setHover(null)}>
+          {NAV_ITEMS.map((item, index) => {
+            const isActive = index === active;
+            return (
+              <a
+                key={item.href}
+                className={styles.link}
+                href={item.href}
+                aria-current={isActive ? "page" : undefined}
+                data-active={isActive || undefined}
+                // Sekce úvodní stránky: na ní doscrolluje, jinde otevře okno
+                // (layout/section-popup/open.ts).
+                data-no-veil={item.popup ? "" : undefined}
+                onPointerEnter={() => setHover(index)}
+                onFocus={() => setHover(index)}
+                onBlur={() => setHover(null)}
+                onClick={(event) => {
+                  onClose();
+                  if (!item.popup) return;
+                  event.preventDefault();
+                  openSection(item.popup, { fromMenu: true });
+                }}
+              >
+                <span className={styles.linkIndex} aria-hidden="true">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span className={styles.mask}>
+                  <motion.span className={styles.linkLabel} variants={RISE}>
+                    {item.label}
+                    {framed === index ? (
+                      <motion.span
+                        layoutId="menu-frame"
+                        className={styles.frame}
+                        transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                        aria-hidden="true"
+                      >
+                        <i />
+                        <i />
+                        <i />
+                        <i />
+                        {isActive ? <b>Jste tady</b> : null}
+                      </motion.span>
+                    ) : null}
+                  </motion.span>
+                </span>
+                <span className={styles.linkArrow} aria-hidden="true">
+                  <ArrowIcon />
+                </span>
+              </a>
+            );
+          })}
+        </nav>
+
+        <motion.div className={styles.bottom} variants={FADE}>
+          <p className={styles.where}>
+            Jste na <span>{where}</span>
+          </p>
+          <button
+            type="button"
+            className={styles.cta}
+            onClick={() => {
+              onClose();
+              onContact();
+            }}
+          >
+            <span>{ctaLabel}</span>
+            <span className={styles.ctaArrow} aria-hidden="true">
+              <ArrowIcon />
+            </span>
+          </button>
+        </motion.div>
+      </motion.div>
+    </motion.div>
+  );
+}
 
 export default function Menu({ id, open, onClose, onContact, ctaLabel }: MenuProps) {
   // Portál do <body>: hlavička se při přechodu mezi stránkami posouvá
@@ -89,70 +242,7 @@ export default function Menu({ id, open, onClose, onContact, ctaLabel }: MenuPro
 
   return createPortal(
     <AnimatePresence>
-      {open && (
-        <motion.div
-          className={styles.backdrop}
-          onClick={onClose}
-          variants={BACKDROP}
-          initial="hidden"
-          animate="shown"
-          exit="exit"
-        >
-          <motion.div
-            id={id}
-            className={styles.panel}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Menu"
-            onClick={(event) => event.stopPropagation()}
-            variants={PANEL}
-          >
-            <div className={styles.glow} aria-hidden="true" />
-
-            <motion.button
-              type="button"
-              className={styles.close}
-              onClick={onClose}
-              aria-label="Zavřít menu"
-              variants={ITEM}
-            >
-              <CloseIcon />
-            </motion.button>
-
-            <nav className={styles.nav} aria-label="Hlavní navigace">
-              {NAV_ITEMS.map((item, index) => (
-                <motion.a
-                  key={item.href}
-                  className={styles.link}
-                  href={item.href}
-                  onClick={onClose}
-                  variants={ITEM}
-                >
-                  <span className={styles.linkIndex} aria-hidden="true">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <span className={styles.linkLabel}>{item.label}</span>
-                </motion.a>
-              ))}
-            </nav>
-
-            <motion.button
-              type="button"
-              className={styles.cta}
-              onClick={() => {
-                onClose();
-                onContact();
-              }}
-              variants={ITEM}
-            >
-              <span>{ctaLabel}</span>
-              <span className={styles.ctaArrow} aria-hidden="true">
-                <ArrowIcon />
-              </span>
-            </motion.button>
-          </motion.div>
-        </motion.div>
-      )}
+      {open ? <Sheet key="menu" id={id} onClose={onClose} onContact={onContact} ctaLabel={ctaLabel} /> : null}
     </AnimatePresence>,
     document.body,
   );

@@ -288,6 +288,11 @@ export function createMeasure(
     return art;
   };
 
+  // Měřítko obalu na obrazovce vůči rozvržení (transformace předků, např.
+  // zmenšené plátno případové studie). Na homepage 1. Obdélníky z
+  // getBoundingClientRect se jím dělí, aby vše bylo v px rozvržení.
+  const zoomOf = (rect: DOMRect) => (root.offsetWidth ? rect.width / root.offsetWidth : 1) || 1;
+
   const measure = () => {
     if (destroyed) return;
     ready = false;
@@ -304,6 +309,7 @@ export function createMeasure(
 
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     const origin = root.getBoundingClientRect();
+    const k = zoomOf(origin);
     const lang = document.documentElement.lang || undefined;
     const previous = glyphs;
     const nextWords: Word[] = [];
@@ -351,9 +357,9 @@ export function createMeasure(
         index += part.length;
         if (!part.trim()) continue;
         const r = range.getBoundingClientRect();
-        const x = r.left - origin.left;
-        const top = r.top - origin.top;
-        baseline = top + (r.height * ascent) / (ascent + descent);
+        const x = (r.left - origin.left) / k;
+        const top = (r.top - origin.top) / k;
+        baseline = top + (r.height / k) * (ascent / (ascent + descent));
         const char = shape(part);
         const m = ctx.measureText(char);
         // Rozpohybovaná písmena si drží svůj posun i přes nové měření.
@@ -387,13 +393,13 @@ export function createMeasure(
       const frameRect = (framer && root.contains(framer) ? framer : span).getBoundingClientRect();
       nextWords.push({
         box: {
-          x: frameRect.left - origin.left,
-          y: frameRect.top - origin.top,
-          w: frameRect.width,
-          h: frameRect.height,
+          x: (frameRect.left - origin.left) / k,
+          y: (frameRect.top - origin.top) / k,
+          w: frameRect.width / k,
+          h: frameRect.height / k,
         },
         el: span,
-        anchor: { x: anchorRect.left - origin.left, y: anchorRect.top - origin.top },
+        anchor: { x: (anchorRect.left - origin.left) / k, y: (anchorRect.top - origin.top) / k },
         shift: { x: 0, y: 0 },
         alpha: 1,
         tint: 0,
@@ -412,16 +418,18 @@ export function createMeasure(
     // slovem; kreslit není co.
     for (const el of frameOnly) {
       const r = el.getBoundingClientRect();
-      const x = r.left - origin.left;
-      const y = r.top - origin.top;
+      const x = (r.left - origin.left) / k;
+      const y = (r.top - origin.top) / k;
+      const rw = r.width / k;
+      const rh = r.height / k;
       const size = parseFloat(getComputedStyle(el).fontSize) || 16;
       biggest = Math.max(biggest, size);
       nextGlyphs.push({
         word: nextWords.length,
         char: "",
         x,
-        baseline: y + r.height,
-        box: { x1: x, y1: y, x2: x + r.width, y2: y + r.height },
+        baseline: y + rh,
+        box: { x1: x, y1: y, x2: x + rw, y2: y + rh },
         ox: motionValue(0),
         oy: motionValue(0),
         outline: 0,
@@ -479,10 +487,11 @@ export function createMeasure(
   // nahoru a prolínají se, plátno mimo ně by jinak stálo a svítilo dřív.
   const follow = () => {
     const origin = root.getBoundingClientRect();
+    const k = zoomOf(origin);
     for (const word of words) {
       const r = word.el.getBoundingClientRect();
-      word.shift.x = r.left - origin.left - word.anchor.x;
-      word.shift.y = r.top - origin.top - word.anchor.y;
+      word.shift.x = (r.left - origin.left) / k - word.anchor.x;
+      word.shift.y = (r.top - origin.top) / k - word.anchor.y;
       let alpha = 1;
       for (let el: HTMLElement | null = word.el.parentElement; el && el !== root; el = el.parentElement) {
         alpha *= parseFloat(getComputedStyle(el).opacity) || 0;
@@ -572,8 +581,9 @@ export function createMeasure(
 
   const locate = (event: PointerEvent) => {
     const rect = root.getBoundingClientRect();
-    pointer.x = event.clientX - rect.left;
-    pointer.y = event.clientY - rect.top;
+    const k = zoomOf(rect);
+    pointer.x = (event.clientX - rect.left) / k;
+    pointer.y = (event.clientY - rect.top) / k;
   };
 
   // Vlna od šťouchnutého písmene po jeho slově: sousedé dostanou slabší
@@ -646,7 +656,8 @@ export function createMeasure(
       performance.now() - press.time < 450
     ) {
       const rect = root.getBoundingClientRect();
-      const moved = Math.hypot(event.clientX - rect.left - press.x, event.clientY - rect.top - press.y);
+      const k = zoomOf(rect);
+      const moved = Math.hypot((event.clientX - rect.left) / k - press.x, (event.clientY - rect.top) / k - press.y);
       if (moved < 6) kick(press.index);
     }
     press.index = -1;
@@ -1015,12 +1026,13 @@ export function createMeasure(
     const glyph = glyphs[hovering() ? focus : -1];
     if (!glyph || !settings.selection) return null;
     const origin = root.getBoundingClientRect();
+    const k = zoomOf(origin);
     const b = targetBox(glyph);
     return {
-      left: origin.left + b.x1,
-      top: origin.top + b.y1,
-      right: origin.left + b.x2,
-      bottom: origin.top + b.y2,
+      left: origin.left + b.x1 * k,
+      top: origin.top + b.y1 * k,
+      right: origin.left + b.x2 * k,
+      bottom: origin.top + b.y2 * k,
     };
   };
 

@@ -1,0 +1,153 @@
+// Vrstvy banneru na stojato (layer-stack.tsx), jako v inspektoru case study:
+// svislé plochy natočené kolem osy Y, za sebou v ose Z. Uhlový sloupec —
+// tlumený sněhový rám, přes něj zelený, který se ve smyčce kreslí.
+
+$turn: 34deg;
+$tip: 5deg;
+
+.stack {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  perspective: 1800px;
+  pointer-events: none;
+}
+
+.rig {
+  position: absolute;
+  top: var(--stack-top, 40%);
+  left: var(--stack-left, 46%);
+  width: var(--stack-size, 40%);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%) rotateX($tip) rotateY($turn);
+  transform-style: preserve-3d;
+  animation: sway 10s ease-in-out infinite;
+}
+
+// Pomalé kolébání celého stohu.
+@keyframes sway {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) rotateX($tip) rotateY($turn);
+  }
+
+  50% {
+    transform: translate(-50%, -50%) rotateX($tip * 0.4) rotateY($turn - 7deg);
+  }
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  outline: 1px solid rgba(var(--snow-rgb), 0.16);
+  background: rgba(var(--snow-rgb), 0.02);
+  opacity: 0;
+  transform: translateZ(0);
+  transition:
+    transform 1.2s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.5s ease;
+  transition-delay: calc(0.2s + var(--i) * 0.07s);
+
+  [data-spread] & {
+    opacity: 1;
+    transform: translateZ(calc(var(--i) * var(--stack-gap, 2rem)));
+  }
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    user-select: none;
+  }
+}
+
+// Zelený rám: dotáhne se, chvíli drží a smaže se — vrstva po vrstvě.
+.frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+
+  rect {
+    fill: none;
+    stroke: var(--green);
+    stroke-width: 1.2px;
+    stroke-dasharray: 1 1;
+    stroke-dashoffset: 1;
+    animation: sketch 6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+    animation-delay: calc(1.2s + var(--i) * 0.4s);
+  }
+}
+
+@keyframes sketch {
+  0% {
+    stroke-dashoffset: 1;
+  }
+
+  35%,
+  65% {
+    stroke-dashoffset: 0;
+  }
+
+  100% {
+    stroke-dashoffset: -1;
+  }
+}
+
+// Jmenovka svisle podél levé hrany vrstvy (v její rovině) — vrstvy jdou
+// za sebou doprava, vodorovné jmenovky by se překrývaly.
+.label {
+  position: absolute;
+  top: 0;
+  right: 100%;
+  padding-left: 0.6vh;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: clamp(0.45rem, 0.95vh, 1.25rem);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(var(--snow-rgb), 0.6);
+
+  .layer:last-child & {
+    color: var(--green);
+  }
+}
+
+@media (orientation: portrait) {
+  .label {
+    font-size: 0.45rem;
+  }
+
+  // Telefon: jmenovky by vlezly do nadpisu — jen vrstvy.
+  @media (max-width: 560px) {
+    .label {
+      display: none;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rig,
+  .frame rect {
+    animation: none;
+  }
+
+  .frame rect {
+    stroke-dashoffset: 0;
+  }
+
+  .layer {
+    transition: opacity 0.3s ease;
+  }
+}
+
+// Jen detail: celý stoh ztlumený (opacity na .stack, ne na .rig — na prvku
+// s preserve-3d by zploštila 3D).
+.stack {
+  opacity: 0.4;
+}

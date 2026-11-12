@@ -57,8 +57,9 @@ const ratioLabel = (aspect: number) =>
   RATIOS.find(([value]) => Math.abs(value - aspect) / value < 0.03)?.[1] ?? aspect.toFixed(2);
 
 /** Slova ze sazby — vybere se jich pár náhodně. */
-const WORDS = ["Aa", "Kerning", "Baseline", "Grid", "CMYK", "300 DPI", "Bleed 3 mm", "Layout", "Branding", "#BEC948", "Typografie", "Vizuál"];
-const SHAPES = ["circle", "square", "triangle", "pen"] as const;
+// Sdílí je i DepthRibbon (glyfy při posunu na stránce Projekty).
+export const WORDS = ["Aa", "Kerning", "Baseline", "Grid", "CMYK", "300 DPI", "Bleed 3 mm", "Layout", "Branding", "#BEC948", "Typografie", "Vizuál"];
+export const SHAPES = ["circle", "square", "triangle", "pen"] as const;
 type ShapeKind = (typeof SHAPES)[number];
 
 type Banner = {
@@ -191,6 +192,23 @@ export function createBanners(
 
   let dpr = 1;
   let origin: Pt = [0, 0];
+  // Kreslí se v souřadnicích okna z chvíle posledního layoutu (`origin`).
+  // DOM (portrét, nadpis) se ale měří až teď — když se plátno mezitím
+  // pohnulo (předání z úvodu, přechod stránky, obrázek dorazil později),
+  // je třeba měřené posunout zpět o ten posun, jinak se bannery „upečou"
+  // jinam (třeba nahoru přes hlavičku) a už se nehnou.
+  const drift = (): Pt => {
+    const own = canvas.getBoundingClientRect();
+    return [own.left - origin[0], own.top - origin[1]];
+  };
+  const back = (box: Box, [dx, dy]: Pt): Box => ({ ...box, x: box.x - dx, y: box.y - dy });
+  // Rám okna v souřadnicích kreslení: svisle podle plátna (bannery stojí
+  // na lince plátna, ne okna), vodorovně rám obsahu opravený o posun.
+  const frameOf = (d: Pt) => {
+    const frame = viewFrame();
+    const height = canvas.getBoundingClientRect().height || frame.h;
+    return { x: frame.x - d[0], y: origin[1], w: frame.w, h: height };
+  };
   let banners: Banner[] = [];
   let items: Item[] = [];
   let last = -1;
@@ -212,8 +230,10 @@ export function createBanners(
   const layoutBanners = () => {
     // Výška rámu obsahu (strop 1440px) — portrét, ke kterému bannery stojí,
     // je 94 % jeho výšky.
-    const vh = viewFrame().h;
-    const region = rectOf(area);
+    const d = drift();
+    const frame = frameOf(d);
+    const vh = frame.h;
+    const region = back(rectOf(area), d);
     if (!region.w || !region.h) {
       banners = [];
       return;
@@ -224,14 +244,22 @@ export function createBanners(
     let widths = heights.map((h, i) => h * aspectOf(i));
     const gaps = SETTINGS.gutter * (images.length - 1);
     const total = () => widths.reduce((a, b) => a + b, 0) + gaps;
-    const frame = viewFrame();
     const room = options.across !== undefined ? frame.w * options.across : region.w * 1.15;
     if (total() > room) {
       const k = (room - gaps) / (total() - gaps);
       heights = heights.map((h) => h * k);
       widths = widths.map((w) => w * k);
     }
-    const base = vh * (options.baseline ?? 0.8);
+    const base = frame.y + vh * (options.baseline ?? 0.8);
+    // Hranice: vyšší banner nesmí vylézt nad horních 12 % plátna (hlavička)
+    // — radši se oba zmenší.
+    const ceiling = frame.y + vh * 0.12;
+    const tallest = Math.max(...heights);
+    if (base - tallest < ceiling) {
+      const k = Math.max(base - ceiling, 0) / tallest;
+      heights = heights.map((h) => h * k);
+      widths = widths.map((w) => w * k);
+    }
     let x = options.across !== undefined ? frame.x + (frame.w - total()) / 2 : region.x + (region.w - total()) / 2;
     const previous = banners;
     banners = images.map((image, i) => {
@@ -269,10 +297,11 @@ export function createBanners(
   const placeItems = () => {
     placed = true;
     items = [];
-    const region = rectOf(area);
+    const d = drift();
+    const region = back(rectOf(area), d);
     if (!banners.length || !region.w) return;
-    // Rám obsahu (strop 2560 × 1440, lib/fluid).
-    const frame = viewFrame();
+    // Rám obsahu (lib/fluid) v souřadnicích kreslení.
+    const frame = frameOf(d);
     const vw = frame.w;
     const vh = frame.h;
     const rnd = random(seed ^ 0x9e3779b9);
@@ -282,7 +311,7 @@ export function createBanners(
         : Math.max(frame.x + vw * 0.45, region.x - vw * 0.15);
     const field: Box = { x: left, y: frame.y + 100, w: 0, h: vh - 100 - 30 };
     field.w = frame.x + vw - 20 - field.x;
-    const taken = [...banners.map((b) => pad(b.box, 22)), ...headlineBoxes()];
+    const taken = [...banners.map((b) => pad(b.box, 22)), ...headlineBoxes().map((box) => back(box, d))];
     const place = (w: number, h: number): Box | null => {
       for (let tries = 0; tries < 60; tries++) {
         const box = { x: field.x + rnd() * (field.w - w), y: field.y + rnd() * (field.h - h), w, h };

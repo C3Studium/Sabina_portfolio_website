@@ -95,6 +95,12 @@ type InfoProps = {
   stack?: StackItem[] | null;
   stats?: StatItem[] | null;
   services?: Service[] | null;
+  /**
+   * Okno sekce (layout/section-popup): hotové rozvržení bez přišpendlení
+   * a bez umělé myši — sekce jen nastoupí (styles .infoPopup), balíček
+   * karet běží hned. Texty a anotace pro Studio stejné jako na stránce.
+   */
+  popup?: boolean;
 };
 
 /** Seznam z CMS, a když je prázdný, ten z kódu. */
@@ -126,7 +132,13 @@ function DocIcon({ icon, className }: { icon: CmsImage; className?: string }) {
   );
 }
 
-export default function Info({ copy = null, stack = null, stats = null, services = null }: InfoProps) {
+export default function Info({
+  copy = null,
+  stack = null,
+  stats = null,
+  services = null,
+  popup = false,
+}: InfoProps) {
   const edit = editableIn(copy?.docId ?? null);
 
   // Zvýraznění a řádky se řeší zvlášť: zvýraznění je deklarace POLE, platí
@@ -192,12 +204,15 @@ export default function Info({ copy = null, stack = null, stats = null, services
     offset: ["start start", "end end"],
   });
   const editing = Boolean(copy?.docId);
+  // Hotový stav bez stavby a bez myši: Studio a okno sekce. Statické karty
+  // (místo balíčku) ale jen ve Studiu — překryv je čte jako dokumenty.
+  const still = editing || popup;
   const tablet = useMedia(PORTRAIT_TABLET);
   const labelOpacity = useTransform(stage, span(0.02, 0.08));
   // Levý sloupec během stavby vyjede o 6vh nahoru. Ve Studiu stojí rovnou
   // v konečné poloze — hotový stav ukazuje i lištu statistik a sloupec
   // posunutý podle scrollu by pod ni zajel.
-  const introY = useTransform(useTransform(stage, [0, 0.6], [editing ? 0 : 6, 0]), cvh);
+  const introY = useTransform(useTransform(stage, [0, 0.6], [still ? 0 : 6, 0]), cvh);
 
   // Umělá myš a to, co staví (choreography.ts).
   const toolsRef = useRef<HTMLUListElement>(null);
@@ -212,7 +227,7 @@ export default function Info({ copy = null, stack = null, stats = null, services
     names: tools.map((tool) => tool.title),
     refs: { list: toolsRef, heading: headingRef, lead: leadRef, cards: cardsRef, stats: statsRef, intro: introRef },
     cardsPad: CARDS_PAD,
-    enabled: !editing,
+    enabled: !still,
   });
   const { flow, typing } = designer;
   // Karty: rámeček kreslí myš, po nakreslení ořezové značky a mřížka, pak
@@ -257,7 +272,13 @@ export default function Info({ copy = null, stack = null, stats = null, services
 
 
   return (
-    <section ref={sectionRef} className={styles.infoTrack} id="sluzby" data-cursor="user" data-scroll-label="Služby">
+    <section
+      ref={sectionRef}
+      className={popup ? `${styles.infoTrack} ${styles.infoPopup}` : styles.infoTrack}
+      id={popup ? undefined : "sluzby"}
+      data-cursor="user"
+      data-scroll-label="Služby"
+    >
     <div className={styles.info}>
       {/* Obsah drží 90vw uprostřed */}
       <div className={styles.content}>
@@ -266,10 +287,10 @@ export default function Info({ copy = null, stack = null, stats = null, services
         <motion.div ref={introRef} className={styles.intro} style={{ y: introY }}>
           {/* Horní blok — drží se u horního okraje. */}
           <div className={styles.toolsBlock}>
-            <motion.p className={`${styles.toolsLabel} ${styles.exitHost}`} style={{ opacity: labelOpacity }}>
+            <motion.p className={`${styles.toolsLabel} ${styles.exitHost}`} style={popup ? undefined : { opacity: labelOpacity }}>
               <motion.span
                 className={styles.toolsLabelLine}
-                style={editing ? undefined : { opacity: exitLeft }}
+                style={still ? undefined : { opacity: exitLeft }}
                 aria-hidden="true"
               />
               {/* Text ve vlastním spanu: <p> je flex a volný text v něm byl
@@ -278,8 +299,8 @@ export default function Info({ copy = null, stack = null, stats = null, services
                 progress={stage}
                 from={0.03}
                 to={0.16}
-                still={editing}
-                style={editing ? undefined : { opacity: exitLeft }}
+                still={still}
+                style={still ? undefined : { opacity: exitLeft }}
                 {...edit(`items.${AT.toolsLabel}.label`)}
               >
                 {toolsLabel}
@@ -313,7 +334,7 @@ export default function Info({ copy = null, stack = null, stats = null, services
                     dup={dup ? dup.drag : undefined}
                     removeAt={flow.marquee.remove}
                     copy={index > 0 ? content(tools[index - 1]) : undefined}
-                    still={editing}
+                    still={still}
                     className={styles.tool}
                     {...editableDoc(tool.id ?? null, "stackItem")}
                   >
@@ -339,7 +360,7 @@ export default function Info({ copy = null, stack = null, stats = null, services
               {/* Ve Studiu obyčejné řádky (překryv je čte a přepisuje). Na
                   webu nadpis napíše umělá myš: zástupný text se označí,
                   smaže a napíše se skutečný (TypeText). */}
-              {editing ? (
+              {still ? (
                 <Lines lines={heading.lines} markClass={styles.accent} />
               ) : (
                 <>
@@ -351,7 +372,7 @@ export default function Info({ copy = null, stack = null, stats = null, services
             </h2>
 
             <p ref={leadRef} className={`${styles.lead} ${styles.exitHost}`} {...edit("body")}>
-              {editing ? (
+              {still ? (
                 lead
               ) : (
                 <>
@@ -369,7 +390,7 @@ export default function Info({ copy = null, stack = null, stats = null, services
           className={styles.portrait}
           {...edit.image("image")}
           // Bez natáčení — portrét sem myš jen přetáhne a stojí.
-          style={{ opacity: editing ? portraitOpacity : infoPortraitOpacity }}
+          style={popup ? undefined : { opacity: editing ? portraitOpacity : infoPortraitOpacity }}
         >
           <Image
             ref={portraitRef}
@@ -386,7 +407,7 @@ export default function Info({ copy = null, stack = null, stats = null, services
             Služby jsou dokumenty (Služby ve Studiu). První podle pořadí je
             rozložená, další stojí za ní s číslem a názvem. */}
         <div ref={cardsRef} className={styles.cardsBuild}>
-        {editing ? null : (
+        {still ? null : (
           <>
             <DrawFrame draw={cardsDraw} marks={cardsMarks} fade={cardsFrameFade} label={cardLabel} pad={CARDS_PAD} />
             <BuildGrid opacity={cardsGrid} />
@@ -492,8 +513,8 @@ export default function Info({ copy = null, stack = null, stats = null, services
           // až myš dokreslí rámeček; pak se samy střídají, dají se táhnout.
           // Karty 2× větší, mezery 3× větší; balíček se vejde na výšku
           // a do strany smí přesáhnout (ukotvený vlevo, za ním okraj okna).
-          <motion.div className={styles.cards} style={{ opacity: exitCards }}>
-            {typing.cards ? (
+          <motion.div className={styles.cards} style={still ? undefined : { opacity: exitCards }}>
+            {popup || typing.cards ? (
               <CardSwap
                 theme="light"
                 width={880}
@@ -562,14 +583,14 @@ export default function Info({ copy = null, stack = null, stats = null, services
         <motion.div
           ref={statsRef}
           className={styles.statsBar}
-          style={editing ? undefined : { opacity: statsOpacity, x: statsX }}
+          style={still ? undefined : { opacity: statsOpacity, x: statsX }}
         >
         <motion.span
           className={styles.statsBarFill}
-          style={editing ? undefined : { opacity: exitStats }}
+          style={still ? undefined : { opacity: exitStats }}
           aria-hidden="true"
         />
-        <motion.ul className={styles.stats} style={editing ? undefined : { opacity: exitStats }}>
+        <motion.ul className={styles.stats} style={still ? undefined : { opacity: exitStats }}>
           {statList.map((stat, index) => {
             const editStat = editableIn(stat.id ?? null);
             return (
@@ -603,7 +624,7 @@ export default function Info({ copy = null, stack = null, stats = null, services
     </div>
 
     {/* Umělá myš, výběr a panel vrstev — ve fixed portálu nad stránkou. */}
-    {editing ? null : (
+    {still ? null : (
       <>
         <FlightImage src={portrait.src} {...designer.flight} />
         <ToolPanels

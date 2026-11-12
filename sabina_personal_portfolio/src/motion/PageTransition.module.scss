@@ -1,21 +1,56 @@
 @use "../styles/system/_shortcuts.scss" as *;
 
-// Scéna závoje — Default. Tmavý závoj v tónu webu, prolne se tam a zpátky.
+// Přechod mezi stránkami — prolnutí bez závoje (PageTransition.tsx).
+//
+// Engine (valecms/motion, hold.js) píše na `main` odchod: krytí 0 a zmenšení
+// na 0,955 — na tichý přechod moc. Tady jemnější verze a příchod nové
+// stránky; selektory o stupeň konkrétnější, aby vyhrály nad stylem enginu.
+//   html[data-veil="1"]                 přechod běží
+//   html[data-preload-reveal="1"]       nová stránka se prolíná dovnitř
 
+$ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+// Scéna je průhledná — mezi stránkami je vidět jen podklad webu.
 .veil {
   position: absolute;
   inset: 0;
-  background: var(--transition-bg, #2e2e2e);
-  animation: veilIn 0.35s ease-out backwards;
-  transition: opacity 0.45s ease-out;
+  pointer-events: none;
+}
 
-  // Nová stránka se prolíná dovnitř, závoj ven.
-  &[data-phase="reveal"] {
-    opacity: 0;
+// Odchod: rozplynutí s nepatrným zmenšením.
+:global(html[data-veil="1"]:not([data-preload-reveal="1"]) body main) {
+  opacity: 0;
+  transform: scale(0.985);
+  transition:
+    opacity 0.48s $ease,
+    transform 0.48s $ease;
+}
+
+// Příchod: krytí řídí engine (prolnutí), měřítko se tu zklidní z 1,01.
+:global(html[data-veil="1"][data-preload-reveal="1"] body main) {
+  animation: pageSettle 0.65s $ease both;
+}
+
+@keyframes pageSettle {
+  from {
+    transform: scale(1.01);
+  }
+  to {
+    transform: none;
   }
 }
 
-@keyframes veilIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+// Hlavička je na všech stránkách stejná — při přechodu stojí a zůstává
+// klikací. (Pod oponou při načtení ji drží úvod, to tady neplatí.)
+:global(html[data-veil="1"] body header[data-motion-hold]) {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(html[data-veil="1"] body main) {
+    transform: none !important;
+    animation: none !important;
+  }
 }

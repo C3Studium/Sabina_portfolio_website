@@ -1,0 +1,836 @@
+// Poptávka v krocích (brief.tsx). Světlá karta modálu: uhlové písmo,
+// zelená jen jako zvýraznění (zaškrtnutí, aktuální krok).
+
+$ink: var(--charcoal);
+$accent: var(--green);
+$line: rgba(var(--charcoal-rgb), 0.22);
+
+.brief {
+  display: flex;
+  flex-direction: column;
+  gap: 2.6vh;
+}
+
+/* ---------- Postup ---------- */
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 1.2vw;
+}
+
+// Hlavička kroku (StepHead): velké tenké číslo, vedle otázka a nápověda.
+.head {
+  display: flex;
+  align-items: center;
+  gap: 2.2vw;
+  margin-bottom: 2.6vh;
+}
+
+.num {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4vw;
+  flex-shrink: 0;
+  font-size: clamp(2.4rem, 8vh, 10rem);
+  font-weight: 200;
+  line-height: 0.8;
+  letter-spacing: -0.02em;
+
+  small {
+    font-size: clamp(0.65rem, 1.4vh, 1.8rem);
+    font-weight: 400;
+    letter-spacing: 0.14em;
+  }
+}
+
+.headText {
+  display: flex;
+  flex-direction: column;
+  gap: 1vh;
+  min-width: 0;
+  padding-left: 2.2vw;
+  border-left: 1px solid rgba(var(--charcoal-rgb), 0.35);
+}
+
+// Otázka kroku jako zelený zvýrazňovač (uhlový text na zeleném pruhu) —
+// zelené písmo by na světlé ploše bylo hůř čitelné, ne líp.
+.headText .title {
+  align-self: flex-start;
+  padding: 0.04em 0.28em 0.08em;
+  margin-left: -0.28em;
+  background: $accent;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.ticks {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0.4vw;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tick {
+  position: relative;
+  width: 100%;
+  height: 2.6vh;
+  min-height: 1.2rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 3px;
+    border-radius: 2px;
+    background: $line;
+    transition: background 0.3s ease;
+  }
+
+  &[data-done]::before {
+    background: $ink;
+  }
+
+  &[data-current]::before {
+    background: $accent;
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+
+  // Název kroku jen u aktuálního, pod čárkou.
+  span {
+    position: absolute;
+    left: 0;
+    top: calc(50% + 6px);
+    font-size: clamp(0.5rem, 1.05vh, 1.4rem);
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  &[data-current] span {
+    opacity: 1;
+  }
+}
+
+/* ---------- Krok ---------- */
+
+.stage {
+  position: relative;
+  min-height: 34vh;
+  margin-top: 1vh;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6vh;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.1rem, 2.9vh, 3.8rem);
+  font-weight: 300;
+  line-height: 1.2;
+}
+
+.hint {
+  margin: 0;
+  font-size: clamp(0.65rem, 1.4vh, 1.85rem);
+  font-weight: 300;
+  line-height: 1.5;
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9vh 0.6vw;
+}
+
+// Volba jako štítek: kroužek se zaškrtnutím a text. Vybraná = uhlová plocha.
+.option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7vw;
+  padding: 1.3vh 1.2vw 1.3vh 0.8vw;
+  border: 1px solid $line;
+  border-radius: 999px;
+  background: #e9e8e4;
+  color: $ink;
+  font-family: inherit;
+  font-size: clamp(0.7rem, 1.55vh, 2.05rem);
+  font-weight: 400;
+  cursor: pointer;
+  transition:
+    background 0.22s ease,
+    border-color 0.22s ease,
+    color 0.22s ease,
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+
+  &:hover {
+    border-color: $ink;
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  &[data-on] {
+    border-color: $ink;
+    background: $ink;
+    color: var(--snow);
+  }
+}
+
+.small {
+  padding: 1vh 1vw 1vh 0.7vw;
+  font-size: clamp(0.62rem, 1.35vh, 1.8rem);
+}
+
+.mark {
+  display: grid;
+  place-items: center;
+  width: clamp(0.95rem, 2.2vh, 2.8rem);
+  height: clamp(0.95rem, 2.2vh, 2.8rem);
+  flex-shrink: 0;
+  border: 1.5px solid rgba(var(--charcoal-rgb), 0.35);
+  border-radius: 50%;
+  color: transparent;
+  transition: background 0.22s ease, color 0.22s ease, border-color 0.22s ease;
+
+  [data-multi] > & {
+    border-radius: 25%;
+  }
+
+  [data-on] > & {
+    border-color: $accent;
+    background: $accent;
+    color: $ink;
+  }
+
+  svg {
+    width: 68%;
+    height: 68%;
+  }
+}
+
+.contactRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1vh 0.8vw;
+}
+
+// Shrnutí: odpovědi pod sebou, každá s „Upravit".
+.summary {
+  display: grid;
+  gap: 0.2vh;
+  margin: 0.6vh 0 0;
+  padding: 1.2vh 1vw;
+  border: 1px dashed $line;
+  border-radius: 0.4vw;
+
+  > div {
+    display: grid;
+    grid-template-columns: 9em 1fr;
+    gap: 0.8vw;
+    padding: 0.5vh 0;
+    font-size: clamp(0.62rem, 1.35vh, 1.8rem);
+  }
+
+  dt {
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 0.85em;
+    align-self: center;
+  }
+
+  dd {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.6vw;
+    margin: 0;
+    font-weight: 300;
+  }
+}
+
+.edit {
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: $ink;
+  font: inherit;
+  font-size: 0.85em;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+/* ---------- Navigace kroků ---------- */
+
+// Když se krok nevejde (telefon, tablet, nízký notebook), panel se
+// posouvá a Zpět / Dál zůstávají přilepené u spodní hrany.
+.nav {
+  position: sticky;
+  // -1px: přilepený pruh tak vyčnívá o pixel a brief.tsx pozná, že visí.
+  bottom: -1px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1vw;
+  margin-top: 1vh;
+  transition: background 0.25s ease;
+
+  // Kde se krok posouvá, má pruh vzduch kolem tlačítek; podklad jen když
+  // opravdu visí přes obsah pod sebou (data-stuck). Na monitoru se vše
+  // vejde — tam podklad nikdy (ležel by přes tvary v pozadí).
+  @media (orientation: portrait), (max-width: 1100px), (max-height: 720px) {
+    padding: 1.6vh 0;
+
+    &[data-stuck] {
+      background: linear-gradient(to bottom, rgba(218, 216, 212, 0), rgba(218, 216, 212, 0.94) 50%);
+    }
+  }
+}
+
+.back,
+.next {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6vw;
+  padding: 1.4vh 1.4vw;
+  border: 1px solid $line;
+  border-radius: 999px;
+  background: transparent;
+  color: $ink;
+  font-family: inherit;
+  font-size: clamp(0.65rem, 1.4vh, 1.85rem);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.22s ease, color 0.22s ease, opacity 0.22s ease;
+
+  svg {
+    width: clamp(0.8rem, 1.8vh, 2.3rem);
+    height: clamp(0.8rem, 1.8vh, 2.3rem);
+  }
+}
+
+.next {
+  border-color: $ink;
+  background: $ink;
+  color: var(--green);
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+.send {
+  width: auto;
+  flex: 1;
+  margin-top: 0;
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+/* ---------- Odesláno ---------- */
+
+.done {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6vh;
+}
+
+.doneIcon {
+  display: grid;
+  place-items: center;
+  width: 5vh;
+  height: 5vh;
+  min-width: 2.6rem;
+  min-height: 2.6rem;
+  border-radius: 50%;
+  background: $accent;
+  color: $ink;
+
+  svg {
+    width: 55%;
+    height: 55%;
+  }
+}
+
+.doneTitle {
+  margin: 0;
+  font-size: clamp(1.1rem, 3vh, 3.8rem);
+  font-weight: 300;
+}
+
+.doneText {
+  margin: 0;
+  font-size: clamp(0.68rem, 1.55vh, 2.05rem);
+  font-weight: 300;
+  line-height: 1.6;
+}
+
+/* ---------- Na výšku ---------- */
+
+@media (orientation: portrait) {
+  .options {
+    gap: 8px;
+  }
+
+  .option {
+    gap: 10px;
+    padding: 10px 16px 10px 10px;
+    font-size: clamp(0.85rem, 1.6vh, 1.1rem);
+  }
+
+  .small {
+    padding: 8px 12px 8px 8px;
+  }
+
+  .ticks {
+    gap: 4px;
+  }
+
+  .back,
+  .next {
+    gap: 8px;
+    padding: 12px 18px;
+  }
+
+  .summary {
+    padding: 10px 12px;
+    border-radius: 6px;
+
+    > div {
+      grid-template-columns: 7.5em 1fr;
+      gap: 8px;
+    }
+  }
+
+  .stage {
+    min-height: 0;
+  }
+
+  .progress {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 560px) {
+  .contactRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Karty voleb (ikona + název) ---------- */
+// Ikona hned od začátku jako velká tenká kresba v pozadí karty, název
+// velký a na střed u spodní hrany, zaškrtnutí v pravém horním rohu.
+// Vybraná: zelená karta, kresba plně uhlová.
+// Na šířku všechny volby kroku v jedné řadě.
+
+.cards {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 1vw;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: clamp(11rem, 26.2vh, 22rem);
+  padding: 2vh 0.9vw 2.4vh;
+  border: 1px solid $line;
+  border-radius: 5px;
+  // Plná výplň — Bauhaus tvary v pozadí nesmí prosvítat přes kartu.
+  background: #e9e8e4;
+  color: $ink;
+  font-family: inherit;
+  text-align: center;
+  cursor: pointer;
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease,
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s ease;
+
+  @media (hover: hover) {
+    &:hover {
+      border-color: $ink;
+      transform: translateY(-2px);
+      box-shadow: 0 1.2vh 2.4vh rgba(0, 0, 0, 0.08);
+    }
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &[data-on] {
+    border-color: $accent;
+    background: $accent;
+  }
+
+  // Zaškrtnutí dole uprostřed karty, pod názvem.
+  .mark {
+    position: absolute;
+    bottom: 1.6vh;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  // Na zelené kartě by zelené zaškrtnutí zmizelo — uhlový kroužek.
+  &[data-on] .mark {
+    border-color: $ink;
+    background: $ink;
+    color: $accent;
+  }
+}
+
+// Kresba ikony jako v kartách O mně (bez animace): velká, tlumená, u pravé
+// hrany a přes ni přetéká; tenká čára při jakékoli velikosti.
+.cardArt {
+  position: absolute;
+  z-index: -1;
+  top: 50%;
+  right: -16%;
+  height: 118%;
+  aspect-ratio: 1;
+  color: rgba(var(--green-rgb), 0.7);
+  transform: translateY(-50%);
+  transition: color 0.3s ease;
+  pointer-events: none;
+
+  svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  path {
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .card:hover & {
+    color: var(--green);
+  }
+
+  [data-on] > & {
+    color: rgba(var(--charcoal-rgb), 0.3);
+  }
+}
+
+.cardLabel {
+  font-size: clamp(0.8rem, 2vh, 2.6rem);
+  font-weight: 400;
+  line-height: 1.2;
+  max-width: 92%;
+
+  [data-on] > & {
+    font-weight: 500;
+  }
+}
+
+// Na šířku zůstávají volby v jedné řadě i na tabletu; tři vedle sebe až
+// na nejužším telefonu, kde by karta měla pod 70 px.
+@media (orientation: landscape) and (max-width: 760px) {
+  .cards {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (orientation: portrait) {
+  .cards {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .card {
+    min-height: 11.5rem;
+    padding: 12px 10px 14px;
+
+    .mark {
+      bottom: 10px;
+    }
+  }
+
+  .cardArt {
+    right: -12%;
+    height: 110%;
+  }
+
+  .cardLabel {
+    font-size: 0.95rem;
+  }
+}
+
+/* ---------- Poslední krok: menší a vzdušnější ---------- */
+// Kontakt + shrnutí + souhlas + odeslání se musí vejít bez scrollu:
+// menší písmo a pole, víc vzduchu mezi bloky.
+.contactStep {
+  gap: 1.4vh;
+
+  // Menší číslo a bez mezery pod hlavičkou — poslední krok se má vejít.
+  .head {
+    margin-bottom: 0;
+  }
+
+  .num {
+    font-size: clamp(2rem, 5.6vh, 7rem);
+  }
+
+  // Kresba za formulářem by šla přes text shrnutí — světlý podklad jako pole.
+  .summary {
+    background: #e9e8e4;
+  }
+
+  .title {
+    font-size: clamp(1rem, 2.4vh, 3.2rem);
+  }
+
+  // Pole (třída .field z modálu) o stupeň menší.
+  input[type="text"] {
+    padding: 1.15vh 0.9vw;
+    font-size: clamp(0.65rem, 1.35vh, 1.8rem);
+  }
+
+  .small {
+    padding: 0.75vh 0.9vw 0.75vh 0.6vw;
+    font-size: clamp(0.6rem, 1.25vh, 1.65rem);
+  }
+
+  .mark {
+    width: clamp(0.85rem, 1.9vh, 2.4rem);
+    height: clamp(0.85rem, 1.9vh, 2.4rem);
+  }
+
+  // Shrnutí ve dvou sloupcích — poloviční výška.
+  .summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 2.4vw;
+    padding: 1vh 0.9vw;
+
+    > div {
+      grid-template-columns: 8.5em 1fr;
+      padding: 0.35vh 0;
+      font-size: clamp(0.58rem, 1.2vh, 1.6rem);
+    }
+  }
+
+  label {
+    font-size: clamp(0.6rem, 1.25vh, 1.65rem);
+  }
+}
+
+// Odeslat na posledním kroku: pilulka místo pruhu přes celou šířku.
+.brief .send {
+  flex: 0 1 auto;
+  min-width: 18vw;
+  gap: 0.9vw;
+  padding: 0.8vh 0.8vh 0.8vh 0.8vh;
+  border-radius: 999px;
+
+  // Kroužky ikony a šipky menší (třídy z modálu: první a poslední dítě).
+  > span:first-child,
+  > span:last-child {
+    width: clamp(1.4rem, 3.2vh, 4.2rem);
+    height: clamp(1.4rem, 3.2vh, 4.2rem);
+  }
+
+  > span:nth-child(2) {
+    font-size: clamp(0.55rem, 1.2vh, 1.6rem);
+  }
+}
+
+.contactRow {
+  gap: 0.8vh 0.6vw;
+}
+
+@media (orientation: portrait) {
+  .contactStep {
+    gap: 14px;
+
+    input[type="text"] {
+      padding: 10px 12px;
+      font-size: 0.9rem;
+    }
+
+    .summary {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .summary > div {
+      font-size: 0.8rem;
+    }
+  }
+
+  .brief .send {
+    flex: 1;
+    padding: 10px 10px 10px 16px;
+  }
+}
+
+// Poslední krok má víc obsahu — tam původní, těsnější rozestupy.
+.brief:has(.contactStep) {
+  gap: 2vh;
+}
+
+/* ---------- Responzivita na šířku ---------- */
+
+// Nízký notebook (1280 × 620 … 1440 × 800): menší karty a mezery, ať se
+// krok vejde bez posouvání. Minima v rem jsou nižší — vh je tu malé.
+@media (orientation: landscape) and (max-height: 800px) and (min-height: 521px) {
+  .brief {
+    gap: 2.4vh;
+  }
+
+  .head {
+    margin-bottom: 2.4vh;
+  }
+
+  .num {
+    font-size: clamp(2rem, 7.5vh, 10rem);
+  }
+
+  .card {
+    min-height: clamp(8rem, 23.5vh, 22rem);
+  }
+}
+
+// Tablet na šířku (do 1100 px): karta je úzká — menší písmo a okraje.
+@media (orientation: landscape) and (max-width: 1100px) {
+  .cards {
+    gap: 0.8vw;
+  }
+
+  .card {
+    min-height: clamp(7.5rem, 19vh, 15rem);
+    padding: 1.4vh 0.6vw;
+  }
+
+  .cardLabel {
+    font-size: clamp(0.7rem, 1.6vh, 1rem);
+
+    [data-on] > & {
+      font-size: clamp(0.7rem, 1.6vh, 1rem);
+    }
+  }
+
+  .head {
+    margin-bottom: 2.4vh;
+  }
+}
+
+// Telefon na šířku (výška do 520 px): všechno o stupeň menší; panel se
+// posouvá a Zpět / Dál drží u spodní hrany.
+@media (orientation: landscape) and (max-height: 520px) {
+  .brief {
+    gap: 14px;
+  }
+
+  .head {
+    gap: 14px;
+    margin-bottom: 12px;
+  }
+
+  .num {
+    font-size: 2.4rem;
+  }
+
+  .headText {
+    gap: 4px;
+    padding-left: 14px;
+  }
+
+  .title {
+    font-size: 1rem;
+  }
+
+  .hint {
+    font-size: 0.72rem;
+  }
+
+  .card {
+    min-height: 7rem;
+    padding: 8px 6px;
+  }
+
+  .cardLabel {
+    font-size: 0.72rem;
+  }
+
+  .mark {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+
+  .back,
+  .next {
+    padding: 8px 14px;
+    font-size: 0.68rem;
+  }
+}
+
+// Nízký notebook, poslední krok: ještě o kousek těsněji, ať se pole,
+// shrnutí, souhlas i Odeslat vejdou bez posouvání.
+@media (orientation: landscape) and (max-height: 800px) and (min-height: 521px), (orientation: landscape) and (max-width: 1100px) and (min-height: 521px) {
+  .brief:has(.contactStep) {
+    gap: 1.4vh;
+  }
+
+  .contactStep {
+    gap: 1.1vh;
+
+    .num {
+      font-size: clamp(1.8rem, 6vh, 7rem);
+    }
+
+    .summary > div {
+      padding: 0.2vh 0;
+    }
+  }
+}
+
+// Nejnižší notebook (1280 × 620): karty ještě o kus nižší.
+@media (orientation: landscape) and (max-height: 680px) and (min-height: 521px) {
+  .card {
+    min-height: clamp(7.5rem, 21.5vh, 22rem);
+  }
+
+  .contactStep {
+    gap: 0.9vh;
+  }
+}

@@ -188,3 +188,53 @@ $h-dot-rest: calc(#{$h-gap} + #{$h-dot} / 2);
     }
   }
 }
+
+/* ---------- Malá svislá varianta (`compact`) ---------- */
+// Lišta na stránce Projekty: kratší linka a drobný popisek, aby se vešla
+// mezi číslo a tlačítko lišty. Na konci souboru, ať přebije bloky výš.
+.compact {
+  gap: 0.6rem;
+
+  .rail {
+    width: 1.5px;
+    height: clamp(3rem, 9vh, 7rem);
+  }
+
+  .dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .label {
+    font-size: clamp(0.55rem, 1.2vh, 1.6rem);
+    letter-spacing: 0.32em;
+    white-space: nowrap;
+  }
+}
+
+// Malá VODOROVNÁ varianta (`compact` + horizontal): pod textem projektu na
+// stránce Projekty. Písmo jako drobné popisky kolem, krátká linka.
+.compact.horizontal {
+  gap: 0.8rem;
+
+  .rail {
+    width: clamp(3rem, 5vw, 6.5rem);
+    height: 1.5px;
+    margin-left: calc(0.8rem + 6px);
+  }
+
+  .fill,
+  .carrier {
+    left: calc(-1 * (0.8rem + 3px));
+  }
+
+  .dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .label {
+    font-size: clamp(0.55rem, 1.2vh, 1.6rem);
+    letter-spacing: 0.32em;
+  }
+}

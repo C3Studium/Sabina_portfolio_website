@@ -1,0 +1,146 @@
+// DepthRibbon — vzhled. Scéna je jedno plátno přes celý kořen; tady jen
+// rám, popisek přiblížené karty a náhrada bez WebGL.
+// Sazba ve třech barvách: bílá, zelená a uhlová (žádné šedé).
+
+.root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  outline: none;
+  isolation: isolate;
+
+  &:focus-visible {
+    box-shadow: inset 0 0 0 1px var(--green);
+  }
+}
+
+// Svislý tah nechává stránce (na dotyku scroll), zbytek je galerie.
+.stage {
+  position: absolute;
+  inset: 0;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+
+  // Stránka bez scrollu (prop `wheel`): oba směry tahu patří scéně.
+  &[data-own-touch] {
+    touch-action: none;
+  }
+}
+
+/* ---------- Popisek přiblížené karty ---------- */
+
+.caption {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 5%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9vh;
+  max-width: 90%;
+  color: var(--snow);
+  text-align: center;
+  text-transform: uppercase;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 1.5vh);
+  transition: opacity 0.35s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+
+  &[data-open] {
+    opacity: 1;
+    transform: translate(-50%, 0);
+    transition-delay: 0.35s;
+  }
+}
+
+.captionTitle {
+  font-size: clamp(1rem, 3.2vh, 4rem);
+  font-weight: 300;
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+}
+
+.captionSubtitle {
+  font-size: clamp(0.5rem, 1.25vh, 1.6rem);
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  color: var(--green);
+}
+
+.captionLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8vw;
+  margin-top: 1.2vh;
+  padding: 1.1vh 1.4vw;
+  border: 1px solid rgba(var(--snow-rgb), 0.35);
+  border-radius: 999px;
+  color: var(--snow);
+  font-size: clamp(0.5rem, 1.2vh, 1.6rem);
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  pointer-events: auto;
+  transition: border-color 0.24s ease, color 0.24s ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--green);
+    color: var(--green);
+  }
+}
+
+.captionArrow {
+  display: grid;
+  place-items: center;
+
+  svg {
+    width: clamp(0.7rem, 1.7vh, 2.2rem);
+    height: clamp(0.7rem, 1.7vh, 2.2rem);
+  }
+}
+
+/* ---------- Studio a přístupnost ---------- */
+
+// Neviditelný klikací cíl nad kartou v plátně (jen Studio).
+.editTarget {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Bez WebGL ---------- */
+
+// Obrázky v řadě se stejnou výškou — šířku si každý vezme ze svého poměru.
+.fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 1vh;
+  padding: 3vh;
+
+  img {
+    display: block;
+    height: 22vh;
+    width: auto;
+    border-radius: 0.3vh;
+  }
+}

@@ -1,0 +1,4491 @@
+@use "../../styles/system/_shortcuts.scss" as *;
+
+// Plátno případové studie (index.tsx) a artboardy (boards.tsx).
+//  - Svět je ve SVĚTOVÝCH px; kameru píše index.tsx do transformu, do
+//    --cam-s (měřítko) a --m (0–1, izometrie při přejezdu). Popisky se
+//    stálou velikostí na obrazovce: `X / var(--cam-s)`.
+//  - Vrstvy artboardu `[data-z]` se při přejezdu zvednou: vlastnost
+//    `translate` (ne transform — ten píše framer u animovaných prvků).
+//  - Obsah artboardu je v jednotkách kontejneru (cqw / cqh) nebo v px
+//    artboardu (rozvržení počítané v boards.tsx).
+
+$accent: var(--green);
+$ink: var(--charcoal);
+$text: var(--snow);
+$line: rgba(var(--snow-rgb), 0.14);
+$card: rgba(22, 22, 22, 0.92);
+$ruler: 22px;
+$chapters: 30px;
+
+.accent {
+  color: $accent;
+}
+
+/* ---------- Sekce a rám ---------- */
+
+.canvasSection {
+  position: relative;
+  height: calc(var(--total) * var(--step-vh) * 1vh + 100vh);
+  color: $text;
+}
+
+.scrollMark {
+  position: absolute;
+  top: calc(var(--at) * (100% - 100vh));
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.canvasFrame {
+  --m: 0;
+  position: sticky;
+  top: var(--frame-y);
+  height: var(--frame-h);
+  overflow: hidden;
+  perspective: 2800px;
+  perspective-origin: 50% 45%;
+  background-image: radial-gradient(rgba(var(--snow-rgb), calc(0.12 * (1 - var(--m)))) 1.2px, transparent 1.6px);
+  background-size: 50px 50px;
+
+  // Volné plátno: tah posouvá, obrázky se při najetí zvýrazní.
+  &[data-free] {
+    cursor: grab;
+    touch-action: pan-y;
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    .img:hover {
+      outline: calc(2px / var(--cam-s)) solid $accent;
+      outline-offset: calc(2px / var(--cam-s));
+    }
+  }
+}
+
+.worldFade {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.lens {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform-origin: 45% 55%;
+}
+
+.world {
+  --cam-s: 1;
+  --m: 0;
+  --lift: 60px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* ---------- Artboard ---------- */
+
+.board {
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+.plate {
+  position: absolute;
+  inset: 0;
+  border-radius: calc(8px / var(--cam-s));
+  background: rgba(24, 24, 24, 0.9);
+  box-shadow: 0 calc(20px / var(--cam-s)) calc(60px / var(--cam-s)) rgba(0, 0, 0, 0.35);
+  outline: calc(1px / var(--cam-s)) solid rgba(var(--snow-rgb), calc(0.08 + 0.25 * var(--m)));
+}
+
+.board[data-active] .plate {
+  outline-color: rgba(var(--green-rgb), calc(0.55 * (1 - var(--m))));
+}
+
+.boardName {
+  position: absolute;
+  bottom: calc(100% + 10px / var(--cam-s));
+  left: 0;
+  display: flex;
+  gap: calc(12px / var(--cam-s));
+  margin: 0;
+  font-size: calc(12px / var(--cam-s));
+  white-space: nowrap;
+
+  span:last-child {
+    opacity: 0.7;
+  }
+}
+
+.board[data-active] .boardName span:first-child {
+  color: $accent;
+}
+
+.boardFace {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  container-type: size;
+}
+
+// Vrstvy artboardu: při přejezdu se jemně zvednou nad sebe.
+.boardFace [data-z] {
+  outline: calc(1px / var(--cam-s)) dashed rgba(var(--snow-rgb), calc(0.35 * var(--m)));
+  outline-offset: calc(6px / var(--cam-s));
+}
+
+.boardFace [data-z="1"] {
+  translate: 0 0 calc(var(--m) * var(--lift));
+}
+
+.boardFace [data-z="2"] {
+  translate: 0 0 calc(var(--m) * var(--lift) * 2);
+}
+
+.boardFace [data-z="3"] {
+  translate: 0 0 calc(var(--m) * var(--lift) * 3);
+}
+
+.pin {
+  position: absolute;
+  top: calc(-15px / var(--cam-s));
+  right: calc(-15px / var(--cam-s));
+  display: grid;
+  place-items: center;
+  width: calc(30px / var(--cam-s));
+  height: calc(30px / var(--cam-s));
+  border-radius: 50% 50% 50% 0;
+  background: $accent;
+  color: $ink;
+  font-size: calc(11px / var(--cam-s));
+  font-weight: 700;
+  translate: 0 0 calc(var(--m) * var(--lift) * 3.5);
+  opacity: 0.45;
+  transition: opacity 0.4s ease;
+}
+
+.board[data-active] .pin {
+  opacity: 1;
+  box-shadow: 0 0 0 calc(5px / var(--cam-s)) rgba(var(--green-rgb), 0.22);
+}
+
+.grip {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.boardEyebrow {
+  margin: 0;
+  font-size: 1.05cqw;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* ---------- Obrázek ---------- */
+
+.img {
+  position: relative;
+  width: 100%;
+  border-radius: calc(5px / var(--cam-s));
+  transition: outline-color 0.2s ease;
+}
+
+.imgInner {
+  border-radius: inherit;
+  object-fit: cover;
+  user-select: none;
+}
+
+/* ---------- Výběr a specifikace (společné) ---------- */
+
+.marquee {
+  position: absolute;
+  border: calc(1.5px / var(--cam-s)) solid $accent;
+  background: rgba(var(--green-rgb), 0.08);
+  pointer-events: none;
+
+  b {
+    position: absolute;
+    top: calc(100% + 6px / var(--cam-s));
+    left: 0;
+    padding: calc(3px / var(--cam-s)) calc(7px / var(--cam-s));
+    border-radius: calc(3px / var(--cam-s));
+    background: $accent;
+    color: $ink;
+    font-size: calc(11px / var(--cam-s));
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}
+
+.specBox {
+  position: absolute;
+  outline: calc(1px / var(--cam-s)) dashed rgba(var(--green-rgb), 0.85);
+  pointer-events: none;
+
+  b {
+    position: absolute;
+    bottom: calc(100% + 4px / var(--cam-s));
+    left: 0;
+    padding: calc(2px / var(--cam-s)) calc(6px / var(--cam-s));
+    border-radius: calc(3px / var(--cam-s));
+    background: rgba(var(--green-rgb), 0.9);
+    color: $ink;
+    font-size: calc(10px / var(--cam-s));
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  &[data-hot] {
+    outline-style: solid;
+    background: rgba(var(--green-rgb), 0.06);
+  }
+}
+
+.specGapV,
+.specGapH {
+  position: absolute;
+  pointer-events: none;
+
+  b {
+    position: absolute;
+    padding: calc(1px / var(--cam-s)) calc(5px / var(--cam-s));
+    border-radius: calc(3px / var(--cam-s));
+    background: $text;
+    color: $ink;
+    font-size: calc(10px / var(--cam-s));
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}
+
+.specGapV {
+  width: 0;
+  border-left: calc(1px / var(--cam-s)) solid $text;
+
+  b {
+    top: 50%;
+    left: calc(6px / var(--cam-s));
+    translate: 0 -50%;
+  }
+}
+
+.specGapH {
+  height: 0;
+  border-top: calc(1px / var(--cam-s)) solid $text;
+
+  b {
+    left: 50%;
+    top: calc(5px / var(--cam-s));
+    translate: -50% 0;
+  }
+}
+
+/* ---------- Vizuál z vrstev ---------- */
+
+.layerStage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.layerStack {
+  --s: 0;
+  position: relative;
+  height: 100%;
+  max-width: 100%;
+  transform-style: preserve-3d;
+  transform: rotateX(calc(var(--s) * 56deg)) rotateZ(calc(var(--s) * -38deg)) scale(calc(1 - var(--s) * 0.2));
+}
+
+.layerFlat {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: calc(4px / var(--cam-s));
+}
+
+.layerSheet {
+  position: absolute;
+  inset: 0;
+  transform: translateZ(calc(var(--k) * var(--s) * 120px));
+  outline: calc(1px / var(--cam-s)) solid rgba(var(--snow-rgb), calc(var(--s) * 0.35));
+  transition: opacity 0.25s ease;
+
+  &[data-hover] {
+    outline: calc(1.5px / var(--cam-s)) solid $accent;
+  }
+
+  &[data-dim] {
+    opacity: 0.25;
+  }
+}
+
+.layerDrop {
+  position: absolute;
+  inset: 0;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    user-select: none;
+  }
+}
+
+.layerTag {
+  position: absolute;
+  padding: calc(2px / var(--cam-s)) calc(6px / var(--cam-s));
+  border-radius: calc(3px / var(--cam-s));
+  background: $accent;
+  color: $ink;
+  font-size: calc(10px / var(--cam-s));
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: clamp(0, (var(--s) - 0.55) * 3, 1);
+  translate: 0 -110%;
+  pointer-events: none;
+}
+
+// Přepínač Náhled / Vrstvy: jezdec přejede pod aktivní záložku.
+.viewTabs {
+  --i: 0;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 0.4cqw;
+  border: 1px solid $line;
+  border-radius: 999px;
+  background: rgba(14, 14, 14, 0.85);
+
+  button {
+    position: relative;
+    z-index: 1;
+    padding: 0.9cqw 2cqw;
+    border: 0;
+    background: transparent;
+    color: $text;
+    font: inherit;
+    font-size: 1.15cqw;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.35s ease;
+
+    &[data-active] {
+      color: $ink;
+    }
+  }
+}
+
+.viewThumb {
+  position: absolute;
+  top: 0.4cqw;
+  bottom: 0.4cqw;
+  left: 0.4cqw;
+  width: calc(50% - 0.4cqw);
+  border-radius: 999px;
+  background: $accent;
+  translate: calc(var(--i) * 100%) 0;
+  transition: translate 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------- Titulní ---------- */
+
+.coverBoard {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.plane {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+}
+
+.coverMeta {
+  position: absolute;
+  top: 7cqh;
+  left: 5cqw;
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: 3.4cqw;
+  margin: 0;
+
+  dt {
+    font-size: 0.9cqw;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  dd {
+    margin: 0.5cqw 0 0;
+    font-size: 1.35cqw;
+  }
+}
+
+.coverEyebrow {
+  position: absolute;
+  left: 5cqw;
+  bottom: 37cqh;
+  margin: 0;
+  font-size: 1.15cqw;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.coverTitle {
+  position: absolute;
+  left: 4.6cqw;
+  bottom: 17cqh;
+  display: flex;
+  margin: 0;
+  font-size: 9.6cqw;
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.letterMask {
+  display: inline-block;
+  overflow: hidden;
+  padding-bottom: 0.06em;
+}
+
+.letter {
+  display: inline-block;
+}
+
+.coverTagline {
+  position: absolute;
+  left: 5cqw;
+  bottom: 8cqh;
+  margin: 0;
+  font-size: 2.6cqw;
+  font-weight: 300;
+}
+
+.coverStage {
+  position: absolute;
+  top: 5cqh;
+  bottom: 4cqh;
+  right: 4.5cqw;
+  width: 31cqw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2cqh;
+}
+
+.coverVisual {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.coverTabs {
+  flex: none;
+}
+
+// Titulní vizuál se rozkládá střídměji (vejde se do artboardu).
+.coverVisual .layerSheet {
+  transform: translateZ(calc(var(--k) * var(--s) * 70px));
+}
+
+/* ---------- Zadání ---------- */
+
+.briefBoard {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.briefThread {
+  position: absolute;
+  top: 8cqh;
+  left: 5cqw;
+  width: 50cqw;
+}
+
+.briefHead {
+  display: flex;
+  align-items: center;
+  gap: 1.2cqw;
+  margin: 0 0 2.4cqw;
+
+  span:last-child {
+    display: grid;
+    gap: 0.3cqw;
+  }
+
+  b {
+    font-size: 1.35cqw;
+    font-weight: 500;
+  }
+
+  i {
+    font-size: 0.95cqw;
+    font-style: normal;
+    opacity: 0.7;
+  }
+}
+
+.briefAvatar {
+  display: grid;
+  place-items: center;
+  width: 3.2cqw;
+  height: 3.2cqw;
+  border-radius: 50%;
+  background: $text;
+  color: $ink;
+  font-size: 1.3cqw;
+  font-weight: 700;
+}
+
+.bubble {
+  width: fit-content;
+  max-width: 44cqw;
+  margin: 0 0 1.3cqw;
+  padding: 1.5cqw 1.9cqw;
+  border-radius: 0.4cqw 1.8cqw 1.8cqw 1.8cqw;
+  background: rgba(var(--snow-rgb), 0.07);
+  font-size: 1.75cqw;
+  line-height: 1.5;
+
+  &[data-me] {
+    margin-left: auto;
+    border-radius: 1.8cqw 0.4cqw 1.8cqw 1.8cqw;
+    background: rgba(var(--green-rgb), 0.16);
+    color: $accent;
+  }
+}
+
+.briefMark {
+  position: relative;
+  white-space: normal;
+}
+
+.briefMarker {
+  position: absolute;
+  inset: 0.05em -0.15em 0;
+  border-radius: 0.2em;
+  background: rgba(var(--green-rgb), 0.34);
+  transform-origin: left center;
+}
+
+.briefMarkText {
+  position: relative;
+}
+
+.briefMarkNo {
+  position: relative;
+  top: -0.7em;
+  display: inline-grid;
+  place-items: center;
+  width: 1.3em;
+  height: 1.3em;
+  margin-left: 0.2em;
+  border-radius: 50%;
+  background: $accent;
+  color: $ink;
+  font-size: 0.6em;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.briefCard {
+  position: absolute;
+  top: 8cqh;
+  right: 5cqw;
+  width: 33cqw;
+  padding: 2.2cqw;
+  border: 1px solid $line;
+  border-radius: 1.4cqw;
+  background: rgba(14, 14, 14, 0.85);
+}
+
+.briefCardHead {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 1.2cqw;
+  font-size: 1.5cqw;
+
+  span {
+    color: $accent;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.briefProgress {
+  display: block;
+  height: 0.35cqw;
+  margin-bottom: 2cqw;
+  border-radius: 1cqw;
+  background: rgba(var(--snow-rgb), 0.1);
+
+  i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: $accent;
+    transform-origin: left;
+    transition: scale 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+.briefField {
+  display: grid;
+  gap: 0.6cqw;
+  padding: 1.4cqw 0;
+  border-top: 1px solid $line;
+
+  &[data-done] .briefLabel i {
+    background: $accent;
+    color: $ink;
+  }
+}
+
+.briefLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.8cqw;
+  font-size: 0.95cqw;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+
+  i {
+    display: grid;
+    place-items: center;
+    width: 1.7cqw;
+    height: 1.7cqw;
+    border: 1px solid $accent;
+    border-radius: 50%;
+    color: $accent;
+    font-size: 0.85cqw;
+    font-style: normal;
+    letter-spacing: 0;
+    transition: background-color 0.3s ease;
+  }
+}
+
+.briefValue {
+  min-height: 1.5em;
+  font-size: 1.55cqw;
+}
+
+.briefChip {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6cqw;
+  padding: 0.7cqw 1.1cqw;
+  border-radius: 0.6cqw;
+  background: $accent;
+  color: $ink;
+  font-size: 1.4cqw;
+  font-weight: 600;
+  white-space: nowrap;
+  translate: 0 -50% calc(var(--m) * var(--lift) * 3);
+  box-shadow: 0 1cqw 2.4cqw rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+
+  i {
+    display: grid;
+    place-items: center;
+    width: 1.6cqw;
+    height: 1.6cqw;
+    border-radius: 50%;
+    background: $ink;
+    color: $accent;
+    font-size: 0.9cqw;
+    font-style: normal;
+  }
+}
+
+/* ---------- Myšlenka ---------- */
+
+.thoughtBoard {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.thoughtCopy {
+  position: absolute;
+  top: 8cqh;
+  bottom: 8cqh;
+  left: 5cqw;
+  width: 42cqw;
+  display: flex;
+  flex-direction: column;
+}
+
+.statement {
+  margin: 2.4cqw 0 0;
+  font-size: 4cqw;
+  font-weight: 300;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+}
+
+.statementLine {
+  display: block;
+}
+
+.scale {
+  margin-top: auto;
+  padding-top: 1.6cqw;
+  border-top: 1px solid $line;
+}
+
+.scaleHead {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 1.4cqw;
+  font-size: 1.05cqw;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+
+  span {
+    letter-spacing: 0.04em;
+    text-transform: none;
+    opacity: 0.7;
+  }
+}
+
+.scaleRow {
+  display: grid;
+  grid-template-columns: 9cqw 1fr 6cqw;
+  align-items: center;
+  gap: 1.2cqw;
+  padding: 0.55cqw 0;
+  font-size: 1.15cqw;
+
+  b {
+    color: $accent;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+}
+
+.scaleBar {
+  display: block;
+  height: 1cqw;
+  border-radius: 1cqw;
+  background: rgba(var(--snow-rgb), 0.07);
+
+  i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: $accent;
+    transform-origin: left;
+  }
+}
+
+.thoughtText {
+  max-width: 36cqw;
+  margin: 2cqw 0 0;
+  font-size: 1.25cqw;
+  line-height: 1.55;
+  opacity: 0.9;
+}
+
+.thoughtStage {
+  position: absolute;
+  top: 5cqh;
+  bottom: 5cqh;
+  right: 3cqw;
+  width: 48cqw;
+}
+
+.slider {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1.4cqw;
+  padding: 1.1cqw 1.5cqw;
+  border: 1px solid $line;
+  border-radius: 1cqw;
+  background: rgba(14, 14, 14, 0.85);
+  font-size: 1.1cqw;
+}
+
+.sliderTrack {
+  position: relative;
+  height: 0.35cqw;
+  border-radius: 1cqw;
+  background: rgba(var(--snow-rgb), 0.15);
+
+  i {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: $accent;
+    transform-origin: left;
+  }
+
+  b {
+    position: absolute;
+    top: 50%;
+    width: 1.5cqw;
+    height: 1.5cqw;
+    border-radius: 50%;
+    background: $text;
+    translate: -50% -50%;
+    box-shadow: 0 0 0 0.35cqw rgba(var(--green-rgb), 0.35);
+  }
+}
+
+.sliderValue {
+  min-width: 4em;
+  color: $accent;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ---------- Systém ---------- */
+
+.systemBoard {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.systemHead {
+  position: absolute;
+  top: 6cqh;
+  left: 5cqw;
+  right: 5cqw;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.systemLegend {
+  display: flex;
+  gap: 0.8cqw;
+  margin: 0;
+
+  span {
+    padding: 0.4cqw 1cqw;
+    border: 1px dashed rgba(var(--green-rgb), 0.6);
+    border-radius: 0.4cqw;
+    font-size: 1cqw;
+  }
+}
+
+.systemRow {
+  position: absolute;
+  inset: 0;
+}
+
+.systemItem {
+  position: absolute;
+  margin: 0;
+  transform-origin: 50% 80%;
+
+  .img {
+    height: 100%;
+  }
+
+  figcaption {
+    margin-top: 1.4cqh;
+    font-size: 1cqw;
+    text-align: center;
+    opacity: 0.75;
+  }
+}
+
+.systemGroups {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  span {
+    position: absolute;
+    outline: calc(1px / var(--cam-s)) dashed rgba(var(--green-rgb), 0.9);
+  }
+
+  b {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    padding: calc(1px / var(--cam-s)) calc(5px / var(--cam-s));
+    background: rgba(var(--green-rgb), 0.9);
+    color: $ink;
+    font-size: calc(9px / var(--cam-s));
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}
+
+.systemLinks {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+
+  path {
+    fill: none;
+    stroke: $accent;
+    stroke-width: 2.5;
+    stroke-dasharray: 1;
+  }
+
+  circle {
+    fill: $accent;
+  }
+}
+
+.guide {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: calc(1.5px / var(--cam-s)) solid $accent;
+  pointer-events: none;
+
+  b {
+    position: absolute;
+    right: calc(8px / var(--cam-s));
+    bottom: calc(4px / var(--cam-s));
+    padding: calc(1px / var(--cam-s)) calc(5px / var(--cam-s));
+    border-radius: calc(3px / var(--cam-s));
+    background: $accent;
+    color: $ink;
+    font-size: calc(10px / var(--cam-s));
+    font-weight: 600;
+  }
+}
+/* ---------- Výstupy: editor ---------- */
+
+// Vlastní rozhraní návrhového nástroje: lišta, panely Vrstvy a Vlastnosti,
+// plocha s formáty, pata s výzvou. Rozměry v px artboardu (boards.tsx)
+// a v cqw; tmavé plochy jako panely nástroje, zelená jako výběr.
+.editor {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: calc(8px / var(--cam-s));
+  transform-style: preserve-3d;
+}
+
+.edBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0 1.4cqw;
+  border-bottom: 1px solid $line;
+  background: rgba(16, 16, 16, 0.96);
+  font-size: 0.95cqw;
+}
+
+.edTools {
+  display: flex;
+  align-items: center;
+  gap: 0.4cqw;
+}
+
+.edMark {
+  display: grid;
+  place-items: center;
+  width: 2.2cqw;
+  height: 2.2cqw;
+  margin-right: 0.8cqw;
+  border-radius: 0.5cqw;
+  background: $accent;
+  color: $ink;
+  font-weight: 700;
+}
+
+.edTool {
+  display: grid;
+  place-items: center;
+  width: 2.2cqw;
+  height: 2.2cqw;
+  border-radius: 0.5cqw;
+  font-size: 0.85cqw;
+  opacity: 0.7;
+
+  &[data-active] {
+    background: rgba(var(--snow-rgb), 0.12);
+    opacity: 1;
+  }
+}
+
+.edFile {
+  opacity: 0.85;
+
+  b {
+    font-weight: 500;
+  }
+}
+
+.edRight {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1cqw;
+  // Místo pro sbalený komentář Sabiny u špendlíku.
+  padding-right: 0;
+}
+
+.edPeople {
+  display: flex;
+
+  i {
+    display: grid;
+    place-items: center;
+    width: 2cqw;
+    height: 2cqw;
+    margin-left: -0.4cqw;
+    border: 2px solid rgba(16, 16, 16, 0.96);
+    border-radius: 50%;
+    background: $accent;
+    color: $ink;
+    font-size: 0.75cqw;
+    font-style: normal;
+    font-weight: 700;
+
+    &[data-who="vy"] {
+      background: $text;
+    }
+  }
+}
+
+.edZoom {
+  display: flex;
+  align-items: center;
+  border: 1px solid $line;
+  border-radius: 0.5cqw;
+
+  button {
+    padding: 0.4cqw 0.7cqw;
+    border: 0;
+    background: transparent;
+    color: $text;
+    font: inherit;
+    font-size: 0.9cqw;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+
+    &:hover {
+      color: $accent;
+    }
+  }
+}
+
+.edExport {
+  position: relative;
+  overflow: hidden;
+  padding: 0.55cqw 1.2cqw;
+  border-radius: 0.5cqw;
+  background: $accent;
+  color: $ink;
+  font-weight: 600;
+
+  i {
+    position: absolute;
+    inset: auto 0 0;
+    height: 0.25cqw;
+    background: $ink;
+    opacity: 0.6;
+    transform-origin: left;
+  }
+}
+
+.edLayers,
+.edProps {
+  position: absolute;
+  overflow: hidden;
+  background: rgba(18, 18, 18, 0.96);
+}
+
+.edLayers {
+  left: 0;
+  border-right: 1px solid $line;
+
+  ul {
+    position: absolute;
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 0 0.6cqw;
+    list-style: none;
+  }
+
+  li {
+    display: grid;
+    grid-template-columns: 1.6cqw 1fr auto;
+    align-items: center;
+    gap: 0.7cqw;
+    padding: 0 0.8cqw;
+    border-radius: 0.5cqw;
+    cursor: pointer;
+    transition:
+      background-color 0.25s ease,
+      color 0.25s ease;
+
+    &:hover {
+      background: rgba(var(--snow-rgb), 0.06);
+    }
+
+    &[data-active] {
+      background: rgba(var(--green-rgb), 0.18);
+      color: $accent;
+    }
+  }
+}
+
+.edProps {
+  right: 0;
+  border-left: 1px solid $line;
+}
+
+.edPanelHead {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 1.4cqw 1.4cqw 0.8cqw;
+  font-size: 0.85cqw;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+
+  span {
+    color: $accent;
+  }
+}
+
+.edFrameIcon {
+  width: 1cqw;
+  height: 1.6cqw;
+  border: 1.5px solid currentColor;
+  border-radius: 0.2cqw;
+
+  &[data-square] {
+    height: 1cqw;
+  }
+}
+
+.edRowName {
+  display: grid;
+  overflow: hidden;
+  font-size: 0.9cqw;
+  white-space: nowrap;
+
+  i {
+    overflow: hidden;
+    font-size: 0.72cqw;
+    font-style: normal;
+    text-overflow: ellipsis;
+    opacity: 0.65;
+  }
+}
+
+.edCheck {
+  width: 0.9cqw;
+  height: 0.9cqw;
+  border: 1px solid rgba(var(--snow-rgb), 0.35);
+  border-radius: 50%;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
+
+  [data-done] > & {
+    border-color: $accent;
+    background: $accent;
+  }
+}
+
+// Plocha: tečková mřížka, posun a zoom píše boards.tsx do .edPlane.
+.edView {
+  position: absolute;
+  overflow: hidden;
+  background-color: rgba(30, 30, 30, 0.9);
+  background-image: radial-gradient(rgba(var(--snow-rgb), 0.12) 1px, transparent 1.4px);
+  background-size: 28px 28px;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.edPlane {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  transition: transform 0.12s linear;
+}
+
+.edItem {
+  position: absolute;
+  margin: 0;
+
+  figcaption {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    overflow: hidden;
+    font-size: 0.75cqw;
+    white-space: nowrap;
+    opacity: 0.8;
+
+    b {
+      font-weight: 500;
+    }
+  }
+
+  &:hover .edImage {
+    outline: calc(1.5px / var(--cam-s) / var(--k, 1)) solid rgba(var(--green-rgb), 0.6);
+  }
+}
+
+.edImage {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 0.3cqw;
+  box-shadow: 0 0.8cqw 2cqw rgba(0, 0, 0, 0.35);
+
+  img {
+    object-fit: cover;
+    pointer-events: none;
+  }
+}
+
+// Výběr: obrys, úchyty v rozích, rozměr pod rámem.
+.edSelect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+  outline: calc(2px / var(--cam-s) / var(--k, 1)) solid $accent;
+
+  i {
+    position: absolute;
+    width: calc(10px / var(--cam-s) / var(--k, 1));
+    height: calc(10px / var(--cam-s) / var(--k, 1));
+    border: calc(1.5px / var(--cam-s) / var(--k, 1)) solid $accent;
+    background: $text;
+    translate: -50% -50%;
+
+    &:nth-of-type(1) {
+      top: 0;
+      left: 0;
+    }
+
+    &:nth-of-type(2) {
+      top: 0;
+      left: 100%;
+    }
+
+    &:nth-of-type(3) {
+      top: 100%;
+      left: 100%;
+    }
+
+    &:nth-of-type(4) {
+      top: 100%;
+      left: 0;
+    }
+  }
+
+  b {
+    position: absolute;
+    top: calc(100% + 8px / var(--cam-s) / var(--k, 1));
+    left: 50%;
+    translate: -50% 0;
+    padding: calc(2px / var(--cam-s) / var(--k, 1)) calc(7px / var(--cam-s) / var(--k, 1));
+    border-radius: calc(3px / var(--cam-s) / var(--k, 1));
+    background: $accent;
+    color: $ink;
+    font-size: calc(11px / var(--cam-s) / var(--k, 1));
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}
+
+.edHint {
+  position: absolute;
+  left: 50%;
+  bottom: 1.4cqw;
+  margin: 0;
+  padding: 0.5cqw 1.2cqw;
+  border-radius: 999px;
+  background: rgba(16, 16, 16, 0.85);
+  font-size: 0.85cqw;
+  white-space: nowrap;
+  translate: -50% 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+
+  &[data-hide] {
+    opacity: 0;
+  }
+}
+
+.edPropsBody {
+  display: grid;
+  gap: 1cqw;
+  padding: 0 1.4cqw;
+}
+
+.edPropName {
+  margin: 0;
+  font-size: 1.3cqw;
+}
+
+.edPropSub {
+  margin: -0.6cqw 0 0;
+  font-size: 0.85cqw;
+  opacity: 0.7;
+}
+
+.edFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6cqw;
+  margin: 0;
+
+  div {
+    display: flex;
+    gap: 0.6cqw;
+    padding: 0.55cqw 0.7cqw;
+    border-radius: 0.4cqw;
+    background: rgba(var(--snow-rgb), 0.06);
+    font-size: 0.9cqw;
+    font-variant-numeric: tabular-nums;
+  }
+
+  dt {
+    opacity: 0.6;
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+.edPropRow {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding-top: 0.8cqw;
+  border-top: 1px solid $line;
+  font-size: 0.9cqw;
+
+  span {
+    opacity: 0.7;
+  }
+
+  b {
+    font-weight: 500;
+  }
+}
+
+.edOpen {
+  margin-top: 0.4cqw;
+  padding: 0.8cqw 1cqw;
+  border: 1px solid $accent;
+  border-radius: 0.5cqw;
+  background: transparent;
+  color: $accent;
+  font: inherit;
+  font-size: 0.9cqw;
+  cursor: pointer;
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
+
+  &:hover {
+    background: $accent;
+    color: $ink;
+  }
+}
+
+.edEmpty {
+  margin: 0;
+  padding: 0 1.4cqw;
+  font-size: 0.9cqw;
+  line-height: 1.5;
+  opacity: 0.7;
+}
+
+// Pata editoru: výzva jako na stránce Projekty.
+.edFoot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.4cqw 0 2cqw;
+  border-top: 1px solid $line;
+  background: rgba(16, 16, 16, 0.96);
+
+  p {
+    margin: 0;
+    font-size: 1.5cqw;
+    font-weight: 300;
+  }
+}
+
+.edCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 1cqw;
+  padding: 0.5cqw 0.5cqw 0.5cqw 1.4cqw;
+  border: 1px solid rgba(var(--snow-rgb), 0.35);
+  border-radius: 999px;
+  background: transparent;
+  color: $accent;
+  font: inherit;
+  font-size: 0.85cqw;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 0.24s ease,
+    background 0.24s ease,
+    color 0.24s ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: $accent;
+    background: $accent;
+    color: $ink;
+  }
+}
+
+.edCtaArrow {
+  display: grid;
+  place-items: center;
+  width: 2.4cqw;
+  height: 2.4cqw;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+
+  svg {
+    width: 45%;
+    height: 45%;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+
+/* ---------- Artboardy na výšku (kontejner) ---------- */
+
+@container (orientation: portrait) {
+  .boardEyebrow {
+    font-size: 2cqw;
+  }
+
+  .coverMeta {
+    grid-template-columns: repeat(2, auto);
+    gap: 3cqw 6cqw;
+
+    dt {
+      font-size: 1.8cqw;
+    }
+
+    dd {
+      font-size: 2.6cqw;
+    }
+  }
+
+  .coverStage {
+    top: 20cqh;
+    bottom: 34cqh;
+    left: 5cqw;
+    right: 5cqw;
+    width: auto;
+  }
+
+  .viewTabs button {
+    padding: 1.6cqw 4cqw;
+    font-size: 2.4cqw;
+  }
+
+  .coverEyebrow {
+    bottom: 24cqh;
+    font-size: 2.2cqw;
+  }
+
+  .coverTitle {
+    bottom: 11cqh;
+    font-size: 14cqw;
+  }
+
+  .coverTagline {
+    bottom: 5cqh;
+    font-size: 4.4cqw;
+  }
+
+  .briefThread {
+    width: 90cqw;
+  }
+
+  .briefHead b {
+    font-size: 2.6cqw;
+  }
+
+  .briefHead i {
+    font-size: 1.9cqw;
+  }
+
+  .briefAvatar {
+    width: 6cqw;
+    height: 6cqw;
+    font-size: 2.6cqw;
+  }
+
+  .bubble {
+    max-width: 82cqw;
+    font-size: 3.3cqw;
+  }
+
+  .briefCard {
+    top: auto;
+    bottom: 6cqh;
+    left: 5cqw;
+    width: auto;
+    padding: 3.6cqw;
+  }
+
+  .briefCardHead {
+    font-size: 3cqw;
+  }
+
+  .briefLabel {
+    font-size: 1.8cqw;
+
+    i {
+      width: 3.2cqw;
+      height: 3.2cqw;
+      font-size: 1.6cqw;
+    }
+  }
+
+  .briefValue {
+    font-size: 3cqw;
+  }
+
+  .briefField {
+    padding: 2cqw 0;
+  }
+
+  .briefChip {
+    font-size: 2.6cqw;
+  }
+
+  .thoughtCopy {
+    bottom: auto;
+    width: 90cqw;
+  }
+
+  .statement {
+    font-size: 7cqw;
+  }
+
+  .scale {
+    position: absolute;
+    top: 76cqh;
+    left: 0;
+    right: 0;
+    margin-top: 0;
+  }
+
+  .scaleHead {
+    font-size: 2cqw;
+  }
+
+  .scaleRow {
+    grid-template-columns: 18cqw 1fr 12cqw;
+    font-size: 2.4cqw;
+  }
+
+  .thoughtStage {
+    top: 26cqh;
+    bottom: 26cqh;
+    left: 5cqw;
+    right: 5cqw;
+    width: auto;
+  }
+
+  .thoughtText {
+    max-width: none;
+    font-size: 2.4cqw;
+  }
+
+  .slider {
+    font-size: 2.2cqw;
+  }
+
+  .systemLegend span,
+  .systemItem figcaption {
+    font-size: 1.8cqw;
+  }
+
+
+
+
+
+
+}
+
+/* ---------- Samolepky s texty (přes obrazovku) ---------- */
+
+// Dva lístky nalepené páskou vpravo nahoře: zelený s nadpisem a světlý
+// s textem (uhlové písmo — jen na světlé ploše). Klik je sbalí do proužku
+// u pravého kraje; s každou zastávkou se odlepí a nalepí nové.
+.stickers {
+  position: absolute;
+  z-index: 5;
+  top: calc(5.75rem + 3.5vh);
+  right: 2.2vw;
+  width: clamp(17rem, 23vw, 30rem);
+  transition: translate 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+
+  &[data-folded] {
+    translate: calc(100% - 3.2rem) 0;
+
+    .stickerText {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+}
+
+.stickerStack {
+  display: grid;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stickerTitle,
+.stickerText {
+  position: relative;
+  display: grid;
+  border-radius: 3px;
+  color: $ink;
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.08),
+    0 1.6vh 3.6vh rgba(0, 0, 0, 0.35);
+}
+
+.stickerTitle {
+  z-index: 2;
+  gap: 0.6rem;
+  width: 86%;
+  padding: 1.6rem 1.4rem 1.3rem;
+  background: $accent;
+
+  i {
+    font-size: clamp(10px, 0.66vw, 12px);
+    font-style: normal;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+}
+
+.stickerHeading {
+  font-size: clamp(1.35rem, 1.9vw, 2.7rem);
+  font-weight: 300;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+
+  // Zvýrazněné slovo na zeleném lístku: tučně (zelená by zmizela).
+  .accent {
+    color: $ink;
+    font-weight: 600;
+  }
+}
+
+.stickerText {
+  z-index: 1;
+  gap: 0.9rem;
+  margin: -0.6rem 0 0 1.6rem;
+  padding: 1.8rem 1.4rem 1.2rem;
+  background: $text;
+  font-size: clamp(0.84rem, 0.86vw, 1.2rem);
+  line-height: 1.58;
+  transition: opacity 0.4s ease;
+
+  b {
+    font-weight: 600;
+  }
+}
+
+.stickerPara {
+  display: block;
+}
+
+.stickerSign {
+  justify-self: end;
+  font-size: 0.85em;
+  font-style: italic;
+  opacity: 0.6;
+}
+
+// Lepicí páska přes horní hranu lístku.
+.tape {
+  position: absolute;
+  top: -0.7rem;
+  left: 50%;
+  width: 5.2rem;
+  height: 1.4rem;
+  background: rgba(var(--snow-rgb), 0.45);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  translate: -50% 0;
+  rotate: -3deg;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+
+  .stickerText & {
+    left: 30%;
+    rotate: 4deg;
+    background: rgba(var(--green-rgb), 0.55);
+  }
+}
+
+/* ---------- Pravítka ---------- */
+
+.rulerTop,
+.rulerLeft,
+.rulerBottom {
+  position: absolute;
+  z-index: 5;
+  display: block;
+}
+
+.rulerTop {
+  top: 0;
+  left: $ruler;
+  width: calc(100% - #{$ruler});
+  height: $ruler;
+  pointer-events: none;
+}
+
+.rulerLeft {
+  top: $ruler;
+  left: 0;
+  width: $ruler;
+  height: calc(100% - #{$ruler} - #{$chapters});
+  pointer-events: none;
+}
+
+.rulerBottom {
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: $chapters;
+  cursor: pointer;
+}
+
+.zoomBadge {
+  position: absolute;
+  z-index: 4;
+  left: calc(#{$ruler} + 1.2vw);
+  bottom: calc(#{$chapters} + 1.4vh);
+  font-size: clamp(10px, 0.7vw, 13px);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+/* ---------- Dotyk: zpět / dál ---------- */
+
+.stepper {
+  position: absolute;
+  z-index: 6;
+  right: 4vw;
+  bottom: calc(#{$chapters} + 2vh);
+  display: none;
+  gap: 0.5rem;
+
+  button {
+    display: grid;
+    place-items: center;
+    width: 2.8rem;
+    height: 2.8rem;
+    border: 1px solid rgba(var(--snow-rgb), 0.3);
+    border-radius: 50%;
+    background: rgba(18, 18, 18, 0.75);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    color: $text;
+    cursor: pointer;
+
+    svg {
+      width: 45%;
+      height: 45%;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+  }
+
+  @media (pointer: coarse) {
+    display: flex;
+  }
+}
+/* ---------- Kurzor ---------- */
+
+.cursor {
+  position: absolute;
+  z-index: 6;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+
+  svg {
+    display: block;
+    width: 22px;
+    height: 22px;
+    margin: -3px 0 0 -4px;
+    fill: $accent;
+    stroke: $ink;
+    stroke-width: 1.2;
+    stroke-linejoin: round;
+    transition: scale 0.2s ease;
+  }
+
+  span {
+    position: absolute;
+    top: 18px;
+    left: 14px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: $accent;
+    color: $ink;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  &[data-mode="press"] svg {
+    scale: 0.82;
+  }
+
+  &[data-mode="text"] svg,
+  &[data-mode="hand"] svg {
+    fill: none;
+    stroke: $accent;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    margin: -11px 0 0 -11px;
+  }
+}
+/* ---------- Na výšku ---------- */
+
+@include xs-v {
+  // Samolepky dole přes celou šířku.
+  .stickers {
+    top: auto;
+    bottom: calc(#{$chapters} + 1.6vh);
+    left: calc(#{$ruler} + 4vw);
+    right: 4vw;
+    width: auto;
+
+    &[data-folded] {
+      translate: calc(100% - 3rem) 0;
+    }
+  }
+
+  .stickerTitle {
+    width: 72%;
+    padding: 1.2rem 1.1rem 1rem;
+  }
+
+  .stickerHeading {
+    font-size: clamp(1.1rem, 4.4vw, 2.2rem);
+  }
+
+  .stickerText {
+    padding: 1.4rem 1.1rem 1rem;
+    font-size: clamp(0.8rem, 2.3vw, 1.1rem);
+  }
+
+  .zoomBadge {
+    display: none;
+  }
+}
+
+@media (max-width: 599.98px) and (orientation: portrait) {
+  // Nad spodní lištou s kontaktem; text samolepky zkrácený na pár řádků.
+  .stickers {
+    bottom: calc(#{$chapters} + 5.2rem);
+  }
+
+  .stickerPara {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+  }
+
+  .stickerSign {
+    display: none;
+  }
+}
+
+@include reduced-motion {
+  .cursor {
+    display: none;
+  }
+}
+
+/* ================================================================
+   DOLADĚNÍ — profesionální jazyk detailů
+   Ostré rohy (2–4 px), tlumené hrany, jemný stín, menší písmo s víc
+   vzduchu. Drobné popisky ve stálé velikosti (px / --cam-s), obsah v cqw.
+   ================================================================ */
+
+// Artboard: bez obrysu, jen stín (aktivní nese zelený pás v pravítku).
+.plate {
+  border-radius: calc(3px / var(--cam-s));
+  outline: 0;
+  box-shadow:
+    0 calc(2px / var(--cam-s)) calc(6px / var(--cam-s)) rgba(0, 0, 0, 0.18),
+    0 calc(28px / var(--cam-s)) calc(70px / var(--cam-s)) rgba(0, 0, 0, 0.32);
+}
+
+.board[data-active] .plate {
+  outline: 0;
+}
+
+.boardEyebrow {
+  font-size: calc(11px / var(--cam-s));
+  letter-spacing: 0.22em;
+}
+
+.zoomBadge {
+  left: auto;
+  right: 1.6vw;
+
+  // Ležel by přes artboard (index.tsx, measure) — schovat přes visibility,
+  // ať má dál rozměr a dá se měřit.
+  &[data-hidden] {
+    visibility: hidden;
+  }
+}
+
+/* ---------- Titulní ---------- */
+
+.coverMeta {
+  top: 9cqh;
+  left: 6cqw;
+  gap: 4.4cqw;
+
+  dt {
+    font-size: calc(10px / var(--cam-s));
+    letter-spacing: 0.2em;
+    opacity: 0.6;
+  }
+
+  dd {
+    margin-top: 0.7cqw;
+    font-size: 1cqw;
+  }
+}
+
+.coverEyebrow {
+  left: 6cqw;
+  bottom: 44cqh;
+  font-size: calc(11px / var(--cam-s));
+  letter-spacing: 0.24em;
+}
+
+.coverTitle {
+  left: 5.7cqw;
+  bottom: 25cqh;
+  font-size: 6.4cqw;
+  letter-spacing: 0.01em;
+}
+
+.coverTagline {
+  left: 6cqw;
+  bottom: 18cqh;
+  font-size: 1.4cqw;
+  letter-spacing: 0.01em;
+}
+
+.coverStage {
+  top: 8cqh;
+  bottom: 9cqh;
+  right: 6cqw;
+  width: 26cqw;
+  display: block;
+}
+
+// Rám vizuálu: tenká tlumená hrana, ostré rohy.
+.coverFrame {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 4cqh 2cqw 6cqh;
+  border-radius: calc(2px / var(--cam-s));
+  background: rgba(var(--snow-rgb), 0.025);
+  box-shadow: inset 0 0 0 calc(1px / var(--cam-s)) rgba(var(--snow-rgb), 0.04), 0 calc(16px / var(--cam-s)) calc(40px / var(--cam-s)) rgba(0, 0, 0, 0.28);
+}
+
+.coverVisual {
+  height: 100%;
+  max-width: 100%;
+}
+
+.frameSize {
+  position: absolute;
+  right: calc(12px / var(--cam-s));
+  bottom: calc(10px / var(--cam-s));
+  font-size: calc(10px / var(--cam-s));
+  letter-spacing: 0.12em;
+  opacity: 0.45;
+}
+
+.coverTools {
+  position: absolute;
+  right: calc(100% + 12px / var(--cam-s));
+  bottom: 0;
+}
+
+// Sloupec ikon odspodu nahoru; název vyjede doleva po najetí.
+.toolStack {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: calc(6px / var(--cam-s));
+
+  button {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: calc(34px / var(--cam-s));
+    height: calc(34px / var(--cam-s));
+    padding: 0;
+    border: 0;
+    border-radius: calc(3px / var(--cam-s));
+    background: rgba(14, 14, 14, 0.92);
+    color: $text;
+    box-shadow: 0 calc(6px / var(--cam-s)) calc(16px / var(--cam-s)) rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+    transition:
+      background-color 0.25s ease,
+      color 0.25s ease;
+
+    svg {
+      width: calc(16px / var(--cam-s));
+      height: calc(16px / var(--cam-s));
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.6;
+      stroke-linejoin: round;
+    }
+
+    &[data-active] {
+      background: $accent;
+      color: $ink;
+    }
+
+    &:not([data-active]):hover {
+      color: $accent;
+    }
+
+    &:hover .toolLabel,
+    &:focus-visible .toolLabel {
+      opacity: 1;
+      translate: 0 -50%;
+    }
+  }
+}
+
+.toolLabel {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 8px / var(--cam-s));
+  padding: calc(5px / var(--cam-s)) calc(10px / var(--cam-s));
+  border-radius: calc(3px / var(--cam-s));
+  background: rgba(14, 14, 14, 0.92);
+  color: $text;
+  font-size: calc(11px / var(--cam-s));
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  opacity: 0;
+  translate: calc(6px / var(--cam-s)) -50%;
+  transition:
+    opacity 0.25s ease,
+    translate 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+/* ---------- Zadání ---------- */
+
+.briefThread {
+  top: 10cqh;
+  left: 6cqw;
+  width: 44cqw;
+}
+
+.briefHead {
+  gap: 1cqw;
+  margin-bottom: 2cqw;
+
+  b {
+    font-size: 0.95cqw;
+  }
+
+  i {
+    font-size: calc(10px / var(--cam-s));
+    letter-spacing: 0.06em;
+  }
+}
+
+.briefAvatar {
+  width: 2.3cqw;
+  height: 2.3cqw;
+  font-size: 0.9cqw;
+}
+
+.bubble {
+  max-width: 38cqw;
+  margin-bottom: 0.9cqw;
+  padding: 1.05cqw 1.4cqw;
+  border: 0;
+  border-radius: calc(3px / var(--cam-s));
+  background: rgba(34, 34, 34, 0.95);
+  box-shadow: 0 calc(8px / var(--cam-s)) calc(22px / var(--cam-s)) rgba(0, 0, 0, 0.28);
+  font-size: 1.02cqw;
+  line-height: 1.7;
+
+  &[data-me] {
+    border: 0;
+    border-radius: calc(3px / var(--cam-s));
+    background: rgba(var(--green-rgb), 0.12);
+  }
+}
+
+.briefMarker {
+  border-radius: calc(1px / var(--cam-s));
+}
+
+.briefMarkNo {
+  top: -0.6em;
+  width: 1.35em;
+  height: 1.35em;
+  border-radius: calc(2px / var(--cam-s));
+  font-size: 0.56em;
+}
+
+.attachments {
+  margin: 1.4cqw 0 1.6cqw;
+}
+
+.attachHead {
+  display: flex;
+  gap: 0.6em;
+  margin: 0 0 0.9cqw;
+  font-size: calc(10px / var(--cam-s));
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.7;
+
+  span {
+    color: $accent;
+  }
+}
+
+.attachRow {
+  display: flex;
+  gap: 1cqw;
+}
+
+.attachment {
+  display: grid;
+  gap: 0.6cqw;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: $text;
+  font: inherit;
+  text-align: left;
+  cursor: zoom-in;
+
+  &:hover .attachImage {
+    outline-color: $accent;
+  }
+}
+
+.attachImage {
+  position: relative;
+  display: block;
+  height: 7.4cqw;
+  overflow: hidden;
+  border-radius: calc(2px / var(--cam-s));
+  outline: calc(1.5px / var(--cam-s)) solid transparent;
+  outline-offset: calc(2px / var(--cam-s));
+  box-shadow: 0 calc(8px / var(--cam-s)) calc(20px / var(--cam-s)) rgba(0, 0, 0, 0.35);
+  transition: outline-color 0.25s ease;
+
+  img {
+    object-fit: cover;
+  }
+}
+
+.attachName {
+  display: grid;
+  gap: calc(2px / var(--cam-s));
+  font-size: calc(11px / var(--cam-s));
+
+  i {
+    font-size: calc(10px / var(--cam-s));
+    font-style: normal;
+    opacity: 0.5;
+  }
+}
+
+.briefCard {
+  top: 10cqh;
+  right: 6cqw;
+  width: 27cqw;
+  padding: 1.8cqw 2cqw 1.2cqw;
+  border: 0;
+  border-radius: calc(4px / var(--cam-s));
+  background: rgba(30, 30, 30, 0.96);
+  box-shadow:
+    0 calc(2px / var(--cam-s)) calc(6px / var(--cam-s)) rgba(0, 0, 0, 0.2),
+    0 calc(24px / var(--cam-s)) calc(60px / var(--cam-s)) rgba(0, 0, 0, 0.35);
+}
+
+.briefCardHead {
+  margin-bottom: 1.1cqw;
+  font-size: calc(11px / var(--cam-s));
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+
+  b {
+    font-weight: 500;
+  }
+}
+
+.briefProgress {
+  height: calc(2px / var(--cam-s));
+  margin-bottom: 1.2cqw;
+  border-radius: 0;
+
+  i {
+    border-radius: 0;
+  }
+}
+
+.briefField {
+  gap: 0.5cqw;
+  padding: 1.2cqw 0;
+  border-top-color: rgba(var(--snow-rgb), 0.06);
+}
+
+.briefLabel {
+  gap: 0.7cqw;
+  font-size: calc(10px / var(--cam-s));
+  letter-spacing: 0.18em;
+
+  i {
+    width: calc(16px / var(--cam-s));
+    height: calc(16px / var(--cam-s));
+    border-color: rgba(var(--green-rgb), 0.6);
+    border-radius: calc(2px / var(--cam-s));
+    font-size: calc(9px / var(--cam-s));
+  }
+}
+
+.briefValue {
+  font-size: 1.05cqw;
+  letter-spacing: 0.005em;
+}
+
+.briefChip {
+  gap: 0.5cqw;
+  padding: 0.5cqw 0.85cqw;
+  border-radius: calc(2px / var(--cam-s));
+  font-size: 0.95cqw;
+
+  i {
+    width: 1.2cqw;
+    height: 1.2cqw;
+    border-radius: calc(1px / var(--cam-s));
+    font-size: 0.7cqw;
+  }
+}
+
+/* ---------- Myšlenka ---------- */
+
+.thoughtCopy {
+  top: 10cqh;
+  bottom: auto;
+  left: 6cqw;
+  width: 36cqw;
+}
+
+.statement {
+  margin-top: 2cqw;
+  font-size: 3cqw;
+  line-height: 1.12;
+}
+
+.thoughtStage {
+  top: 8cqh;
+  bottom: 8cqh;
+  right: 6cqw;
+  width: 46cqw;
+}
+
+.typeBlock {
+  margin-top: 3.6cqw;
+  user-select: none;
+
+  canvas {
+    pointer-events: none;
+    user-select: none;
+  }
+}
+
+.blockHead {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 0.9cqw;
+  font-size: calc(10px / var(--cam-s));
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+
+  span {
+    letter-spacing: 0.06em;
+    text-transform: none;
+    opacity: 0.5;
+  }
+}
+
+// Ukázky písma: výřez textu z vizuálu, výška úměrná velikosti v px.
+.specimens {
+  margin: 0 0 2.2cqw;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: 2cqw minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1.2cqw;
+    padding: 0.8cqw 0;
+    border-top: calc(1px / var(--cam-s)) solid rgba(var(--snow-rgb), 0.06);
+  }
+}
+
+.specimenNo {
+  font-size: calc(10px / var(--cam-s));
+  letter-spacing: 0.1em;
+  opacity: 0.5;
+}
+
+.specimenCrop {
+  display: block;
+  min-width: 0;
+
+  canvas {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: 100%;
+    border-radius: calc(2px / var(--cam-s));
+    object-fit: contain;
+    object-position: left center;
+  }
+}
+
+.specimenMeta {
+  display: grid;
+  justify-items: end;
+  gap: calc(2px / var(--cam-s));
+  font-size: calc(11px / var(--cam-s));
+  opacity: 0.85;
+
+  b {
+    color: $accent;
+    font-size: calc(12px / var(--cam-s));
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.palette {
+  canvas {
+    display: block;
+    width: 100%;
+    height: 2.4cqw;
+    border-radius: calc(2px / var(--cam-s));
+  }
+
+  p {
+    display: flex;
+    margin: 0.6cqw 0 0;
+  }
+
+  span {
+    flex: 1;
+    font-size: calc(10px / var(--cam-s));
+    opacity: 0.55;
+  }
+}
+
+/* ---------- Samolepka (přes obrazovku, vlevo dole) ---------- */
+
+.stickers {
+  top: auto;
+  right: auto;
+  left: calc(#{$ruler} + 2vw);
+  bottom: calc(#{$chapters} + 2.6vh);
+  width: clamp(17rem, 21vw, 27rem);
+
+  &[data-folded] {
+    translate: 0 0;
+
+    .stickerBody {
+      grid-template-rows: 0fr;
+    }
+  }
+}
+
+// Jedna karta: zelený štítek s kapitolou nahoře, papír s textem pod ním.
+.sticker {
+  position: relative;
+  display: grid;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: $text;
+  color: $ink;
+  font: inherit;
+  text-align: left;
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.06),
+    0 1.4vh 3.2vh rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+
+  .tape {
+    top: -0.65rem;
+    left: auto;
+    right: 1.4rem;
+    width: 4.2rem;
+    height: 1.2rem;
+    rotate: 6deg;
+  }
+}
+
+.stickerTag {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 2px 2px 0 0;
+  background: $accent;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+
+  i {
+    font-style: normal;
+    opacity: 0.6;
+  }
+}
+
+.stickerToggle {
+  margin-left: auto;
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+// Tělo karty: nadpis a text; sbalení přes mřížku 1fr → 0fr.
+.stickerBody {
+  display: grid;
+  grid-template-rows: 1fr;
+  overflow: hidden;
+  transition: grid-template-rows 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.stickerBodyInner {
+  min-height: 0;
+}
+
+.stickerHeading {
+  display: block;
+  padding: 0.95rem 1rem 0;
+  font-size: clamp(1rem, 1.15vw, 1.5rem);
+  font-weight: 300;
+  line-height: 1.12;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+
+  .accent {
+    color: $ink;
+    font-weight: 600;
+  }
+}
+
+.stickerPara {
+  display: block;
+  padding: 0.6rem 1rem 1rem;
+  font-size: clamp(0.76rem, 0.78vw, 1.02rem);
+  line-height: 1.6;
+
+  b {
+    font-weight: 600;
+  }
+}
+
+/* ---------- Na výšku (artboardy a samolepka) ---------- */
+
+@container (orientation: portrait) {
+  .coverMeta dd {
+    font-size: 2.2cqw;
+  }
+
+  .coverTitle {
+    bottom: 12cqh;
+    font-size: 12cqw;
+  }
+
+  .coverTagline {
+    bottom: 6cqh;
+    font-size: 3.2cqw;
+  }
+
+  .coverEyebrow {
+    bottom: 22cqh;
+  }
+
+  .coverStage {
+    top: 20cqh;
+    bottom: 34cqh;
+    left: 14cqw;
+    right: 6cqw;
+    width: auto;
+  }
+
+  .briefThread {
+    width: 88cqw;
+  }
+
+  .bubble {
+    max-width: 82cqw;
+    font-size: 2.6cqw;
+  }
+
+  .briefHead b,
+  .briefValue {
+    font-size: 2.4cqw;
+  }
+
+  .briefCard {
+    top: auto;
+    bottom: 5cqh;
+    left: 6cqw;
+    right: 6cqw;
+    width: auto;
+    padding: 3cqw;
+  }
+
+  .attachImage {
+    height: 16cqw;
+  }
+
+  .thoughtCopy {
+    width: 88cqw;
+  }
+
+  .statement {
+    font-size: 6cqw;
+  }
+
+  .typeBlock {
+    display: none;
+  }
+}
+
+@include xs-v {
+  .stickers {
+    left: calc(#{$ruler} + 3vw);
+    right: 3vw;
+    width: auto;
+  }
+}
+
+@media (max-width: 599.98px) and (orientation: portrait) {
+  .stickers {
+    bottom: calc(#{$chapters} + 5.2rem);
+  }
+
+  .stickerPara {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+  }
+}
+
+/* ---------- Volný pás vlevo dole pro samolepku ---------- */
+
+// Sbalená samolepka: jen štítek a nadpis; text se rozbalí najetím.
+.stickers[data-folded] .stickerPara {
+  display: none;
+}
+
+.stickers[data-folded] .stickerBody {
+  grid-template-rows: 1fr;
+}
+
+.stickerHeading {
+  padding-bottom: 0.85rem;
+}
+
+.stickerPara {
+  padding-top: 0;
+}
+
+.coverEyebrow {
+  bottom: 52cqh;
+}
+
+.coverTitle {
+  bottom: 33cqh;
+}
+
+.coverTagline {
+  bottom: 27cqh;
+}
+
+// Titulní vizuál se v rámu rozloží střídměji (nepřeteče).
+.coverVisual {
+  .layerSheet {
+    transform: translateZ(calc(var(--k) * var(--s) * 38px));
+  }
+
+  .layerStack {
+    transform: rotateX(calc(var(--s) * 52deg)) rotateZ(calc(var(--s) * -34deg)) scale(calc(1 - var(--s) * 0.32));
+  }
+}
+
+.attachImage {
+  height: 6cqw;
+}
+
+.attachments {
+  margin: 1cqw 0 1.2cqw;
+}
+
+.bubble {
+  margin-bottom: 0.7cqw;
+  padding: 0.9cqw 1.3cqw;
+}
+
+.typeBlock {
+  margin-top: 2.6cqw;
+}
+
+.specimens {
+  margin-bottom: 1.6cqw;
+
+  li {
+    padding: 0.55cqw 0;
+  }
+}
+
+.palette canvas {
+  height: 1.8cqw;
+}
+
+/* ---------- Na výšku: rozvržení artboardů (po pravidlech pro šířku) ---------- */
+
+@container (orientation: portrait) {
+  .coverStage {
+    top: 18cqh;
+    bottom: 44cqh;
+    left: 16cqw;
+    right: 6cqw;
+    width: auto;
+  }
+
+  .coverEyebrow {
+    bottom: 36cqh;
+  }
+
+  .coverTitle {
+    bottom: 27cqh;
+    font-size: 12cqw;
+  }
+
+  .coverTagline {
+    bottom: 23cqh;
+    font-size: 3.2cqw;
+  }
+
+  .thoughtStage {
+    top: 30cqh;
+    bottom: 20cqh;
+    left: 6cqw;
+    right: 6cqw;
+    width: auto;
+  }
+
+  .statement {
+    font-size: 5.4cqw;
+  }
+}
+
+/* ================================================================
+   TITULNÍ A ZADÁNÍ (přepracované) — práce na prvním místě, mřížka
+   s okraji 6 % a horním řádkem 10 %, oddělení vzduchem a stínem.
+   ================================================================ */
+
+/* ---------- Titulní ---------- */
+
+.coverIntro {
+  position: absolute;
+  top: 10cqh;
+  left: 6cqw;
+  width: 24cqw;
+}
+
+.coverKicker {
+  margin: 0 0 1.4cqw;
+  font-size: calc(10px / var(--cam-s));
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.coverName {
+  margin: 0;
+  font-size: 3cqw;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.coverKind {
+  margin: 0.9cqw 0 0;
+  color: $accent;
+  font-size: calc(11px / var(--cam-s));
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.coverFacts {
+  display: grid;
+  gap: 1.5cqw;
+  margin: 6cqh 0 0;
+
+  div {
+    display: grid;
+    gap: 0.35cqw;
+  }
+
+  dt {
+    font-size: calc(10px / var(--cam-s));
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.5;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 0.95cqw;
+  }
+}
+
+.coverBanner {
+  position: absolute;
+  overflow: hidden;
+  border-radius: calc(2px / var(--cam-s));
+  box-shadow:
+    0 calc(2px / var(--cam-s)) calc(6px / var(--cam-s)) rgba(0, 0, 0, 0.2),
+    0 calc(30px / var(--cam-s)) calc(70px / var(--cam-s)) rgba(0, 0, 0, 0.45);
+
+  &:hover .iconButton span {
+    max-width: 6em;
+    margin-right: calc(6px / var(--cam-s));
+  }
+}
+
+.coverFull {
+  object-fit: cover;
+}
+
+.coverLayer {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.25s ease;
+  user-select: none;
+}
+
+.coverBox {
+  position: absolute;
+  outline: calc(1.5px / var(--cam-s)) solid $accent;
+  outline-offset: calc(2px / var(--cam-s));
+  pointer-events: none;
+  transition:
+    left 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    top 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+// Jediná ikona u vizuálu: detail. Název vyjede doleva po najetí.
+.iconButton {
+  position: absolute;
+  z-index: 2;
+  right: calc(10px / var(--cam-s));
+  bottom: calc(10px / var(--cam-s));
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  height: calc(30px / var(--cam-s));
+  padding: 0 calc(8px / var(--cam-s));
+  border: 0;
+  border-radius: calc(3px / var(--cam-s));
+  background: rgba(14, 14, 14, 0.82);
+  color: $text;
+  box-shadow: 0 calc(6px / var(--cam-s)) calc(16px / var(--cam-s)) rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+
+  svg {
+    flex: none;
+    width: calc(14px / var(--cam-s));
+    height: calc(14px / var(--cam-s));
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+  }
+
+  span {
+    max-width: 0;
+    overflow: hidden;
+    font-size: calc(11px / var(--cam-s));
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    transition:
+      max-width 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+      margin 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &:hover {
+    color: $accent;
+  }
+}
+
+.coverLines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+
+  path {
+    fill: none;
+    stroke: rgba(var(--snow-rgb), 0.7);
+    stroke-width: 1.2;
+    transition:
+      opacity 0.3s ease,
+      stroke 0.3s ease;
+
+    &[data-on] {
+      stroke: $accent;
+      stroke-width: 1.6;
+    }
+  }
+}
+
+.coverList {
+  position: absolute;
+  width: 28cqw;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: 2.4cqw minmax(0, 1fr) auto;
+    align-items: center;
+    font-size: 0.92cqw;
+    cursor: default;
+    transition:
+      opacity 0.3s ease,
+      color 0.3s ease;
+
+    &[data-on] {
+      color: $accent;
+    }
+
+    &:hover .coverListSize,
+    &[data-on] .coverListSize {
+      opacity: 0.6;
+    }
+  }
+}
+
+.coverListNo {
+  font-size: calc(10px / var(--cam-s));
+  letter-spacing: 0.1em;
+  opacity: 0.5;
+}
+
+.coverListName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.coverListSize {
+  font-size: calc(10px / var(--cam-s));
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* ---------- Zadání ---------- */
+
+.briefCopy {
+  position: absolute;
+  top: 10cqh;
+  left: 6cqw;
+  width: 27cqw;
+}
+
+.briefStatement {
+  margin: 1.6cqw 0 0;
+  font-size: 2.5cqw;
+  font-weight: 300;
+  line-height: 1.15;
+  letter-spacing: -0.005em;
+}
+
+.criteria {
+  display: grid;
+  margin: 5cqh 0 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: 2.4cqw minmax(0, 1fr);
+    padding: 1.2cqw 0;
+    font-size: 0.88cqw;
+    line-height: 1.55;
+    transition: color 0.3s ease;
+
+    b {
+      display: block;
+      margin-bottom: 0.25cqw;
+      font-size: 0.95cqw;
+      font-weight: 500;
+      transition: color 0.3s ease;
+    }
+
+    > span:last-child {
+      opacity: 0.75;
+    }
+
+    &[data-on] b,
+    &[data-on] .criteriaNo {
+      color: $accent;
+      opacity: 1;
+    }
+  }
+}
+
+.criteriaNo {
+  padding-top: 0.15cqw;
+  font-size: calc(10px / var(--cam-s));
+  letter-spacing: 0.1em;
+  opacity: 0.5;
+}
+
+.splitRow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.splitItem {
+  position: absolute;
+  margin: 0;
+  pointer-events: auto;
+  transition:
+    opacity 0.35s ease,
+    translate 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+
+  &[data-on] {
+    translate: 0 calc(-10px / var(--cam-s));
+  }
+
+  figcaption {
+    display: grid;
+    gap: calc(3px / var(--cam-s));
+    margin-top: 1.2cqw;
+    font-size: calc(11px / var(--cam-s));
+    opacity: 0.65;
+
+    b {
+      font-size: calc(10px / var(--cam-s));
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      transition: color 0.3s ease;
+    }
+  }
+
+  &[data-on] figcaption {
+    opacity: 1;
+
+    b {
+      color: $accent;
+    }
+  }
+}
+
+.splitButton {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+
+.splitVisual {
+  position: relative;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  border-radius: calc(2px / var(--cam-s));
+  background: #202020;
+  box-shadow:
+    0 calc(2px / var(--cam-s)) calc(6px / var(--cam-s)) rgba(0, 0, 0, 0.2),
+    0 calc(24px / var(--cam-s)) calc(60px / var(--cam-s)) rgba(0, 0, 0, 0.4);
+
+  img {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+@container (orientation: portrait) {
+  .coverIntro {
+    top: 4cqh;
+    width: 88cqw;
+  }
+
+  .coverName {
+    font-size: 6cqw;
+  }
+
+  .coverFacts {
+    display: none;
+  }
+
+  .coverList {
+    top: auto !important;
+    left: 6cqw !important;
+    right: 6cqw;
+    bottom: 8cqh;
+    width: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.2cqw 3cqw;
+
+    li {
+      display: flex;
+      gap: 1cqw;
+      height: auto !important;
+      font-size: 2.4cqw;
+    }
+  }
+
+  .coverListSize {
+    display: none;
+  }
+
+  .briefCopy {
+    top: 4cqh;
+    width: 88cqw;
+  }
+
+  .briefStatement {
+    font-size: 5.2cqw;
+  }
+
+  .criteria {
+    margin-top: 2cqh;
+
+    li {
+      padding: 1.6cqw 0;
+      font-size: 2.2cqw;
+
+      b {
+        font-size: 2.4cqw;
+      }
+    }
+  }
+}
+
+// Zakrytá prodejní vrstva v „hravé" kopii banneru.
+.splitMask {
+  position: absolute;
+  border-radius: calc(2px / var(--cam-s));
+  background: rgba(28, 28, 28, 0.94);
+  box-shadow: 0 0 0 calc(4px / var(--cam-s)) rgba(28, 28, 28, 0.94);
+}
+
+@container (orientation: portrait) {
+  .criteria li {
+    grid-template-columns: 6cqw minmax(0, 1fr);
+  }
+
+  .criteriaNo {
+    font-size: 2cqw;
+  }
+}
+
+/* ================================================================
+   KAPITOLY (v15) — asymetrická mřížka, Sabinin text jako poznámky
+   nalepené přes díla. Velikosti v px artboardu (cqw) s minimem na
+   obrazovce (`X / var(--cam-s)`), aby šlo číst i na telefonu.
+   ================================================================ */
+
+$ease: cubic-bezier(0.22, 1, 0.36, 1);
+$px: var(--cam-s);
+
+// Ostrý text: bez trvalé vrstvy a na zastávce bez 3D kontextu.
+.world {
+  will-change: auto;
+}
+
+.canvasFrame[data-flat] {
+  .worldFade,
+  .lens,
+  .world {
+    transform-style: flat;
+  }
+}
+
+.chBoard {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---------- Nadpis kapitoly ---------- */
+
+.chHead {
+  position: absolute;
+}
+
+.chKicker,
+.cvKick {
+  display: flex;
+  align-items: center;
+  gap: max(0.6cqw, calc(8px / #{$px}));
+  margin: 0 0 max(2cqw, calc(16px / #{$px}));
+  font-size: max(0.6cqw, calc(10px / #{$px}));
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+
+  span:not(.chBar) {
+    opacity: 0.55;
+  }
+}
+
+.cvKick {
+  position: absolute;
+  margin: 0;
+}
+
+.chBar {
+  display: block;
+  width: max(2cqw, calc(22px / #{$px}));
+  height: max(0.16cqw, calc(2px / #{$px}));
+  background: $accent;
+}
+
+.chTitle {
+  margin: 0;
+  font-size: max(3.5cqw, calc(28px / #{$px}));
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: 0.005em;
+  text-transform: uppercase;
+}
+
+// Řádek nadpisu vyjede zespodu, když kamera k artboardu dojede.
+.chLine {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.08em;
+
+  > span {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(105%);
+    transition:
+      transform 1.1s $ease,
+      opacity 0.6s ease;
+
+    &[data-green] {
+      color: $accent;
+      font-weight: 500;
+    }
+  }
+}
+
+.board[data-seen] .chLine > span {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- Poznámka přes díla ---------- */
+
+.note {
+  position: absolute;
+  z-index: 20;
+  width: max(var(--w), calc(250px / #{$px}));
+  max-width: 88cqw;
+  margin: 0;
+  padding: max(1.3cqw, calc(16px / #{$px})) max(1.4cqw, calc(18px / #{$px})) max(1.4cqw, calc(17px / #{$px}));
+  border-radius: calc(2px / #{$px});
+  background: var(--snow);
+  color: var(--charcoal);
+  font-size: max(0.82cqw, calc(12px / #{$px}));
+  line-height: 1.62;
+  box-shadow:
+    0 calc(1px / #{$px}) calc(2px / #{$px}) rgba(0, 0, 0, 0.22),
+    0 calc(18px / #{$px}) calc(44px / #{$px}) rgba(0, 0, 0, 0.38);
+  opacity: 0;
+  rotate: calc(var(--tilt) + 5deg);
+  scale: 1.08;
+  transform-origin: 50% 0;
+  transition:
+    opacity 0.35s ease,
+    rotate 0.75s cubic-bezier(0.2, 1.45, 0.4, 1),
+    scale 0.75s cubic-bezier(0.2, 1.45, 0.4, 1);
+
+  b {
+    font-weight: 600;
+  }
+
+  &[data-on] {
+    opacity: 1;
+    rotate: var(--tilt);
+    scale: 1;
+    transition-delay: 0.25s;
+  }
+}
+
+// Krátký postřeh: menší lístek, menší písmo.
+.note[data-small] {
+  width: max(var(--w), calc(170px / #{$px}));
+  padding: max(0.9cqw, calc(11px / #{$px})) max(1cqw, calc(13px / #{$px}));
+  font-size: max(0.7cqw, calc(11px / #{$px}));
+  line-height: 1.5;
+}
+
+/* ---------- Text pod nadpisem (vypisuje se) ---------- */
+
+.lead {
+  margin-top: max(2cqw, calc(18px / #{$px}));
+  color: rgba(var(--snow-rgb), 0.78);
+  font-size: max(0.88cqw, calc(12px / #{$px}));
+  line-height: 1.72;
+
+  p {
+    margin: 0 0 0.9em;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  b {
+    color: $text;
+    font-weight: 500;
+  }
+}
+
+.typedRest {
+  visibility: hidden;
+}
+
+.caret {
+  display: inline-block;
+  width: max(0.1cqw, calc(1.5px / #{$px}));
+  height: 1.05em;
+  margin: 0 0.04em 0 0.02em;
+  vertical-align: -0.16em;
+  background: $accent;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.noteTape {
+  position: absolute;
+  top: calc(-9px / #{$px});
+  left: 50%;
+  width: calc(62px / #{$px});
+  height: calc(18px / #{$px});
+  translate: -50% 0;
+  rotate: -4deg;
+  background: rgba(var(--green-rgb), 0.82);
+  box-shadow: 0 calc(1px / #{$px}) calc(2px / #{$px}) rgba(0, 0, 0, 0.15);
+}
+
+/* ---------- Dílo ---------- */
+
+.work {
+  position: absolute;
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: calc(3px / #{$px});
+  overflow: hidden;
+  background: rgba(var(--snow-rgb), 0.04);
+  box-shadow:
+    0 calc(2px / #{$px}) calc(6px / #{$px}) rgba(0, 0, 0, 0.22),
+    0 calc(26px / #{$px}) calc(60px / #{$px}) rgba(0, 0, 0, 0.42);
+  cursor: zoom-in;
+
+  // Díla jsou ztlumená, aby text (nadpis a poznámky) vážil stejně jako
+  // obrázky; najetí dílo rozsvítí.
+  img {
+    object-fit: cover;
+    filter: saturate(0.8);
+    transition: filter 0.5s ease;
+  }
+
+  // Tlumení: základ + podle hloubky (--dim 0–1).
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(12, 12, 12, calc(0.42 + var(--dim, 0) * 0.55));
+    pointer-events: none;
+    transition: background 0.5s ease;
+  }
+
+  &:hover::after {
+    background: rgba(12, 12, 12, 0);
+  }
+
+  &:hover img {
+    filter: none;
+  }
+
+  &:focus-visible {
+    outline: calc(2px / #{$px}) solid $accent;
+    outline-offset: calc(3px / #{$px});
+  }
+}
+
+/* ---------- Počítadlo ---------- */
+
+.counter {
+  position: absolute;
+}
+
+.counterNo {
+  margin: 0;
+  color: rgba(var(--snow-rgb), 0.45);
+  font-size: max(2.2cqw, calc(22px / #{$px}));
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+
+  b {
+    color: $text;
+    font-weight: 400;
+  }
+}
+
+.counterName {
+  margin: max(0.9cqw, calc(8px / #{$px})) 0 0;
+  font-size: max(0.9cqw, calc(13px / #{$px}));
+}
+
+.counterMeta {
+  margin: max(0.35cqw, calc(4px / #{$px})) 0 0;
+  font-size: max(0.56cqw, calc(9px / #{$px}));
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.55;
+
+  span {
+    margin-right: 0.8em;
+  }
+}
+
+/* ---------- Titulní ---------- */
+
+.cvTitle {
+  position: absolute;
+}
+
+.cvName {
+  margin: 0;
+  font-size: max(7.4cqw, calc(52px / #{$px}));
+  font-weight: 500;
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+}
+
+.cvKind {
+  margin: max(1.1cqw, calc(10px / #{$px})) 0 0;
+  font-size: max(1.35cqw, calc(14px / #{$px}));
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cvMeta {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  justify-content: start;
+  gap: max(2.4cqw, calc(20px / #{$px}));
+  margin: max(4cqw, calc(28px / #{$px})) 0 0;
+
+  div {
+    display: grid;
+    gap: max(0.35cqw, calc(4px / #{$px}));
+  }
+
+  dt {
+    font-size: max(0.52cqw, calc(9px / #{$px}));
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.5;
+  }
+
+  dd {
+    margin: 0;
+    font-size: max(0.74cqw, calc(11px / #{$px}));
+    white-space: nowrap;
+  }
+}
+
+/* ---------- Konstrukce nad názvem ---------- */
+
+.construct {
+  position: absolute;
+  overflow: visible;
+  fill: none;
+  stroke-linecap: round;
+  pointer-events: none;
+
+  path,
+  circle,
+  polygon {
+    vector-effect: non-scaling-stroke;
+  }
+}
+
+.cnLine {
+  stroke: rgba(var(--snow-rgb), 0.55);
+  stroke-width: 1;
+}
+
+.cnAccent {
+  stroke: $accent;
+  stroke-width: 1.2;
+}
+
+.cnDash {
+  stroke: rgba(var(--snow-rgb), 0.5);
+  stroke-width: 1;
+  stroke-dasharray: 3 6;
+}
+
+.cnFaint {
+  stroke: rgba(var(--snow-rgb), 0.3);
+  stroke-width: 1;
+  stroke-dasharray: 1 4;
+}
+
+.cnGuide path {
+  stroke: rgba(var(--snow-rgb), 0.3);
+  stroke-width: 1;
+}
+
+.cnFlow {
+  stroke-dasharray: 2 6;
+  animation: cnFlow 3s linear infinite;
+}
+
+.cnDot {
+  fill: var(--snow);
+  stroke: none;
+}
+
+.cnSpin,
+.cnSway,
+.cnFloat {
+  transform-box: view-box;
+}
+
+.cnSpin {
+  transform-origin: 120px 160px;
+  animation: cnSpin 48s linear infinite;
+}
+
+.cnSway {
+  transform-origin: 270px 160px;
+  animation: cnSway 11s ease-in-out infinite alternate;
+}
+
+.cnFloat {
+  animation: cnFloat 7s ease-in-out infinite alternate;
+
+  .cnFaint {
+    animation: cnFlow 4s linear infinite reverse;
+  }
+}
+
+@keyframes cnFlow {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+@keyframes cnSpin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes cnSway {
+  from {
+    rotate: -9deg;
+  }
+  to {
+    rotate: 9deg;
+  }
+}
+
+@keyframes cnFloat {
+  from {
+    translate: 0 -10px;
+  }
+  to {
+    translate: 0 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .construct * {
+    animation: none !important;
+  }
+}
+
+/* ---------- Balíček karet a kolotoč ---------- */
+
+.stack,
+.ring {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+}
+
+.stackCard {
+  transform-origin: 100% 0;
+  transition:
+    left 0.9s $ease,
+    top 0.9s $ease,
+    scale 0.9s $ease;
+}
+
+/* ---------- Pás kampaní a mapa ---------- */
+
+.strip {
+  position: absolute;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 2.5%, #000 97.5%, transparent);
+}
+
+.stripTrack {
+  position: absolute;
+  inset: 0;
+}
+
+.stripItem {
+  position: absolute;
+  top: 0;
+  margin: 0;
+
+  .work {
+    position: relative;
+  }
+
+  figcaption {
+    margin-top: max(0.9cqw, calc(10px / #{$px}));
+    font-size: max(0.62cqw, calc(10px / #{$px}));
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    opacity: 0.75;
+
+    span {
+      margin-right: 0.7em;
+      color: $accent;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+  }
+}
+
+.map {
+  position: absolute;
+  height: calc(30px / #{$px});
+}
+
+.mapGroup {
+  position: absolute;
+  top: 0;
+  padding-top: max(0.7cqw, calc(10px / #{$px}));
+  font-size: max(0.56cqw, calc(9px / #{$px}));
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0.45;
+  transition:
+    opacity 0.3s ease,
+    color 0.3s ease;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: calc(8px / #{$px});
+    height: max(0.1cqw, calc(1px / #{$px}));
+    background: rgba(var(--snow-rgb), 0.4);
+    transition: background 0.3s ease;
+  }
+
+  &[data-on] {
+    color: $accent;
+    opacity: 1;
+
+    &::before {
+      background: $accent;
+    }
+  }
+}
+
+
+/* ---------- Na výšku ---------- */
+
+@container (orientation: portrait) {
+  .chTitle {
+    font-size: max(7.4cqw, calc(26px / #{$px}));
+  }
+
+  .cvName {
+    font-size: max(15cqw, calc(46px / #{$px}));
+  }
+
+  .cvKind {
+    font-size: max(2.8cqw, calc(13px / #{$px}));
+  }
+
+  .cvMeta {
+    grid-template-columns: repeat(2, auto);
+    gap: max(3cqw, calc(12px / #{$px})) max(6cqw, calc(20px / #{$px}));
+    margin-top: max(5cqw, calc(18px / #{$px}));
+
+    dd {
+      font-size: max(1.6cqw, calc(11px / #{$px}));
+    }
+  }
+
+  .note {
+    font-size: max(1.7cqw, calc(12px / #{$px}));
+  }
+
+  .counterNo {
+    font-size: max(4.6cqw, calc(20px / #{$px}));
+  }
+
+  .counterName {
+    font-size: max(1.9cqw, calc(12px / #{$px}));
+  }
+
+  // Úzký pás: popisek jen u druhu, kde právě jsme.
+  .mapGroup:not([data-on]) {
+    color: transparent;
+  }
+}
+
+/* ================================================================
+   VOLBA DÍLA A POZADÍ KAPITOL (v15b) — klik / šipky přenesou dílo
+   dopředu a zvýrazní ho; za díly velký tvar kapitoly.
+   ================================================================ */
+
+// Obrázek v ořezu zvlášť, aby popisek výběru mohl ven nad kartu.
+.work {
+  overflow: visible;
+
+  &::after {
+    border-radius: inherit;
+  }
+}
+
+.workImage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.work[data-picked] {
+  outline: calc(1.5px / #{$px}) solid $accent;
+  outline-offset: calc(5px / #{$px});
+  animation: pickPop 0.7s $ease;
+
+  &::after {
+    background: rgba(12, 12, 12, 0);
+  }
+
+  img {
+    filter: none;
+  }
+}
+
+@keyframes pickPop {
+  0% {
+    scale: 1;
+  }
+  35% {
+    scale: 1.03;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+// Popisek výběru nad kartou: název a rozměr (jako rámeček v editoru).
+.pickLabel {
+  position: absolute;
+  bottom: 100%;
+  left: calc(-5px / #{$px});
+  display: flex;
+  gap: 0.8em;
+  margin-bottom: calc(10px / #{$px});
+  color: $accent;
+  font-size: max(0.6cqw, calc(10px / #{$px}));
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  pointer-events: none;
+
+  i {
+    font-style: normal;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.7;
+  }
+}
+
+.depthWork {
+  transition:
+    left 0.85s $ease,
+    top 0.85s $ease,
+    width 0.85s $ease,
+    height 0.85s $ease;
+}
+
+.stripTrack[data-glide] {
+  transition: translate 0.9s $ease;
+}
+
+.ring[data-glide] .ringCard {
+  transition:
+    left 0.8s $ease,
+    top 0.8s $ease,
+    width 0.8s $ease,
+    height 0.8s $ease;
+}
+
+.stripItem {
+  .pickLabel {
+    display: none;
+  }
+
+  &[data-picked] figcaption {
+    color: $accent;
+    opacity: 1;
+  }
+}
+
+/* ---------- Ovládání: šipky ---------- */
+
+.controls {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: max(1cqw, calc(12px / #{$px}));
+}
+
+.controlsNo {
+  color: rgba(var(--snow-rgb), 0.5);
+  font-size: max(0.66cqw, calc(11px / #{$px}));
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.1em;
+
+  b {
+    color: $text;
+    font-weight: 500;
+  }
+}
+
+.counterRow {
+  display: flex;
+  align-items: center;
+  gap: max(1.4cqw, calc(16px / #{$px}));
+}
+
+.steps {
+  display: inline-flex;
+  gap: calc(6px / #{$px});
+
+  button {
+    display: grid;
+    place-items: center;
+    width: max(1.8cqw, calc(32px / #{$px}));
+    height: max(1.8cqw, calc(32px / #{$px}));
+    padding: 0;
+    border: 0;
+    border-radius: calc(3px / #{$px});
+    background: rgba(var(--snow-rgb), 0.06);
+    color: $text;
+    box-shadow: 0 calc(4px / #{$px}) calc(14px / #{$px}) rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition:
+      background 0.25s ease,
+      color 0.25s ease;
+
+    svg {
+      width: 46%;
+      height: 46%;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    &:hover {
+      background: rgba(var(--green-rgb), 0.14);
+      color: $accent;
+    }
+
+    &:focus-visible {
+      outline: calc(1.5px / #{$px}) solid $accent;
+      outline-offset: calc(2px / #{$px});
+    }
+  }
+}
+
+// Druhy kampaní v mapě jsou tlačítka (skok na první dílo druhu).
+.mapGroup {
+  padding-right: 0;
+  padding-left: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+/* ---------- Pozadí kapitol ---------- */
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  opacity: 0.16;
+  fill: none;
+  stroke-linecap: round;
+  pointer-events: none;
+
+  path,
+  circle,
+  polygon,
+  rect,
+  line {
+    vector-effect: non-scaling-stroke;
+  }
+}
+
+.cnHandle {
+  fill: none;
+  stroke: rgba(var(--snow-rgb), 0.7);
+  stroke-width: 1;
+}
+
+.cnFlowFaint {
+  stroke: rgba(var(--snow-rgb), 0.35);
+  stroke-width: 1;
+  stroke-dasharray: 2 7;
+  animation: cnFlow 3.5s linear infinite;
+}
+
+.bgSpin,
+.bgSpinBack,
+.bgSway,
+.bgSwayBack,
+.bgFloat {
+  transform-box: view-box;
+}
+
+.bgSpin {
+  animation: cnSpin 120s linear infinite;
+}
+
+.bgSpinBack {
+  animation: cnSpin 80s linear infinite reverse;
+}
+
+.bgSway {
+  animation: bgSway 18s ease-in-out infinite alternate;
+}
+
+.bgSwayBack {
+  animation: bgSway 13s ease-in-out infinite alternate-reverse;
+}
+
+.bgFloat {
+  animation: bgFloat 10s ease-in-out infinite alternate;
+}
+
+@keyframes bgSway {
+  from {
+    rotate: -5deg;
+  }
+  to {
+    rotate: 5deg;
+  }
+}
+
+@keyframes bgFloat {
+  from {
+    translate: 0 -18px;
+  }
+  to {
+    translate: 0 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop *,
+  .work[data-picked] {
+    animation: none !important;
+  }
+}
+
+/* ================================================================
+   VÝSTUPY (v15c) — úzké rozhraní, malé písmo; hlavní je plocha.
+   Díla jdou táhnout. Spodní lišta zrušená (výzva je na konci).
+   ================================================================ */
+
+$ui: max(0.52cqw, calc(9.5px / #{$px}));
+$ui-small: max(0.44cqw, calc(8.5px / #{$px}));
+
+.edBar {
+  padding: 0 0.9cqw;
+  font-size: $ui;
+}
+
+.edTools {
+  gap: 0.25cqw;
+}
+
+.edMark,
+.edTool {
+  width: max(1.4cqw, calc(24px / #{$px}));
+  height: max(1.4cqw, calc(24px / #{$px}));
+  font-size: $ui-small;
+}
+
+.edPeople i {
+  width: max(1.3cqw, calc(22px / #{$px}));
+  height: max(1.3cqw, calc(22px / #{$px}));
+  font-size: $ui-small;
+}
+
+.edZoom button {
+  padding: 0.25cqw 0.45cqw;
+  font-size: $ui;
+}
+
+.edExport {
+  padding: 0.35cqw 0.8cqw;
+  font-size: $ui;
+}
+
+.edPanelHead {
+  padding: 0.9cqw 0.9cqw 0.5cqw;
+  font-size: $ui-small;
+}
+
+.edLayers li {
+  gap: 0.5cqw;
+  padding: 0 0.6cqw;
+}
+
+.edFrameIcon {
+  width: max(0.7cqw, calc(12px / #{$px}));
+  height: max(1cqw, calc(16px / #{$px}));
+
+  &[data-square] {
+    height: max(0.7cqw, calc(12px / #{$px}));
+  }
+}
+
+.edRowName {
+  font-size: $ui;
+
+  i {
+    font-size: $ui-small;
+  }
+}
+
+.edCheck {
+  width: max(0.6cqw, calc(10px / #{$px}));
+  height: max(0.6cqw, calc(10px / #{$px}));
+}
+
+.edItem figcaption {
+  font-size: max(0.5cqw, calc(9px / #{$px} / var(--k, 1)));
+}
+
+.edHint {
+  padding: 0.35cqw 0.8cqw;
+  font-size: $ui-small;
+}
+
+.edPropsBody {
+  gap: 0.7cqw;
+  padding: 0 0.9cqw;
+}
+
+.edPropName {
+  font-size: max(0.8cqw, calc(12px / #{$px}));
+}
+
+.edPropSub,
+.edEmpty {
+  font-size: $ui-small;
+}
+
+.edEmpty {
+  padding: 0 0.9cqw;
+}
+
+.edFields div {
+  padding: 0.35cqw 0.5cqw;
+  font-size: $ui;
+}
+
+.edPropRow,
+.edOpen {
+  font-size: $ui;
+}
+
+.edOpen {
+  padding: 0.55cqw 0.7cqw;
+}
+
+// Tah dílem: chytit, při tahu nad ostatními a s hlubším stínem.
+.edItem {
+  cursor: grab;
+  transition: box-shadow 0.25s ease;
+
+  &[data-dragging] {
+    cursor: grabbing;
+    filter: drop-shadow(0 calc(18px / #{$px}) calc(30px / #{$px}) rgba(0, 0, 0, 0.5));
+  }
+}
+
+.edView[data-dragging] {
+  cursor: grabbing;
+}
+
+/* ================================================================
+   VÝZVA NA KONCI (Finale) — obměna CTA z homepage: oddálené plátno
+   ztlumené za ní, uprostřed věta, velké tlačítko a stav.
+   ================================================================ */
+
+.finale {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse 60% 70% at 50% 50%, rgba(14, 14, 14, 0.9), rgba(14, 14, 14, 0.62) 70%, rgba(14, 14, 14, 0.45));
+  pointer-events: none;
+
+  &[data-on] {
+    pointer-events: auto;
+  }
+}
+
+// Tmavé „jeviště" jako na homepage — velký kruh za tlačítkem.
+.finaleStage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 92vh;
+  height: 92vh;
+  margin: -46vh 0 0 -46vh;
+  border-radius: 50%;
+  background: linear-gradient(152deg, rgba(96, 96, 96, 0.5) 0%, rgba(44, 44, 44, 0.8) 42%, rgba(14, 14, 14, 0.95) 100%);
+  box-shadow: 0 0 7vw 2vw rgba(56, 56, 56, 0.32);
+  pointer-events: none;
+}
+
+.finaleSwoosh {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+
+  path {
+    fill: none;
+    stroke: rgba(var(--snow-rgb), 0.42);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+
+  circle {
+    fill: $accent;
+  }
+}
+
+.finaleInner {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 5vh;
+  text-align: center;
+}
+
+.finaleLead {
+  margin: 0;
+  color: rgba(var(--snow-rgb), 0.7);
+  font-size: clamp(0.7rem, 1.45vh, 1.8rem);
+  line-height: 1.6;
+
+  b,
+  .accent {
+    display: block;
+    color: $text;
+    font-weight: 500;
+  }
+}
+
+.finaleHit {
+  display: inline-block;
+}
+
+.finaleMeasure {
+  display: inline-block;
+  padding: 4vh 1.5vw;
+  margin: -4vh -1.5vw;
+}
+
+.finaleAction {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 1px dashed $accent;
+    outline-offset: 0.8vh;
+  }
+}
+
+.finaleBody {
+  display: flex;
+  align-items: center;
+  gap: 2vw;
+}
+
+.finaleLabel {
+  display: block;
+  width: min-content;
+  color: $accent;
+  font-size: clamp(1.6rem, 8vh, 10rem);
+  font-weight: 200;
+  line-height: 0.96;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.finaleDisc {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: clamp(3.4rem, 15vh, 19rem);
+  height: clamp(3.4rem, 15vh, 19rem);
+  border: 1px solid $accent;
+  border-radius: 50%;
+  color: $accent;
+  transition:
+    background 0.26s ease,
+    color 0.26s ease;
+
+  svg {
+    width: 36%;
+    height: 36%;
+  }
+}
+
+.finaleAction:hover .finaleDisc,
+.finaleAction:focus-visible .finaleDisc {
+  background: $accent;
+  color: var(--charcoal);
+}
+
+.finaleStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.8vw;
+  margin: 0;
+  color: rgba(var(--snow-rgb), 0.7);
+  font-size: clamp(0.5rem, 1.05vh, 1.4rem);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.finaleDot {
+  width: clamp(0.3rem, 1vh, 1.4rem);
+  height: clamp(0.3rem, 1vh, 1.4rem);
+  border-radius: 50%;
+  background: $accent;
+}
+
+// Na výšku: menší tlačítko, ať se vejde na šířku telefonu.
+.canvasFrame[data-tall] {
+  .finaleLabel {
+    font-size: clamp(1.4rem, 4.6vh, 6rem);
+  }
+
+  .finaleDisc {
+    width: clamp(3rem, 9vh, 12rem);
+    height: clamp(3rem, 9vh, 12rem);
+  }
+
+  .finaleStage {
+    width: 120vw;
+    height: 120vw;
+    margin: -60vw 0 0 -60vw;
+  }
+}
+
+/* ---------- Tlačítko detailu pod díly ---------- */
+
+// Viditelná cesta k detailu díla (klik na obrázek sám o sobě není zřejmý).
+.detailButton {
+  position: absolute;
+  z-index: 15;
+  display: inline-flex;
+  align-items: center;
+  gap: max(0.5cqw, calc(8px / #{$px}));
+  height: max(1.8cqw, calc(32px / #{$px}));
+  padding: 0 max(0.8cqw, calc(13px / #{$px})) 0 max(0.6cqw, calc(10px / #{$px}));
+  border: 0;
+  border-radius: calc(3px / #{$px});
+  background: rgba(var(--snow-rgb), 0.08);
+  color: $text;
+  font: inherit;
+  font-size: max(0.6cqw, calc(11px / #{$px}));
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 calc(4px / #{$px}) calc(14px / #{$px}) rgba(0, 0, 0, 0.3);
+  transition:
+    background 0.25s ease,
+    color 0.25s ease;
+
+  svg {
+    width: max(0.75cqw, calc(13px / #{$px}));
+    height: max(0.75cqw, calc(13px / #{$px}));
+    fill: none;
+    stroke: $accent;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+  }
+
+  span {
+    color: rgba(var(--snow-rgb), 0.5);
+    font-size: 0.85em;
+    font-weight: 400;
+  }
+
+  &:hover {
+    background: rgba(var(--green-rgb), 0.16);
+    color: $accent;
+  }
+
+  &:focus-visible {
+    outline: calc(1.5px / #{$px}) solid $accent;
+    outline-offset: calc(2px / #{$px});
+  }
+}
+
+// Ve skupině se šipkami (Kampaně) stojí v toku.
+.controls .detailButton {
+  position: relative;
+}
+
+/* ---------- Responzivita na šířku: nic nepřeteče ----------
+   Drobné písmo se na malé obrazovce zmenšuje s artboardem (index.tsx, UI)
+   a rámování nechá místo hlavičce; tady jen texty, které by se jinak
+   tvrdě uřízly. */
+
+// Názvy v seznamu vrstev a popisky děl Výstupů: tři tečky místo řezu.
+.edRowName > span,
+.edItem figcaption {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.edItem figcaption {
+  display: block;
+  // Svisle na střed přes line-height (výška popisku z boards.tsx).
+}
+
+// Hodně malý artboard (index.tsx, data-small): u tlačítka detailu jen
+// „Zobrazit detail" — podtitulek by z artboardu vylezl.
+.canvasFrame[data-small] .detailButton span {
+  display: none;
+}
+
+// Druhy v mapě Kampaní: úzký úsek (krátká řada, malá obrazovka) — tři
+// tečky místo přelití do sousedního.
+.mapGroup {
+  overflow: hidden;
+  padding-right: calc(8px / #{$px});
+  text-overflow: ellipsis;
+}
+
+// Hodně malý artboard: v řádku vrstvy jen název (formát je ve Vlastnostech),
+// dva řádky by do výšky řádku nevešly a překrývaly se.
+.canvasFrame[data-small] .edRowName i {
+  display: none;
+}
+
+/* ---------- Na výšku: telefon ---------- */
+
+// Dole přes šířku leží zelená lišta s výzvou (hlavička, .contactBar:
+// 4vw od spodku, 3,7rem vysoká) — pravítko kapitol stojí nad ní a artboard
+// nad pravítkem (index.tsx čte jeho polohu).
+@media (max-width: 599.98px) and (orientation: portrait) {
+  .rulerBottom {
+    bottom: calc(4vw + 3.7rem + 10px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .rulerLeft {
+    height: calc(100% - #{$ruler} - #{$chapters} - 4vw - 3.7rem - 10px - env(safe-area-inset-bottom, 0px));
+  }
+}
+
+// Výstupy na telefonu na výšku: v liště vpravo by se nevešlo „Exportováno"
+// — avatary (kdo je v souboru) ustoupí.
+.canvasFrame[data-small][data-tall] .edPeople {
+  display: none;
+}

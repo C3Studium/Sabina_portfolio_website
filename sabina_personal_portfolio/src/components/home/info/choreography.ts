@@ -319,16 +319,17 @@ export function useDesigner({ stage, names, refs, cardsPad, enabled }: Options) 
       const gallery = registry.get("hero-gallery")?.getBoundingClientRect();
       const galleryPt: Pt | null = gallery && gallery.width ? [gallery.left + gallery.width * 0.35, gallery.top + gallery.height * 0.5] : null;
       const portraitPt = grabOf(heroPortrait);
-      opacity = within([HERO.arrive[0], HERO.arrive[0] + heroAt(10.5)])(h);
+      // Délky jako rozdíl dvou bodů (heroAt přepočítává body tempem úseku).
+      opacity = within([HERO.arrive[0], heroAt(380.5)])(h);
       if (galleryPt && gallery && h < HERO.toPortrait[0]) {
         pos = h < HERO.arrive[1] ? move([fx + vw + 40, fy + vh * 0.62], galleryPt, within(HERO.arrive)(h)) : galleryPt;
-        press = click(h, HERO.select, heroAt(4));
+        press = click(h, HERO.select, heroAt(414) - HERO.select);
         if (h >= HERO.select && h < HERO.remove) select = { r: gallery, label: "3D scéna", o: 1 };
         active = h >= HERO.select && h < HERO.remove ? "gallery" : null;
-        if (near(h, HERO.remove, heroAt(5), heroAt(6))) key = "delete";
+        if (near(h, HERO.remove, HERO.remove - heroAt(416), heroAt(427) - HERO.remove)) key = "delete";
       } else if (galleryPt && h < HERO.portrait) {
         pos = move(galleryPt, portraitPt, within(HERO.toPortrait)(h));
-        const grabbed = within([HERO.portrait - heroAt(4), HERO.portrait])(h);
+        const grabbed = within([heroAt(480), HERO.portrait])(h);
         press = grabbed;
         select = { r: heroPortrait, label: "Portrét", o: grabbed };
       } else {

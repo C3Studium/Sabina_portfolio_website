@@ -1,0 +1,137 @@
+{
+  "version": 1,
+  "source": "/assets/banners/vecicky_banner13.png",
+  "width": 822,
+  "height": 1024,
+  "aspect": 0.80249,
+  "layers": [
+    {
+      "kind": "background",
+      "label": "pozadí",
+      "box": [
+        0,
+        0,
+        1,
+        1
+      ],
+      "color": [
+        182,
+        186,
+        192
+      ],
+      "area": 0.4681
+    },
+    {
+      "kind": "shape",
+      "label": "tvar",
+      "box": [
+        0.2725,
+        0.2666,
+        0.4343,
+        0.0645
+      ],
+      "color": [
+        30,
+        190,
+        187
+      ],
+      "area": 0.023
+    },
+    {
+      "kind": "shape",
+      "label": "tvar",
+      "box": [
+        0.6083,
+        0.165,
+        0.0925,
+        0.1025
+      ],
+      "color": [
+        151,
+        156,
+        165
+      ],
+      "area": 0.003
+    },
+    {
+      "kind": "object",
+      "label": "objekt",
+      "box": [
+        0.0073,
+        0.3193,
+        0.9927,
+        0.6807
+      ],
+      "color": [
+        194,
+        136,
+        147
+      ],
+      "area": 0.4055
+    },
+    {
+      "kind": "text",
+      "label": "Vecicky",
+      "box": [
+        0.4343,
+        0.0391,
+        0.2117,
+        0.0615
+      ],
+      "color": [
+        73,
+        71,
+        74
+      ],
+      "area": 0.0037
+    },
+    {
+      "kind": "text",
+      "label": "Sleva30%",
+      "box": [
+        0.0657,
+        0.0918,
+        0.8844,
+        0.1963
+      ],
+      "color": [
+        229,
+        231,
+        235
+      ],
+      "area": 0.0937
+    },
+    {
+      "kind": "text",
+      "label": "nazimní produkty",
+      "box": [
+        0.3443,
+        0.2246,
+        0.2652,
+        0.0303
+      ],
+      "color": [
+        35,
+        36,
+        37
+      ],
+      "area": 0.0015
+    },
+    {
+      "kind": "text",
+      "label": "KÓD: konecne-zima",
+      "box": [
+        0.3516,
+        0.29,
+        0.281,
+        0.0186
+      ],
+      "color": [
+        223,
+        245,
+        245
+      ],
+      "area": 0.0014
+    }
+  ]
+}

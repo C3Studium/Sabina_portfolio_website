@@ -20,6 +20,8 @@ import {
 } from '@c3studium/valecms/server/site'
 
 import { projectSlug } from '../cms/slug.ts'
+import { studyFrom } from './study.ts'
+import type { StudyContent } from '../../components/study/content'
 
 /** Co si stránka přečetla z preview cookie: publikovaný web, koncept, nebo okamžik. */
 export type View = { draft: boolean; at: string | null }
@@ -52,6 +54,8 @@ export type Project = {
     perex: string
     /** Cíle projektu, jeden na položku. */
     goals: string[]
+    /** Co klient dovolil zveřejnit, jeden detail na položku. */
+    shared: string[]
     /** richText jako HTML; `bodyText` je totéž bez značek. */
     body: string
     bodyText: string
@@ -63,6 +67,8 @@ export type Project = {
     featured: boolean
     /** Text tlačítka na kartě úvodní stránky; '' = výchozí z komponenty. */
     cardCta: string
+    /** Případová studie (záložka „Případová studie"), nebo null = dosavadní detail. */
+    study: StudyContent | null
 }
 
 /**
@@ -125,6 +131,7 @@ export const getProjects = async ({
                 tagline: stringValue(data.tagline),
                 perex: stringValue(data.perex),
                 goals: Array.isArray(data.goals) ? data.goals.map(stringValue).filter(Boolean) : [],
+                shared: Array.isArray(data.shared) ? data.shared.map(stringValue).filter(Boolean) : [],
                 body: stringValue(data.body),
                 bodyText: plainText(data.body),
                 cover: asImage(data.cover, title),
@@ -135,6 +142,7 @@ export const getProjects = async ({
                 order: numberValue(data.order) ?? 100,
                 featured: data.featured === true,
                 cardCta: stringValue(data.cardCta),
+                study: studyFrom(data, title, numberValue(data.order) ?? 100),
             }
         })
         .filter((project) => project.title && project.slug)

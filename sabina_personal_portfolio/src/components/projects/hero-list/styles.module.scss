@@ -3,7 +3,7 @@
 // HeroList — úvodní sekce stránky /projects podle Figma návrhu.
 //
 // ROZVRŽENÍ: jedna obrazovka se čtyřmi vrstvami — levá lišta, nadpis,
-// řada karet v perspektivě a pager vpravo dole. Souřadnice jsou
+// 3D ribbon projektů (DepthRibbon) a pager vpravo dole. Souřadnice jsou
 // přeměřené z návrhu (plátno 1205x685) přepsané na vw/vh.
 //
 // JEDNOTKY: vh/vw se štědrými stropy v clamp(), jako sekce na homepage.
@@ -13,24 +13,14 @@ $accent: var(--green);
 $ink: var(--charcoal);
 // Text na stránce (tmavý podklad); $ink jen na světlých plochách.
 $text: var(--snow);
-$ink-soft: $ink;
-$backdrop: #9c9c9c;
-// Kategorie na světlé kartě — uhlová (text jen sněhový, zelený, na světlém uhlový).
-$violet: $ink;
 
-// Karty mají vlastní stupnici — jsou to samostatné plochy, tmavé i světlé.
-$card-dark: var(--charcoal);
-$card-dark-text: var(--snow);
-$card-dark-muted: var(--snow);
-$card-light: #f2f1ee;
-$card-light-text: var(--charcoal);
-$card-light-muted: var(--charcoal);
-
-
+// Stránka je jen tahle obrazovka (bez scrollu a patičky — lib/scene-pages):
+// přesně výška okna, nic nesmí přetéct.
 .heroList {
   position: relative;
   height: var(--frame-h);
   overflow: hidden;
+  overscroll-behavior: none;
   color: $text;
   // Doslovná kopie podkladu ze sekcí na homepage — web má držet jeden tón.
   // Průhledné schválně — podklad celého webu dělá globální shader
@@ -38,340 +28,211 @@ $card-light-muted: var(--charcoal);
   background: transparent;
 }
 
-// Nasvícení z návrhu: klín světla z levého horního rohu, tmavá pravá
-// polovina s odrazivou podlahou a tmavý roh vpravo nahoře.
-//
-// POZOR na horní pruh: tmavý přechod musí začít až za ~80vw, jinak by
-// pod ním skončily odkazy fixní hlavičky, které jsou v ink barvě.
-.stage {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(
-      118deg,
-      rgba(var(--snow-rgb), 0.26) 0%,
-      rgba(var(--snow-rgb), 0.05) 30%,
-      transparent 52%
-    ),
-    radial-gradient(38% 44% at 106% 0%, rgba(10, 10, 10, 0.8), transparent 72%),
-    radial-gradient(
-      115% 96% at 84% 96%,
-      rgba(6, 6, 6, 0.95) 0%,
-      rgba(12, 12, 12, 0.62) 44%,
-      transparent 78%
-    );
-}
-
 /* ---------- Levá lišta ---------- */
 
-.rail {
+
+
+/* ---------- Text pod scénou ---------- */
+
+// Ztmavení odspodu: pod textem tmavé, nahoru se vytrácí do ztracena. Nad
+// scénou, pod textem; myš propouští.
+.dim {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    rgba(var(--charcoal-rgb), 0.92) 0%,
+    rgba(var(--charcoal-rgb), 0.7) 18%,
+    rgba(var(--charcoal-rgb), 0.3) 38%,
+    transparent 60%
+  );
+}
+
+// Vlevo dole: co od aktivního projektu smí ven, a vedle toho výzva.
+.intro {
   position: absolute;
   z-index: 3;
-  top: 30vh;
-  bottom: 4vh;
-  left: 3.4vw;
+  left: 10vw;
+  right: 26vw;
+  bottom: 6vh;
+  display: flex;
+  align-items: flex-end;
+  gap: 3vw;
+}
+
+// Výzva jako tlačítko v hlavičce: zelený obrys, šipka v kroužku.
+.cta {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 1vw;
+  padding: 1.2vh 1.2vh 1.2vh 1.6vw;
+  border: 1px solid rgba(var(--snow-rgb), 0.35);
+  border-radius: 999px;
+  // Rozostřený podklad: popisky a tvary scény (Layout, CMYK…), které
+  // za tlačítkem projíždějí, se rozmažou a text výzvy zůstane čitelný.
+  background: rgba(var(--charcoal-rgb), 0.28);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  // Standardní zápis POSLEDNÍ: Lightning CSS z dvojice nechá jen poslední
+  // deklaraci — s -webkit- na konci Chromium blur ignoroval.
+  backdrop-filter: blur(14px) saturate(1.1);
+  color: $accent;
+  font: inherit;
+  font-size: clamp(0.6rem, 1.4vh, 1.85rem);
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.24s ease, background 0.24s ease, color 0.24s ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: $accent;
+    background: $accent;
+    color: var(--charcoal);
+  }
+}
+
+.ctaArrow {
+  display: grid;
+  place-items: center;
+  width: clamp(1.6rem, 4.2vh, 5.5rem);
+  height: clamp(1.6rem, 4.2vh, 5.5rem);
+  border: 1px solid currentColor;
+  border-radius: 50%;
+
+  svg {
+    width: 45%;
+    height: 45%;
+  }
+}
+
+// Sdílené detaily: nadpis s názvem projektu, štítky a poznámka.
+.shared {
+  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2vh;
+  gap: 1.1vh;
+  min-width: 0;
+  max-width: 34vw;
+  padding-left: 1.4vw;
+  border-left: 1px dashed rgba(var(--snow-rgb), 0.35);
+}
+
+// Číslo projektu před čárkovanou linkou, na úrovni řádku „Co mohu ukázat".
+.sharedIndex {
+  position: absolute;
+  top: 0;
+  right: calc(100% + 1vw);
+  font-size: clamp(0.6rem, 1.35vh, 1.8rem);
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
   color: $text;
 }
 
-.railDot {
-  width: clamp(0.2rem, 0.42vw, 0.55rem);
-  height: clamp(0.2rem, 0.42vw, 0.55rem);
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: $accent;
+// Nápověda posunu pod textem projektu a vedle ní malé tlačítko se šipkou.
+.sharedHint {
+  display: flex;
+  align-items: center;
+  gap: 1.2vw;
+  margin-top: 1.4vh;
 }
 
-.railLine {
-  flex: 1;
-  width: 1px;
-  min-height: 2vh;
-  background: rgba(var(--charcoal-rgb), 0.3);
-}
-
-.railIndex {
-  flex-shrink: 0;
-  font-size: clamp(0.6rem, 1.35vh, 1.8rem);
-  font-weight: 400;
-  letter-spacing: 0.14em;
-}
-
-// Svisle čtený popisek zdola nahoru, jak ho má návrh.
-.railLabel {
-  flex-shrink: 0;
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  font-size: clamp(0.55rem, 1.2vh, 1.6rem);
-  font-weight: 400;
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.railButton {
+// Malá bublina se šipkou: rozostřený podklad jako výzva, šipka uprostřed.
+.hintButton {
   display: grid;
   place-items: center;
-  width: clamp(2rem, 6.7vh, 8.8rem);
-  height: clamp(2rem, 6.7vh, 8.8rem);
+  width: clamp(1.6rem, 3.6vh, 4.6rem);
+  height: clamp(1.6rem, 3.6vh, 4.6rem);
   flex-shrink: 0;
   padding: 0;
-  border: 1px solid rgba(var(--charcoal-rgb), 0.5);
+  border: 1px solid rgba(var(--snow-rgb), 0.45);
   border-radius: 50%;
-  background: transparent;
+  background: rgba(var(--charcoal-rgb), 0.28);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  // Standardní zápis POSLEDNÍ (Lightning CSS nechá jen poslední).
+  backdrop-filter: blur(14px) saturate(1.1);
   color: $text;
   cursor: pointer;
   transition: background 0.24s ease, border-color 0.24s ease, color 0.24s ease;
 
   svg {
-    width: 36%;
-    height: 36%;
+    display: block;
+    width: 46%;
+    height: 46%;
+    transform: translateY(4%);
   }
 
-  &:hover {
+  &:hover,
+  &:focus-visible {
     background: $accent;
     border-color: $accent;
+    color: var(--charcoal);
   }
 }
 
-/* ---------- Nadpis ---------- */
-
-.intro {
-  position: absolute;
-  z-index: 3;
-  top: 29vh;
-  left: 10vw;
-  width: 26vw;
-}
-
-.headline {
+.sharedTitle {
   display: flex;
-  flex-direction: column;
-  margin: 0 0 5.4vh;
-  font-weight: 200;
-  line-height: 1;
+  gap: 1vw;
+  margin: 0;
+  font-size: clamp(0.55rem, 1.25vh, 1.65rem);
+  font-weight: 500;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
 }
 
-.headlineTop {
-  font-size: clamp(2rem, 11.5vh, 15rem);
-  letter-spacing: 0.055em;
-}
-
-// Druhý řádek je menší a lehčí. Kurzívu z návrhu nepřebírám — Poppins
-// se načítá jen v přímém řezu a prohlížeč by ji jen falešně naklonil.
-.headlineBottom {
-  margin-top: 1.4vh;
-  font-size: clamp(1.3rem, 7.4vh, 9.6rem);
-  font-weight: 300;
-  letter-spacing: 0.02em;
-}
-
-.accent {
+.sharedProject {
   color: $accent;
 }
 
-.lead {
+.sharedList {
   display: flex;
-  flex-direction: column;
-  gap: 0.5vh;
+  flex-wrap: wrap;
+  gap: 0.6vh 0.6vw;
   margin: 0;
-  font-size: clamp(0.55rem, 1.45vh, 1.9rem);
-  font-weight: 400;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: $text;
+  padding: 0;
+  list-style: none;
+  animation: shared-in 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+
+  li {
+    padding: 0.5vh 0.8vw;
+    border: 1px solid rgba(var(--snow-rgb), 0.35);
+    border-radius: 999px;
+    font-size: clamp(0.55rem, 1.3vh, 1.7rem);
+    font-weight: 400;
+  }
 }
 
-/* ---------- Řada karet v perspektivě ---------- */
+@keyframes shared-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.8vh);
+  }
+}
 
-// Karty stojí jako rozevřený balíček ubíhající doprava za hranu sekce.
-// Pozicované jsou absolutně (--i je index z JSX), protože ve flexu si
-// rotateY nesníží zabranou šířku a řada by se rozjela do stran.
-.deck {
+.note {
+  max-width: 34vw;
+  margin: 0;
+  font-size: clamp(0.5rem, 1.15vh, 1.5rem);
+  font-weight: 300;
+  line-height: 1.5;
+}
+
+/* ---------- Ribbon projektů (3D) ---------- */
+
+// Plátno přes celou sekci — scéna jede i za textem. Žádný podklad ani
+// rozplynutí do stran; jen shora pod hlavičkou se rozplyne, aby karty
+// nevjížděly do navigace.
+.ribbon {
   position: absolute;
   z-index: 2;
-  top: 12vh;
-  left: 38vw;
-  width: 62vw;
-  height: 76vh;
-}
-
-// Perspektiva je NA KARTĚ, ne na kontejneru. Když seděla na .deck,
-// měla každá karta jiný odstup od úběžníku a ty vpravo se lámaly čím
-// dál víc — to byl ten špatný náklon. Takhle dostane každá karta
-// stejné zkreslení bez ohledu na to, kde v řadě stojí.
-.card {
-  position: absolute;
-  z-index: calc(10 - var(--i));
-  display: flex;
-  flex-direction: column;
-  height: 74vh;
-  aspect-ratio: 1 / 2;
-  padding: 3vh 1.6vw;
-  border-radius: 0.4vw;
-  // Pojistka: karta bez vlastního nth-child pravidla (sedmý projekt a
-  // dál) by měla --s nedefinované, scale(var(--s)) by bylo neplatné a
-  // propadl by celý transform — karta by zůstala nenakloněná.
-  --s: 1;
-  transform-origin: left center;
-  transform: perspective(90vw) rotateY(30deg) scale(var(--s));
-  box-shadow: -0.8vw 4vh 7vh rgba(4, 4, 4, 0.6);
-}
-
-// Odstup, svislý posun a zmenšení jsou odečtené z návrhu — levé hrany
-// karet tam leží v 37,8 / 55,2 / 66,8 / 78,8 / 87,1 % šířky. Kroky se
-// postupně zkracují, protože karty ubíhají do dálky. Tohle je místo,
-// kde se vějíř ladí; --s jde do scale() v .card výš.
-.card:nth-child(1) {
-  left: 0;
-  top: 0;
-  --s: 1;
-}
-
-.card:nth-child(2) {
-  left: 17.4vw;
-  top: 0.8vh;
-  --s: 0.91;
-}
-
-.card:nth-child(3) {
-  left: 29vw;
-  top: 5vh;
-  --s: 0.83;
-}
-
-.card:nth-child(4) {
-  left: 41vw;
-  top: 7.6vh;
-  --s: 0.76;
-}
-
-.card:nth-child(5) {
-  left: 49.3vw;
-  top: 9.7vh;
-  --s: 0.7;
-}
-
-.card:nth-child(6) {
-  left: 56.8vw;
-  top: 11.5vh;
-  --s: 0.65;
-}
-
-.isDark {
-  background: $card-dark;
-  color: $card-dark-text;
-
-  .cardIndex,
-  .cardLink {
-    color: $card-dark-muted;
-  }
-
-  .cardCategory {
-    color: $accent;
-  }
-}
-
-.isLight {
-  background: $card-light;
-  color: $card-light-text;
-
-  .cardIndex,
-  .cardLink {
-    color: $card-light-muted;
-  }
-
-  .cardCategory {
-    color: $violet;
-  }
-}
-
-.cardIndex {
-  font-size: clamp(0.5rem, 1.28vh, 1.7rem);
-  font-weight: 400;
-  letter-spacing: 0.16em;
-}
-
-.cardTitle {
-  margin: 1.6vh 0 0;
-  font-size: clamp(0.85rem, 3.4vh, 4.4rem);
-  font-weight: 300;
-  line-height: 1.05;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
-.cardCategory {
-  margin: 1vh 0 0;
-  font-size: clamp(0.45rem, 1.25vh, 1.65rem);
-  font-weight: 500;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-
-// Obrázek drží povinný formát 3:4 a zbylé místo v kartě si rozdělí
-// nahoře a dole, takže sedí opticky na střed jako v návrhu.
-.cardMedia {
-  width: 100%;
-  min-height: 0;
-  margin-block: auto;
-  aspect-ratio: 3 / 4;
-  overflow: hidden;
-  border-radius: 0.2vw;
-
-  img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-}
-
-.cardLink {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5vh;
-  transition: color 0.22s ease;
-
-  &:hover {
-    color: $accent;
-  }
-}
-
-.cardLinkTop {
-  display: flex;
-  align-items: center;
-  gap: 0.7vw;
-}
-
-.cardLinkRule {
-  flex: 1;
-  height: 1px;
-  background: currentColor;
-  opacity: 0.4;
-}
-
-.cardLinkArrow {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-
-  svg {
-    width: clamp(0.6rem, 1.7vh, 2.2rem);
-    height: clamp(0.6rem, 1.7vh, 2.2rem);
-  }
-}
-
-.cardLinkLabel {
-  font-size: clamp(0.44rem, 1.2vh, 1.6rem);
-  font-weight: 400;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
+  inset: 0;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, transparent 4.5rem, #000 calc(4.5rem + 7vh));
+  mask-image: linear-gradient(to bottom, transparent 0, transparent 4.5rem, #000 calc(4.5rem + 7vh));
 }
 
 /* ---------- Pager ---------- */
@@ -436,72 +297,214 @@ $card-light-muted: var(--charcoal);
   color: $accent;
 }
 
-/* ---------- Responsivita ---------- */
+/* ---------- Na výšku: tablet i telefon ---------- */
+// Scéna nahoře (úběžník výš, viz index.tsx), text dole přes celou šířku;
+// levá lišta zmizí, pager nahoru pod hlavičku.
+@media (orientation: portrait) {
 
-// Pod 1100 px perspektivní vějíř nedává smysl — karty se srovnají do
-// vodorovného scrollu a sekce ustoupí obsahu.
-@media (max-width: 1100px) {
-  .heroList {
-    display: flex;
-    flex-direction: column;
-    gap: 5vh;
-    height: auto;
-    min-height: 100svh;
-    padding: 16vh 5vw 6vh;
+  .intro {
+    left: 7vw;
+    right: 7vw;
+    bottom: 4vh;
   }
 
-  .rail {
+  .shared {
+    flex: 1;
+    max-width: none;
+  }
+
+  .cta,
+  .sharedTitle,
+  .sharedList li {
+    font-size: min(1.25vh, 2.5vw);
+  }
+
+  .note {
+    max-width: none;
+    font-size: min(1.1vh, 2.3vw);
+  }
+
+  .pager {
+    top: calc(5.75rem + 6vh);
+    right: 7vw;
+    bottom: auto;
+  }
+}
+
+// Telefon na výšku: bez výzvy a pageru, místo pro zelenou lištu dole (hlavička).
+@media (max-width: 599.98px) and (orientation: portrait) {
+  .intro {
+    bottom: calc(4.5rem + 2vh);
+  }
+
+  // Výzvu nese zelená lišta dole (hlavička) — tady by byla podruhé.
+  .cta {
     display: none;
   }
 
-  .intro,
-  .deck,
+  // Na telefonu bez pageru — stačí autoplay, tah a lišta s výzvou dole.
   .pager {
-    position: static;
-    inset: auto;
-    width: auto;
-    height: auto;
+    display: none;
   }
 
-  .headlineTop {
-    font-size: clamp(2.4rem, 13vw, 5.5rem);
+  .cta,
+  .sharedTitle,
+  .sharedList li {
+    font-size: 2.6vw;
   }
 
-  .headlineBottom {
-    font-size: clamp(1.5rem, 8vw, 3.4rem);
+  .note {
+    font-size: 2.4vw;
   }
+}
 
-  .lead {
-    font-size: clamp(0.6rem, 2.4vw, 0.95rem);
+/* ---------- Nástup stránky ---------- */
+// Scéna nastupuje z přehledu kruhu (DepthRibbon, ~2,9 s). Text pod ní
+// a pager vyjedou, až se kamera usazuje do řady — postupně zleva.
+@keyframes hero-list-rise {
+  from {
+    opacity: 0;
+    transform: translateY(2.4vh);
   }
-
-  .deck {
-    display: flex;
-    gap: 4vw;
-    overflow-x: auto;
-    padding-bottom: 2vh;
-  }
-
-  .card {
-    // Bez tohohle by karty zůstaly absolutní a nth-child offsety výš
-    // by je rozházely mimo řadu.
-    position: static;
-    flex: 0 0 auto;
-    width: 62vw;
-    max-width: 21rem;
-    height: auto;
-    aspect-ratio: auto;
-    padding: 3vh 5vw;
+  to {
+    opacity: 1;
     transform: none;
   }
+}
 
-  // Pod kartami na tmavé stránce — sněhový jako zbytek textu.
+// Seznam (.sharedList) má vlastní animaci při změně projektu — vynechaný.
+.shared > :not(.sharedList),
+.cta,
+.pager {
+  animation: hero-list-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.shared > :nth-child(1) { animation-delay: 1.7s; }
+.shared > :nth-child(2) { animation-delay: 1.78s; }
+.shared > :nth-child(3) { animation-delay: 1.86s; }
+.shared > :nth-child(4) { animation-delay: 1.94s; }
+.shared > :nth-child(5) { animation-delay: 2.02s; }
+.cta { animation-delay: 2.1s; }
+.pager { animation-delay: 2.2s; }
+
+// Čárkovaná linka bloku se vytáhne shora dolů spolu s textem.
+.shared {
+  border-left-color: transparent;
+  // Čárkovaná jako původní okraj (dashed): 3 px čárka, 3 px mezera.
+  background: repeating-linear-gradient(
+      to bottom,
+      rgba(var(--snow-rgb), 0.35) 0 3px,
+      transparent 3px 6px
+    )
+    left top / 1px 0 no-repeat;
+  // Celý blok je do 1,6 s schovaný — i seznam (.sharedList), který má
+  // vlastní animaci při změně projektu a během průletu kruhu se mění.
+  animation:
+    hero-list-line 0.9s cubic-bezier(0.22, 1, 0.36, 1) 1.6s both,
+    hero-list-show 0.4s ease 1.6s both;
+}
+
+@keyframes hero-list-show {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes hero-list-line {
+  to {
+    background-size: 1px 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shared,
+  .shared > :not(.sharedList),
+  .cta,
   .pager {
-    align-self: flex-end;
-    color: $text;
+    animation: none;
+  }
+
+  .shared {
+    background-size: 1px 100%;
+  }
+}
+
+/* ---------- Telefon na šířku (phs: 480px+, výška do 520px) ---------- */
+// Málo výšky: scéna vpravo (úběžník v index.tsx), vlevo dole jen projekt
+// a jeho štítky, vpravo dole pager. Výzvu nese hlavička, poznámka a popisek
+// nápovědy by se nevešly — šipka nápovědy zůstává.
+@include phs-h {
+  .dim {
+    background:
+      linear-gradient(to right, rgba(var(--charcoal-rgb), 0.85) 0%, rgba(var(--charcoal-rgb), 0.5) 30%, transparent 55%),
+      linear-gradient(to top, rgba(var(--charcoal-rgb), 0.85) 0%, transparent 45%);
+  }
+
+  .intro {
+    left: calc(4vw + 1.6rem);
+    right: auto;
+    bottom: 5vh;
+    width: 38vw;
+  }
+
+  .shared {
+    max-width: none;
+    gap: 1.6vh;
+    padding-left: 0.9rem;
+  }
+
+  .sharedIndex {
+    right: calc(100% + 0.6rem);
+    font-size: 10px;
+  }
+
+  .sharedTitle {
+    flex-wrap: wrap;
+    gap: 0.2rem 0.6rem;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+  }
+
+  .sharedList {
+    gap: 0.35rem;
+
+    li {
+      padding: 0.25rem 0.6rem;
+      font-size: 11px;
+    }
+  }
+
+  .note,
+  .cta,
+  .sharedHint > :first-child {
+    display: none;
+  }
+
+  .sharedHint {
+    margin-top: 0.4rem;
+  }
+
+  .hintButton {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .pager {
+    right: 4vw;
+    bottom: 5vh;
+    gap: 0.6rem;
+  }
+
+  .pagerCount {
+    margin-right: 0.4rem;
+    font-size: 11px;
   }
 
   .pagerButton {
-    border-color: rgba(var(--snow-rgb), 0.4);
+    width: 2.2rem;
+    height: 2.2rem;
   }
 }

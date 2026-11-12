@@ -28,10 +28,11 @@
   --frame-y: 0px;
 }
 
-/* 16 : 9 podle výšky platí od notebooku (md, na šířku). Telefony a tablety
-   na šířku (pod 1200px) bývají širší než 16 : 9 a jedou dál přes celou
-   šířku. JS dvojče: viewFrame() v lib/fluid.ts. */
-@media (min-width: 1200px) and (orientation: landscape) {
+/* 16 : 9 podle výšky platí jen na ultrawide (okno širší než 20 : 9, od
+   notebooku na šířku). Notebooky a monitory do 20 : 9 — i nízké okno
+   prohlížeče s lištami — jedou přes celou šířku. Telefony a tablety na
+   šířku (pod 1200px) taky. JS dvojče: viewFrame() v lib/fluid.ts. */
+@media (min-width: 1200px) and (orientation: landscape) and (min-aspect-ratio: 20 / 9) {
   :root {
     --vw: min(1vw, calc(1vh * 16 / 9));
     --frame-x: max(0px, (100% - 100vh * 16 / 9) / 2);

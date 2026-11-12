@@ -99,7 +99,14 @@ const getPageSections = (): ScrollSection[] => {
   candidates.sort((a, b) => (tops.get(a) ?? 0) - (tops.get(b) ?? 0));
 
   return candidates.map((element, index) => {
-    const id = element.id || `page-section-${index + 1}`;
+    // Vlastní id jen jednou a jedinečné — pořadí sekcí se může změnit
+    // (nové značky), a stejné id by pak dostaly dva prvky.
+    let id = element.id;
+    if (!id) {
+      let n = index + 1;
+      while (document.getElementById(`page-section-${n}`)) n++;
+      id = `page-section-${n}`;
+    }
     const label = element.dataset.scrollLabel || element.getAttribute("aria-label") || `Sekce ${index + 1}`;
     if (!element.id) element.id = id;
     // Díly podle délky úseku do další sekce (ne výšky prvku — Proces končí

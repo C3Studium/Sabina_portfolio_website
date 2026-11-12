@@ -12,7 +12,8 @@
     "cms:doctor": "valecms doctor",
     "cms:migrate": "valecms migrate",
     "cms:storage": "valecms storage",
-    "cms:seed": "node --import @c3studium/valecms/register.mjs scripts/cms-seed.mjs"
+    "cms:seed": "node --import @c3studium/valecms/register.mjs scripts/cms-seed.mjs",
+    "cms:studies": "node --import @c3studium/valecms/register.mjs scripts/cms-studies.mjs"
   },
   "dependencies": {
     "@c3studium/valecms": "0.1.55",

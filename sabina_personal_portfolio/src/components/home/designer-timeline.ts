@@ -10,10 +10,28 @@
 // váhy úseku, process/steps.ts). Myš celkem
 // ~255vh scrollu od chvíle, kdy Proces začne vyjíždět.
 
-/** Přišpendlený úsek Procesu (vh). */
-export const PROCESS_PINNED = 3438;
+/** Časy níž jsou ve vh PŮVODNÍ osy (3438vh); skutečný úsek je 2,25×
+ *  kratší — podíly zůstávají, jen se celá sekce projede rychleji. */
+const DESIGN_PINNED = 3438;
+const PACE = 2.25;
 
-const at = (vh: number) => vh / PROCESS_PINNED;
+/** Jízda dolly v původní ose (vh): od rozjezdu kamery po příjezd k CTA. */
+const DOLLY_FROM = 154;
+const DOLLY_TO = 3378;
+/** Jízda dolly ve skutečném scrollu (vh), bez pauz. */
+export const DOLLY_TRAVEL_VH = (DOLLY_TO - DOLLY_FROM) / PACE;
+
+/** Pauza po každém postaveném kroku (kroky 01–06 a výzva; vh skutečného
+ *  scrollu): kamera i krok stojí a tlačítka „Rozbalit detail" mají čas se
+ *  ukázat (process/steps.ts, segAt). */
+export const STEP_HOLD_VH = 50;
+export const STEP_HOLDS = 7;
+const HOLDS_VH = STEP_HOLD_VH * STEP_HOLDS;
+
+/** Přišpendlený úsek Procesu (vh) — process/styles .container − 100vh. */
+export const PROCESS_PINNED = Math.round(DESIGN_PINNED / PACE + HOLDS_VH);
+
+const at = (vh: number) => vh / PACE / PROCESS_PINNED;
 const span = (a: number, b: number) => [at(a), at(b)] as const;
 
 export const PROCESS = {
@@ -31,8 +49,8 @@ export const PROCESS = {
   /** Myš odejde, panely zhasnou. */
   leave: span(133, 150.5),
   /** Kamera dolly se rozjede až potom… */
-  dollyStart: at(154),
+  dollyStart: at(DOLLY_FROM),
   /** …a u CTA (poslední dlaždice) stojí tady — zbytek je chvíle na CTA,
-   *  než sekce odjede. */
-  dollyEnd: at(3378),
+   *  než sekce odjede. Jízda je o pauzy po krocích delší. */
+  dollyEnd: at(DOLLY_TO) + HOLDS_VH / PROCESS_PINNED,
 };

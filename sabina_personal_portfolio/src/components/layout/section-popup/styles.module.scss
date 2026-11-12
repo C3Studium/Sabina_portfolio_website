@@ -1,0 +1,90 @@
+// Sekce úvodní stránky jako samostatné okno. Přes celou obrazovku i přes
+// hlavičku (z-index nad ní, pod kontaktním modalem). Podklad je ztmavený
+// a rozostřený shader webu — sekce mají průhledné pozadí a počítají s ním.
+
+.popup {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(22, 24, 28, 0.86);
+  backdrop-filter: blur(24px) saturate(0.9);
+  color: var(--snow);
+  will-change: clip-path, transform;
+}
+// Posuvný kontejner se sekcí — v rámu 16 : 9 (--frame-x, globals.scss):
+// na širším okně stojí uprostřed a co přesáhne, ořízne. Podklad okna
+// (.popup) jde dál přes celou šířku.
+.scroller {
+  position: absolute;
+  inset: 0 var(--frame-x);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// CTA stojí na jedné obrazovce (její nástup řídí čas, ne scroll).
+.ctaStage {
+  position: relative;
+  height: 100svh;
+}
+
+// Název sekce vlevo nahoře — jako popisek v hlavičce.
+.label {
+  position: absolute;
+  top: clamp(1.4rem, 3.4vh, 2.6rem);
+  left: calc(var(--frame-x) + clamp(1.4rem, 3vw, 3rem));
+  z-index: 2;
+  font-size: clamp(0.6rem, 1.3vh, 1.6rem);
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--green);
+  pointer-events: none;
+}
+
+// Křížek vpravo nahoře: kulatá bublina s rozostřeným podkladem.
+.close {
+  position: absolute;
+  top: clamp(1rem, 2.8vh, 2.2rem);
+  right: calc(var(--frame-x) + clamp(1rem, 2.4vw, 2.6rem));
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: clamp(2.6rem, 5.4vh, 4.6rem);
+  height: clamp(2.6rem, 5.4vh, 4.6rem);
+  padding: 0;
+  border: 1px solid rgba(var(--snow-rgb), 0.45);
+  border-radius: 50%;
+  background: rgba(var(--charcoal-rgb), 0.35);
+  // Jen bez prefixu — minifikátor si prefix doplní sám (s ručním -webkit-
+  // za sebou nechá jen ten a Chromium blur ignoruje).
+  backdrop-filter: blur(14px);
+  color: var(--snow);
+  cursor: pointer;
+  transition: background 0.24s ease, border-color 0.24s ease, color 0.24s ease, transform 0.3s ease;
+
+  svg {
+    display: block;
+    width: 40%;
+    height: 40%;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: var(--green);
+    border-color: var(--green);
+    color: var(--charcoal);
+    transform: rotate(90deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .close {
+    transition: none;
+  }
+}

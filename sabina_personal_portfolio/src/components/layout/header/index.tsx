@@ -11,6 +11,7 @@ import { useIntroAt } from "@/motion/intro/useIntroAt";
 import { LOGO } from "@/motion/intro/timeline";
 import { PORTRAIT_PHONE, useMedia } from "@/lib/fluid";
 import { NAV_ITEMS } from "../nav-items";
+import { MENU_OPEN_EVENT, openSection, type SectionKey } from "../section-popup/open";
 import Menu from "../menu";
 import styles from "./styles.module.scss";
 
@@ -23,10 +24,29 @@ const PAD = { brand: 10, link: 0, cta: 5 } as const;
 // Odkaz navigace jako vlastní komponenta: každý se zapisuje do registru
 // pod svým klíčem a hook nejde volat v cyklu. `data-measure-frame` říká
 // MeasureText, že rámeček obejme celý odkaz; text v `data-measure` měří.
-function NavLink({ href, label }: { href: string; label: string }) {
+function NavLink({ href, label, popup }: { href: string; label: string; popup?: SectionKey }) {
   const ref = useRegisterRef(`header.nav.${href}`, { pad: PAD.link });
   return (
-    <a ref={ref} className={styles.navLink} href={href} data-measure-frame="" data-intro="link">
+    <a
+      ref={ref}
+      className={styles.navLink}
+      href={href}
+      data-measure-frame=""
+      data-intro="link"
+      // Sekce úvodní stránky jako samostatné okno. Bez modifikátoru —
+      // Ctrl/⌘ + klik dál otevře stránku v nové kartě. `data-no-veil`:
+      // závoj přechodu stránek se o klik nemá starat.
+      data-no-veil={popup ? "" : undefined}
+      onClick={
+        popup
+          ? (event) => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+              event.preventDefault();
+              openSection(popup);
+            }
+          : undefined
+      }
+    >
       <span data-measure="">{label}</span>
     </a>
   );
@@ -127,15 +147,30 @@ function ArrowIcon() {
   );
 }
 
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// Popisek výzvy, když je kontaktní modal otevřený (tlačítko ho zavírá).
+const CLOSE_LABEL = "Zavřít";
+
 type HeaderProps = {
   // Otevírá kontaktní modal — stav drží _app.tsx, protože modal je
   // sourozenec hlavičky, ne její potomek.
   onContactClick: () => void;
+  // Modal je otevřený: hlavička stojí nad ním a výzva se přelije na
+  // „Zavřít" s křížkem — modal vlastní lištu nemá.
+  contactOpen?: boolean;
+  onContactClose?: () => void;
   // Blok `global.header` z `props.globals` stránky; `null` bez CMS i na 404.
   copy?: GlobalBlock | null;
 };
 
-export default function Header({ onContactClick, copy = null }: HeaderProps) {
+export default function Header({ onContactClick, contactOpen = false, onContactClose, copy = null }: HeaderProps) {
   // Dokument zadaný jednou, ne u každé anotace. Mimo Studio je `docId`
   // undefined a `edit(...)` vrací prázdno, takže na web se nerozprostře nic.
   const edit = editableIn(copy?.docId ?? null);
@@ -163,14 +198,28 @@ export default function Header({ onContactClick, copy = null }: HeaderProps) {
   // nevejde (CSS schová .nav a ukáže .menuButton).
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = useCallback(() => setMenuOpen(false), [setMenuOpen]);
-  const barAway = useContactZone(useMedia(PORTRAIT_PHONE));
+  // Okno sekce otevřené z menu na dotyku se po zavření vrátí do menu
+  // (section-popup/open.ts).
+  useEffect(() => {
+    const reopen = () => setMenuOpen(true);
+    window.addEventListener(MENU_OPEN_EVENT, reopen);
+    return () => window.removeEventListener(MENU_OPEN_EVENT, reopen);
+  }, []);
+  const barAway = useContactZone(useMedia(PORTRAIT_PHONE)) && !contactOpen;
+  const toggleContact = contactOpen && onContactClose ? onContactClose : onContactClick;
+  // Výzva ↔ „Zavřít" kapalným přelitím (TextMorph); ve Studiu obyčejný text.
+  const ctaText = editing ? (
+    contactOpen ? CLOSE_LABEL : ctaLabel
+  ) : (
+    <TextMorph words={[ctaLabel, CLOSE_LABEL]} index={contactOpen ? 1 : 0} measure={false} />
+  );
 
   return (
     // `data-motion-hold`: přechod mezi stránkami hlavičku schová celou. Pod
     // oponou při načtení ne — tam naskakují prvky (`data-intro`) jeden po
     // druhém, jak je úvod postaví (src/motion/intro/header.ts).
     <>
-    <header className={styles.header} data-motion-hold="lift">
+    <header className={styles.header} data-motion-hold="lift" data-contact-open={contactOpen || undefined}>
       {/* Logo i tlačítko mají hover jako odkazy menu (MeasureText): čárkovaný
           rámeček mezi tečkami kurzoru, rozměr a drobky. Text zůstává v DOMu
           (`data-measure-frame` bez měřeného textu), jeho hover dělá CSS. */}
@@ -211,7 +260,7 @@ export default function Header({ onContactClick, copy = null }: HeaderProps) {
       <MeasureText variant="nav" className={styles.navSlot}>
         <nav className={styles.nav} aria-label="Hlavní navigace">
           {NAV_ITEMS.map((item) => (
-            <NavLink key={item.href} href={item.href} label={item.label} />
+            <NavLink key={item.href} href={item.href} label={item.label} popup={item.popup} />
           ))}
         </nav>
       </MeasureText>
@@ -221,20 +270,26 @@ export default function Header({ onContactClick, copy = null }: HeaderProps) {
         ref={ctaRef}
         type="button"
         className={styles.cta}
-        onClick={onContactClick}
+        onClick={toggleContact}
+        aria-expanded={contactOpen}
+        data-open={contactOpen || undefined}
         data-measure-frame=""
         data-intro="cta"
       >
         <span className={styles.ctaLabel} data-intro-label="" {...edit(`items.${LINES.cta}.label`)}>
-          {ctaLabel}
+          {ctaText}
         </span>
-        {/* Šipka dvakrát: při hoveru jedna odletí doprava, druhá přiletí zleva. */}
+        {/* Šipka dvakrát: při hoveru jedna odletí doprava, druhá přiletí zleva.
+            Při otevřeném modalu se šipky schovají a vtočí se křížek. */}
         <span className={styles.ctaArrow} aria-hidden="true" data-intro-ring="">
           <span className={styles.ctaArrowIcon}>
             <ArrowIcon />
           </span>
           <span className={`${styles.ctaArrowIcon} ${styles.ctaArrowNext}`}>
             <ArrowIcon />
+          </span>
+          <span className={styles.ctaCloseIcon}>
+            <CloseIcon />
           </span>
         </span>
       </button>
@@ -268,14 +323,16 @@ export default function Header({ onContactClick, copy = null }: HeaderProps) {
     {/* Telefon na výšku: výzva jako lišta dole přes šířku (v hlavičce se
         schová, styles). Stojí vedle hlavičky, ne v ní — hlavička se při
         přechodu posouvá (transform) a fixed prvek uvnitř by jel s ní. */}
-    <button type="button" className={styles.contactBar} onClick={onContactClick}
+    <button type="button" className={styles.contactBar} onClick={toggleContact}
       data-motion-hold=""
       data-away={barAway ? "" : undefined}
+      data-open={contactOpen || undefined}
+      aria-expanded={contactOpen}
       tabIndex={barAway ? -1 : undefined}
     >
-      <span className={styles.contactBarLabel}>{ctaLabel}</span>
+      <span className={styles.contactBarLabel}>{ctaText}</span>
       <span className={styles.contactBarArrow} aria-hidden="true">
-        <ArrowIcon />
+        {contactOpen ? <CloseIcon /> : <ArrowIcon />}
       </span>
     </button>
     </>

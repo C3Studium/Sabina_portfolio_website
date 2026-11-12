@@ -17,6 +17,8 @@ const project = ({ slug, title, tagline, tone, order, image, alt, featured = fal
     tagline,
     perex: '',
     goals: [],
+    // Co klient dovolil zveřejnit — vyplní se ve Studiu.
+    shared: [],
     body: '',
     // Značka k nahrání: runner soubor uloží do knihovny médií a nahradí ji
     // { id, url, alt, width, height }.
@@ -30,19 +32,26 @@ const project = ({ slug, title, tagline, tone, order, image, alt, featured = fal
 })
 
 export const blocks = [
+    // Text pod scénou — pořadí položek = PROJECTS.intro v cms/projects.ts.
+    // Musí být doslova to, co je v FALLBACK_INTRO (hero-list/index.tsx).
     {
-        key: PROJECTS.list,
+        key: PROJECTS.intro,
         page: 'projects',
-        title: 'Projekty',
-        // Dva řádky nadpisu; zvýrazněný konec je zvlášť v `accent`.
-        headline: 'Práce,\nkterá',
-        accent: ['funguje'],
-        // Úvod jako položky: čtyři řádky, kde počet řádků je obsah.
+        title: 'Projekty — úvod',
         items: [
-            { label: 'Výběr značek, se kterými', value: '', lead: '', note: '' },
-            { label: 'jsem spolupracovala.', value: '', lead: '', note: '' },
-            { label: 'Každý projekt je příběh', value: '', lead: '', note: '' },
-            { label: 'strategie, designu a výsledku.', value: '', lead: '', note: '' },
+            // 0–3 se nečtou (dřív nadtitulek a kroky postupu); drží pořadí zbytku.
+            { label: '', value: '', lead: '', note: '' },
+            { label: '', value: '', lead: '', note: '' },
+            { label: '', value: '', lead: '', note: '' },
+            { label: '', value: '', lead: '', note: '' },
+            { label: 'Domluvit spolupráci', value: '', lead: '', note: '' }, // 4 výzva
+            { label: 'Co mohu ukázat', value: '', lead: '', note: '' }, // 5 nadpis sdílených detailů
+            {
+                label: 'Část zakázek je pod mlčenlivostí. U každého projektu ukazuji jen to, co klient schválil ke zveřejnění.',
+                value: '',
+                lead: '',
+                note: '',
+            }, // 6 poznámka
         ],
     },
 
@@ -76,12 +85,12 @@ export const blocks = [
         slug: 'vecicky',
         featured: true,
         cardCta: 'Zjistit víc',
-        title: 'Věcicky',
+        title: 'Věcičky',
         tagline: 'Sezónní kampaň',
         tone: 'light',
         order: 2,
         image: '/assets/banners/vecicky_banner16.png',
-        alt: 'Sezónní kampaň pro e-shop s dětskou módou Věcicky',
+        alt: 'Sezónní kampaň pro e-shop s dětskou módou Věcičky',
     }),
     project({
         slug: 'bruzek',

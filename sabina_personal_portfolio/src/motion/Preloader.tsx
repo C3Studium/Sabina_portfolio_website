@@ -12,8 +12,15 @@
 // druhém, jak je úvod postaví (`data-intro-in`).
 //
 // Při omezeném pohybu engine zkrátí hodiny a otevře hned, scéna nekreslí nic.
+//
+// Úvod je JEN na úvodní stránce. Kdo přijde rovnou na jinou stránku, dostane
+// totéž co při přechodu mezi stránkami: stránka se jen prolne (žádná opona).
+// Engine běží i tam — sundá `data-preload`, pod kterým je stránka schovaná
+// od prvního snímku (_document), a pustí bránu.
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/router";
+import { isScenePage } from "@/lib/scene-pages";
 import { Preloader as PreloaderEngine } from "@c3studium/valecms/motion";
 import type { PreloaderSceneProps } from "@c3studium/valecms/motion";
 import { createIntro } from "./intro";
@@ -55,7 +62,44 @@ function Scene({ phase, reduced }: PreloaderSceneProps) {
   );
 }
 
+// Stránka se scénou (lib/scene-pages) úvod nemá: prázdná opona, která hned
+// zmizí. Engine pořád musí běžet — sundá `data-preload`, pod kterým je
+// stránka i hlavička schovaná od prvního snímku (_document).
+function Blank() {
+  return null;
+}
+
 export default function Preloader() {
+  const router = useRouter();
+  // Stránka prvního načtení — engine běží jednou, další navigace řeší závoj.
+  const [first] = useState(() => router.pathname);
+  if (isScenePage(first)) {
+    return (
+      <PreloaderEngine
+        scene={Blank}
+        duration={1}
+        stalls={false}
+        groundBefore={1}
+        finalBefore={0}
+        reveal={{ mode: "none", duration: 0 }}
+        reduced={{ duration: 1, reveal: { duration: 0 } }}
+      />
+    );
+  }
+  // Jiná než úvodní stránka: jen prolnutí jako při přechodu (PageTransition).
+  if (first !== "/") {
+    return (
+      <PreloaderEngine
+        scene={Blank}
+        duration={1}
+        stalls={false}
+        groundBefore={1}
+        finalBefore={0}
+        reveal={{ mode: "fade", duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+        reduced={{ duration: 1, reveal: { duration: 0.2 } }}
+      />
+    );
+  }
   // Skutečné sekundy (úvod je zpomalený, viz SLOW v timeline).
   const reveal = real(END) - CLOCK;
   return (

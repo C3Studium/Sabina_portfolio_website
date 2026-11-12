@@ -10,7 +10,7 @@
 // a proto jedna funkce: dvě kopie by se jednou rozešly a karta by vedla jinam,
 // než kam publikace přegeneruje stránku.
 
-/** „Věcicky & spol." → „vecicky-spol" */
+/** „Věcičky & spol." → „vecicky-spol" */
 export const slugify = (text: string): string =>
     text
         .normalize('NFD')

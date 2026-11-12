@@ -125,7 +125,7 @@ const DEFAULT_CTA = "Zjistit víc";
 // rezervaci místa. Karta má vlastní pevný poměr 4/5 a případný přesah ořízne.
 const FALLBACK_CARDS = [
   { slug: "gummylife", title: "Gummylife", tagline: "Doplňky stravy", cta: "Zjistit víc", src: "/assets/banners/gummylife_banner1.png", width: 1440, height: 2560 },
-  { slug: "vecicky", title: "Věcicky", tagline: "Dětská móda", cta: "Zjistit víc", src: "/assets/banners/vecicky_banner16.png", width: 1468, height: 2587 },
+  { slug: "vecicky", title: "Věcičky", tagline: "Dětská móda", cta: "Zjistit víc", src: "/assets/banners/vecicky_banner16.png", width: 1468, height: 2587 },
   { slug: "bruzek", title: "Bruzek", tagline: "Prodej nemovitostí", cta: "Zjistit víc", src: "/assets/banners/bruzek_banner6.png", width: 492, height: 874 },
   { slug: "samurai", title: "Samurai", tagline: "Kampaň pro e-shop", cta: "Chci vědět víc", src: "/assets/banners/samurai_banner1.png", width: 536, height: 954 },
 ];
@@ -358,7 +358,8 @@ export default function Hero({
   // Track je 160vw (100vw hero + 60vw galerie). Posun o -60vw, tedy
   // -37.5 % šířky tracku, nechá pravou část hera — tedy portrét — v záběru.
   //
-  // ČASOVÁ OSA ve vh přišpendleného úseku (HERO_PINNED 772vh, sekce 872vh):
+  // ČASOVÁ OSA ve vh PŮVODNÍ osy 772vh — heroAt je přepočte tempem úseků
+  // na skutečný scroll (hero/progress.ts; HERO_PINNED 469vh, sekce 569vh):
   //   10–210      track jede doleva, galerie přijíždí po spirále, řada
   //               karet se scrollem posouvá
   //   210–370     klid — galerie stojí uprostřed, dá se táhnout (kurzor

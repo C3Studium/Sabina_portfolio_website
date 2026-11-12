@@ -32,14 +32,78 @@ $col-portrait: 24%;
 // nastupuje, + 100vh výšky. margin-top -100vh = překryv s posledními
 // 100vh přišpendleného hera: sekce přes něj (průhledná) vyjíždí a
 // v okamžiku uvolnění sticky hera stojí nahoře. Nad herem (z-index).
+// V okně sekce (layout/section-popup): bez překryvu s herem — dráha začíná
+// nahoře okna.
+.infoPopup.infoPopup {
+  height: auto;
+  margin-top: 0;
+
+  // Bez přišpendlení: rám stojí v okně a části nastoupí jedna po druhé.
+  .info {
+    position: relative;
+    top: 0;
+  }
+
+  .toolsBlock,
+  .headingBlock,
+  .portrait,
+  .cards,
+  .statsBar {
+    animation: info-popup-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  .toolsBlock {
+    animation-delay: 0.35s;
+  }
+
+  .headingBlock {
+    animation-delay: 0.5s;
+  }
+
+  .portrait {
+    animation-delay: 0.25s;
+  }
+
+  .cards {
+    animation-delay: 0.65s;
+  }
+
+  .statsBar {
+    animation-delay: 0.85s;
+  }
+
+  // Na šířku karty o 10vh výš — v okně nad nimi není hero, byly by nízko.
+  // Vlastnost `translate`, ne `transform` — ten patří nástupu (animace).
+  @media (orientation: landscape) {
+    .cards {
+      translate: 0 -10vh;
+    }
+  }
+}
+
+@keyframes info-popup-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6vh);
+    filter: blur(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
 .infoTrack {
   position: relative;
   z-index: 2;
-  // 1238vh = 1138vh přišpendleného scrollu: stavba umělou myší (~525vh),
+  // 606vh = 506vh přišpendleného scrollu (původně 1138vh, 2,25× rychleji;
+  // rozpis níž je v původních vh): stavba umělou myší (~525vh),
   // lišta, volný čas (~130vh, myš jen „přemýšlí"), mazání a odnesení
   // portrétu do Procesu. Časy choreografie jsou podíly, takže výška sekce
   // přímo určuje tempo myši.
-  height: 1238vh;
+  height: 606vh;
   margin-top: -100vh;
 }
 

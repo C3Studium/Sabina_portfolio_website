@@ -1,4 +1,4 @@
-import Head from "next/head";
+import Seo, { personJsonLd } from "@/components/seo";
 import type { GetStaticPropsContext } from "next";
 import { getPageContent } from "@c3studium/valecms/server/site";
 import { getGlobalCopy, type GlobalCopy } from "@/lib/site/globals";
@@ -71,15 +71,12 @@ export async function getStaticProps(context: GetStaticPropsContext) {
 export default function HomePage({ content }: HomeProps) {
   return (
     <>
-      <Head>
-        <title>Sabina Hudrmentová — Grafika pro lepší výsledky</title>
-        <meta
-          name="description"
-          content="Portfolio grafické designérky Sabiny Hudrmentové."
-        />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
+      <Seo
+        title={null}
+        description="Grafika pro lepší výsledky. Grafická designérka Sabina Hudrmentová — reklamní bannery, kampaně a vizuály pro e-shopy, které zaujmou a prodávají."
+        type="profile"
+        jsonLd={personJsonLd()}
+      />
       <main>
         {/* `content.<at>` je blok podle src/lib/cms/home.ts. `docId` v něm je
             jen v editačním rámu Studia; na webu chybí a anotace mlčí. */}

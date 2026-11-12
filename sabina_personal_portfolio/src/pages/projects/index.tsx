@@ -1,7 +1,7 @@
 import type { GetStaticProps } from "next";
-import Head from "next/head";
+import Seo from "@/components/seo";
 import { getPageContent } from "@c3studium/valecms/server/site";
-import HeroList, { type LabelsCopy, type ListCopy } from "@/components/projects/hero-list";
+import HeroList, { type IntroCopy, type LabelsCopy } from "@/components/projects/hero-list";
 import { getGlobalCopy, type GlobalCopy } from "@/lib/site/globals";
 // Import odsud zároveň registruje čtečku typu `project` (registerSources při
 // načtení modulu) — musí proběhnout dřív, než `getPageContent` sáhne po `sources`.
@@ -12,7 +12,7 @@ import { viewFrom, type Project } from "@/lib/site/projects";
 const REVALIDATE_SECONDS = 600;
 
 type PageContent = {
-  list?: ListCopy;
+  intro?: IntroCopy;
   labels?: LabelsCopy;
   projects?: Project[];
 };
@@ -45,20 +45,13 @@ export const getStaticProps: GetStaticProps<Props> = async (context) => {
 export default function ProjectsPage({ content }: Props) {
   return (
     <>
-      <Head>
-        <title>Projekty — Sabina Hudrmentová</title>
-        <meta
-          name="description"
-          content="Výběr kampaní a vizuálů od grafické designérky Sabiny Hudrmentové."
-        />
-      </Head>
+      <Seo title="Projekty" description="Výběr kampaní, reklamních bannerů a vizuálů od grafické designérky Sabiny Hudrmentové — Věcičky, Vlněné zboží, VIKIO, Jordan a další." />
       <main>
         <HeroList
-          copy={content?.list ?? null}
+          copy={content?.intro ?? null}
           labels={content?.labels ?? null}
           projects={content?.projects ?? null}
         />
-        <section id="projects-grid" />
       </main>
     </>
   );

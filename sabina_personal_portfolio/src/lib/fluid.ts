@@ -70,7 +70,8 @@ export function useMedia(query: string): boolean {
 
 // ---------------------------------------------------------------------------
 // Rám obsahu: vždy přes celou výšku okna, od notebooku na šířku nejvýš
-// 16 : 9 podle výšky (širší okno má obsah uprostřed a po stranách pozadí).
+// 16 : 9 podle výšky, ale jen na ultrawide (okno širší než 20 : 9 — obsah
+// uprostřed, po stranách pozadí); užší okna jedou přes celou šířku.
 // CSS to dělá přes --vw / --vh (styles/globals.scss a postcss plugin
 // viewport-frame), JS přes tyhle pomůcky.
 export type Frame = {
@@ -82,8 +83,8 @@ export type Frame = {
   h: number;
 };
 
-/** Kde platí 16 : 9 podle výšky — stejný dotaz jako v globals.scss. */
-const WIDE = `(min-width: ${FLUID.from}px) and (orientation: landscape)`;
+/** Kde platí 16 : 9 podle výšky (jen ultrawide, širší než 20 : 9) — stejný dotaz jako v globals.scss. */
+const WIDE = `(min-width: ${FLUID.from}px) and (orientation: landscape) and (min-aspect-ratio: 20 / 9)`;
 
 /** Rám obsahu v px pro aktuální okno. */
 export function viewFrame(): Frame {

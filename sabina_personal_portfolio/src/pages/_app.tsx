@@ -4,14 +4,18 @@ import type { AppProps } from "next/app";
 import { Poppins, Caveat } from "next/font/google";
 import Lenis from "lenis";
 import Header from "@/components/layout/header";
+import { SiteHead } from "@/components/seo";
 import Footer from "@/components/layout/footer";
 import ContactModal from "@/components/layout/contact-modal";
-import { CONTACT_OPEN_EVENT } from "@/components/layout/contact-modal/open";
+import SectionPopups from "@/components/layout/section-popup";
+import type { HomeContent } from "@/lib/site/home-content";
+import { CONTACT_CLOSE_EVENT, CONTACT_OPEN_EVENT } from "@/components/layout/contact-modal/open";
 import ShaderBackground from "@/components/layout/shader-background";
 import Cursor from "@/components/common/cursor";
 import Scrollbar from "@/components/common/scrollbar";
 import { withStudio } from "@c3studium/valecms";
 import type { GlobalCopy } from "@/lib/site/globals";
+import { isScenePage } from "@/lib/scene-pages";
 import Preloader from "@/motion/Preloader";
 import PageTransition from "@/motion/PageTransition";
 import CookieBanner from "@/providers/CookieBanner";
@@ -54,7 +58,8 @@ declare global {
 // sáhnou po záloze z kódu.
 type GlobalPageProps = { globals?: GlobalCopy | null };
 
-function App({ Component, pageProps }: AppProps) {
+function App({ Component, pageProps, router }: AppProps) {
+  const scenePage = isScenePage(router.pathname);
   // Stav kontaktního modalu žije tady: otevírá ho tlačítko v hlavičce,
   // ale modal je její sourozenec, ne potomek.
   const [contactOpen, setContactOpen] = useState(false);
@@ -66,6 +71,18 @@ function App({ Component, pageProps }: AppProps) {
     window.addEventListener(CONTACT_OPEN_EVENT, open);
     return () => window.removeEventListener(CONTACT_OPEN_EVENT, open);
   }, []);
+
+  // Hlavička zůstává nad otevřeným modalem — odkaz z ní (jiná stránka nebo
+  // okno sekce) modal zavře.
+  useEffect(() => {
+    const close = () => setContactOpen(false);
+    router.events.on("routeChangeStart", close);
+    window.addEventListener(CONTACT_CLOSE_EVENT, close);
+    return () => {
+      router.events.off("routeChangeStart", close);
+      window.removeEventListener(CONTACT_CLOSE_EVENT, close);
+    };
+  }, [router.events]);
 
   // Proměnné písem i na <html>: opona a závoj (chrome z withStudio) stojí
   // MIMO obal níž, takže by `--font-poppins` nezdědily a padly na serif.
@@ -132,14 +149,32 @@ function App({ Component, pageProps }: AppProps) {
 
   return (
     <div className={`${poppins.variable} ${caveat.variable} ${poppins.className}`}>
+      <SiteHead />
       <ShaderBackground />
       {/* Tečka za myší. Jen pro jemný ukazatel; na dotyku se nespustí. */}
       <Cursor />
-      <Header onContactClick={() => setContactOpen(true)} copy={globals?.header} />
+      <Header
+        onContactClick={() => setContactOpen(true)}
+        onContactClose={() => setContactOpen(false)}
+        contactOpen={contactOpen}
+        copy={globals?.header}
+      />
       <Component {...pageProps} />
-      {/* Posuvník stránky (lišta čárek vpravo) — jen pro myš. */}
-      <Scrollbar />
-      <Footer copy={globals?.footer} socials={globals?.socials ?? null} />
+      {/* Stránka se scénou (/projects) je jedna obrazovka — bez posuvníku
+          a patičky (lib/scene-pages). */}
+      {scenePage ? null : (
+        <>
+          {/* Posuvník stránky (lišta čárek vpravo) — jen pro myš. */}
+          <Scrollbar />
+          <Footer copy={globals?.footer} socials={globals?.socials ?? null} />
+        </>
+      )}
+      {/* Reference / Služby / Spolupráce z hlavičky jako samostatná okna.
+          Obsah úvodní stránky z pageProps jen na ní (jiné stránky mají pod
+          `content` svůj); jinde si ho okno načte z /api/home-content. */}
+      <SectionPopups
+        content={router.pathname === "/" ? ((pageProps as { content?: HomeContent }).content ?? null) : null}
+      />
       <ContactModal
         open={contactOpen}
         onClose={() => setContactOpen(false)}

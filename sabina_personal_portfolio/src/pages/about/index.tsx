@@ -1,4 +1,4 @@
-import Head from "next/head";
+import Seo from "@/components/seo";
 import type { GetStaticProps } from "next";
 import { getPageContent, viewOf } from "@c3studium/valecms/server/site";
 import { getGlobalCopy, type GlobalCopy } from "@/lib/site/globals";
@@ -35,13 +35,7 @@ export const getStaticProps: GetStaticProps<Props> = async (context) => {
 export default function AboutPage({ content }: Props) {
   return (
     <>
-      <Head>
-        <title>O mně — Sabina Hudrmentová</title>
-        <meta
-          name="description"
-          content="Grafická designérka Sabina Hudrmentová — vzdělání, zkušenosti a specializace."
-        />
-      </Head>
+      <Seo title="O mně" description="Grafická designérka Sabina Hudrmentová — vzdělání, zkušenosti a specializace na reklamní bannery a online kampaně." type="profile" />
       <main>
         {/* `docId` u bloků cestuje jen do rámu Studia (f.docId); na veřejné
             stránce chybí a anotace se rozprostřou naprázdno. */}

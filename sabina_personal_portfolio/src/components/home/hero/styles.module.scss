@@ -23,9 +23,9 @@ $track-width: 160vw;
 
 .container {
   position: relative;
-  // 872vh = 772vh přišpendleného scrollu (HERO_PINNED, hero/progress.ts) —
-  // klidné tempo, volné místo před umělou myší a pomalá myš.
-  height: 872vh;
+  // 569vh = 469vh přišpendleného scrollu (HERO_PINNED, hero/progress.ts —
+  // tam je i tempo úseků: karty a přelet rychle, smazání scény pomaleji).
+  height: 569vh;
 }
 
 .sticky {

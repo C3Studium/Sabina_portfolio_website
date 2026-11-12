@@ -1,0 +1,361 @@
+{
+  "version": 1,
+  "source": "/assets/banners/vecicky_banner10.png",
+  "width": 822,
+  "height": 1024,
+  "aspect": 0.80288,
+  "layers": [
+    {
+      "kind": "background",
+      "label": "pozadí",
+      "box": [
+        0,
+        0,
+        1,
+        1
+      ],
+      "color": [
+        111,
+        104,
+        99
+      ],
+      "area": 0.4274
+    },
+    {
+      "kind": "shape",
+      "label": "tvar",
+      "box": [
+        0.5657,
+        0.001,
+        0.3321,
+        0.3691
+      ],
+      "color": [
+        56,
+        56,
+        57
+      ],
+      "area": 0.0477
+    },
+    {
+      "kind": "shape",
+      "label": "tvar",
+      "box": [
+        0.3844,
+        0.1055,
+        0.2092,
+        0.2334
+      ],
+      "color": [
+        52,
+        53,
+        56
+      ],
+      "area": 0.018
+    },
+    {
+      "kind": "shape",
+      "label": "tvar",
+      "box": [
+        0.8552,
+        0,
+        0.1168,
+        0.2354
+      ],
+      "color": [
+        62,
+        62,
+        67
+      ],
+      "area": 0.0085
+    },
+    {
+      "kind": "shape",
+      "label": "tvar",
+      "box": [
+        0.0073,
+        0.6533,
+        0.0925,
+        0.1895
+      ],
+      "color": [
+        60,
+        55,
+        45
+      ],
+      "area": 0.0082
+    },
+    {
+      "kind": "shape",
+      "label": "tvar",
+      "box": [
+        0.371,
+        0.4766,
+        0.1302,
+        0.0674
+      ],
+      "color": [
+        55,
+        56,
+        57
+      ],
+      "area": 0.005
+    },
+    {
+      "kind": "shape",
+      "label": "tvar",
+      "box": [
+        0.9903,
+        0,
+        0.0097,
+        0.9883
+      ],
+      "color": [
+        251,
+        251,
+        252
+      ],
+      "area": 0.0049
+    },
+    {
+      "kind": "object",
+      "label": "objekt",
+      "box": [
+        0.0438,
+        0.3379,
+        0.9538,
+        0.6592
+      ],
+      "color": [
+        153,
+        159,
+        168
+      ],
+      "area": 0.4242
+    },
+    {
+      "kind": "text",
+      "label": "Věcičky",
+      "box": [
+        0.4732,
+        0.0391,
+        0.1204,
+        0.0332
+      ],
+      "color": [
+        66,
+        65,
+        66
+      ],
+      "area": 0.001
+    },
+    {
+      "kind": "text",
+      "label": "» lets nami.",
+      "box": [
+        0.4465,
+        0.0674,
+        0.0827,
+        0.0098
+      ],
+      "color": [
+        75,
+        75,
+        75
+      ],
+      "area": 0.0002
+    },
+    {
+      "kind": "text",
+      "label": "Dekuleme, že se",
+      "box": [
+        0.056,
+        0.1299,
+        0.8966,
+        0.0986
+      ],
+      "color": [
+        106,
+        196,
+        192
+      ],
+      "area": 0.0347
+    },
+    {
+      "kind": "text",
+      "label": "k'nam vracite",
+      "box": [
+        0.1168,
+        0.2285,
+        0.3394,
+        0.0752
+      ],
+      "color": [
+        249,
+        247,
+        245
+      ],
+      "area": 0.0116
+    },
+    {
+      "kind": "text",
+      "label": "llona.krejci (Ý) před 28 dny",
+      "box": [
+        0.2165,
+        0.3594,
+        0.2409,
+        0.0195
+      ],
+      "color": [
+        74,
+        83,
+        98
+      ],
+      "area": 0.0009
+    },
+    {
+      "kind": "text",
+      "label": "its Doporučuji obchod",
+      "box": [
+        0.2165,
+        0.3896,
+        0.1849,
+        0.0156
+      ],
+      "color": [
+        63,
+        71,
+        85
+      ],
+      "area": 0.0007
+    },
+    {
+      "kind": "text",
+      "label": "© Všechno materiál, střihy, barvy, kvalita, celých skoro 9 let co",
+      "box": [
+        0.219,
+        0.418,
+        0.5292,
+        0.0176
+      ],
+      "color": [
+        66,
+        79,
+        87
+      ],
+      "area": 0.0019
+    },
+    {
+      "kind": "text",
+      "label": "nakupuji",
+      "box": [
+        0.2457,
+        0.4414,
+        0.0693,
+        0.0137
+      ],
+      "color": [
+        61,
+        70,
+        85
+      ],
+      "area": 0.0003
+    },
+    {
+      "kind": "text",
+      "label": "Alžběta (V) před 12 dny",
+      "box": [
+        0.0645,
+        0.7939,
+        0.2214,
+        0.0205
+      ],
+      "color": [
+        70,
+        79,
+        95
+      ],
+      "area": 0.0008
+    },
+    {
+      "kind": "text",
+      "label": "7 Doporučuji obchod",
+      "box": [
+        0.0657,
+        0.8262,
+        0.1959,
+        0.0166
+      ],
+      "color": [
+        55,
+        64,
+        79
+      ],
+      "area": 0.0008
+    },
+    {
+      "kind": "text",
+      "label": "© Rychlé odeslání",
+      "box": [
+        0.0693,
+        0.8574,
+        0.1667,
+        0.0156
+      ],
+      "color": [
+        58,
+        80,
+        76
+      ],
+      "area": 0.0007
+    },
+    {
+      "kind": "text",
+      "label": "Kvalitní výrobky",
+      "box": [
+        0.0961,
+        0.8799,
+        0.1399,
+        0.0146
+      ],
+      "color": [
+        53,
+        62,
+        76
+      ],
+      "area": 0.0005
+    },
+    {
+      "kind": "text",
+      "label": "Hezky sedí i na hubenější děti",
+      "box": [
+        0.0973,
+        0.9014,
+        0.2652,
+        0.0156
+      ],
+      "color": [
+        61,
+        70,
+        85
+      ],
+      "area": 0.001
+    },
+    {
+      "kind": "text",
+      "label": "Ráda nakupuji opakovane",
+      "box": [
+        0.0973,
+        0.9238,
+        0.2299,
+        0.0156
+      ],
+      "color": [
+        61,
+        70,
+        84
+      ],
+      "area": 0.001
+    }
+  ]
+}

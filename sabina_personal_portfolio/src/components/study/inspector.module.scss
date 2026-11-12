@@ -1,0 +1,652 @@
+@use "../../styles/system/_shortcuts.scss" as *;
+
+// Detail díla (inspector.tsx): karta nalepená vedle díla jako poznámka.
+// Vzhled jako kontaktní modal webu: světlý teplý panel, uhlové písmo,
+// drobné verzálky s prostrkáním a zelenou tečkou, tlačítka s kroužkem,
+// tmavé hlavní tlačítko se zeleným kroužkem. Plocha s obrázkem zůstává
+// tmavá. Plocha má poměr stran obrázku — rozměr jí dává Card (JS).
+
+$accent: var(--green);
+$ink: var(--charcoal);
+$text: var(--snow);
+$line: rgba(var(--charcoal-rgb), 0.16);
+$line-strong: rgba(var(--charcoal-rgb), 0.32);
+$quiet: rgba(var(--snow-rgb), 0.6);
+$side: 15rem;
+// Zelený obrys vrstev: drop-shadow kopíruje tvar alfy.
+$edge: rgba(190, 201, 72, 0.7);
+$edge-strong: rgb(190, 201, 72);
+
+/* ---------- Karta ---------- */
+
+.card {
+  position: fixed;
+  z-index: 115;
+  top: 0;
+  left: 0;
+  display: grid;
+  grid-template-rows: auto auto;
+  width: max-content;
+  border-radius: 4px;
+  background: linear-gradient(150deg, #e2e0dc 0%, #d7d5d0 48%, #ccc9c4 100%);
+  color: $ink;
+  font-size: 0.8rem;
+  box-shadow:
+    0 2px 6px rgba(8, 8, 8, 0.25),
+    0 3vh 8vh rgba(8, 8, 8, 0.5);
+  transform-origin: 50% 0;
+
+  &:not([data-placed]) {
+    visibility: hidden;
+  }
+
+  // Na výšku: list dole přes celou šířku, ovládání pod plochou.
+  &[data-side="sheet"] {
+    width: calc(100% - 32px);
+    max-width: calc(var(--frame-w, 100vw) - 32px);
+
+    .body {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    // Plocha přes celou šířku listu (výšku dá Card).
+    .stage {
+      justify-self: stretch;
+      width: 100% !important;
+    }
+
+    .side {
+      width: auto;
+      contain: none;
+    }
+  }
+}
+
+// Páska nahoře jako u poznámek.
+.tape {
+  position: absolute;
+  z-index: 3;
+  top: -10px;
+  left: 50%;
+  width: 96px;
+  height: 22px;
+  translate: -50% 0;
+  rotate: -3deg;
+  background: rgba(var(--green-rgb), 0.85);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+}
+
+/* ---------- Hlava ---------- */
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.2rem 1rem;
+}
+
+// Pohledy jako záložky: verzálky s prostrkáním, aktivní tmavá.
+.modes {
+  display: flex;
+  gap: 0.3rem;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    height: 2.6rem;
+    padding: 0 1rem;
+    border: 1px solid $line;
+    border-radius: 999px;
+    background: none;
+    color: $ink;
+    font: inherit;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition:
+      background 0.22s ease,
+      color 0.22s ease,
+      border-color 0.22s ease;
+
+    svg {
+      width: 15px;
+      height: 15px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      stroke-linejoin: round;
+    }
+
+    i {
+      font-style: normal;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.04em;
+      opacity: 0.6;
+    }
+
+    &:hover {
+      border-color: $line-strong;
+    }
+
+    &[data-active] {
+      border-color: #1a1a1a;
+      background: #1a1a1a;
+      color: $text;
+
+      svg {
+        stroke: $accent;
+      }
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+  }
+}
+
+// Zavřít: tmavé tlačítko jako „Odeslat" v kontaktu — zelený kroužek s ×.
+.close {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.7rem;
+  height: 2.6rem;
+  padding: 0 0.4rem 0 1.1rem;
+  border: 0;
+  border-radius: 999px;
+  background: #1a1a1a;
+  color: $text;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.22s ease;
+
+  svg {
+    order: 2;
+    box-sizing: content-box;
+    width: 12px;
+    height: 12px;
+    padding: 0.5rem;
+    border: 1px solid $accent;
+    border-radius: 50%;
+    fill: none;
+    stroke: $accent;
+    stroke-width: 2;
+    stroke-linecap: round;
+    transition:
+      background 0.22s ease,
+      stroke 0.22s ease;
+  }
+
+  &:hover {
+    background: #0f0f0f;
+
+    svg {
+      background: $accent;
+      stroke: $ink;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid $accent;
+    outline-offset: 2px;
+  }
+}
+
+/* ---------- Tělo: plocha vlevo, ovládání vpravo ---------- */
+
+.body {
+  display: grid;
+  grid-template-columns: auto $side;
+  gap: 1.2rem;
+  padding: 0 1.2rem 1.2rem;
+}
+
+.stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: 3px;
+  background-color: #141414;
+  background-image: radial-gradient(rgba(var(--snow-rgb), 0.08) 1px, transparent 1.4px);
+  background-size: 16px 16px;
+  color: $text;
+}
+
+.loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: $quiet;
+}
+
+// Náhled a pixely: obrázek se vejde do plochy (kontejner = plocha bez okraje).
+.previewStage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  container-type: size;
+  user-select: none;
+
+  &[data-zoomed] {
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+}
+
+.previewPan {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.previewImage {
+  position: relative;
+  width: min(100cqw, calc(100cqh * var(--ar)));
+  aspect-ratio: var(--ar);
+  box-shadow: 0 1.5vh 4vh rgba(0, 0, 0, 0.5);
+
+  img {
+    border-radius: 2px;
+    object-fit: cover;
+  }
+}
+
+.loupe {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px rgba(var(--green-rgb), 0.9),
+    0 10px 30px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+.loupeImage {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+}
+
+.loupeLabel {
+  position: absolute;
+  left: 5px;
+  bottom: 5px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  background: rgba(14, 14, 14, 0.85);
+  color: $accent;
+  font-size: 0.56rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pixelsGhost {
+  opacity: 0.08;
+}
+
+.pixelsLayer {
+  z-index: 2;
+}
+
+.layersStage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  perspective: 1600px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.layersPan {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 66%;
+  transform-style: preserve-3d;
+}
+
+.layersStack {
+  position: relative;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  outline: 1px solid rgba(var(--snow-rgb), 0.08);
+  filter: drop-shadow(1px 0 0 $edge) drop-shadow(-1px 0 0 $edge) drop-shadow(0 1px 0 $edge) drop-shadow(0 -1px 0 $edge);
+  transition:
+    opacity 0.25s ease,
+    outline-color 0.25s ease;
+
+  &[data-focus] {
+    outline: 1.5px solid $accent;
+    filter: drop-shadow(2px 0 0 $edge-strong) drop-shadow(-2px 0 0 $edge-strong) drop-shadow(0 2px 0 $edge-strong)
+      drop-shadow(0 -2px 0 $edge-strong);
+  }
+
+  &[data-dim] {
+    opacity: 0.2 !important;
+  }
+}
+
+
+/* ---------- Ovládání (pravý sloupec) ---------- */
+
+// Sloupec nepřidává kartě výšku (contain) — výšku dává plocha; když se
+// nevejde, posouvá se.
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  width: $side;
+  min-height: 0;
+  overflow: auto;
+  contain: size;
+}
+
+// Nadpis skupiny jako eyebrow v kontaktu: zelená tečka a verzálky.
+.sideHead {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 0.55rem;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+
+  &::before {
+    content: "";
+    flex-shrink: 0;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: $accent;
+  }
+
+  span {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+    opacity: 0.7;
+  }
+}
+
+.presets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+
+  button {
+    height: 2rem;
+    border: 1px solid $line;
+    border-radius: 3px;
+    background: rgba(var(--snow-rgb), 0.45);
+    color: $ink;
+    font: inherit;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition:
+      background 0.22s ease,
+      border-color 0.22s ease,
+      color 0.22s ease;
+
+    &:hover {
+      border-color: $line-strong;
+      background: rgba(var(--snow-rgb), 0.7);
+    }
+
+    &[data-active] {
+      border-color: #1a1a1a;
+      background: #1a1a1a;
+      color: $accent;
+    }
+  }
+}
+
+.range {
+  width: 100%;
+  margin: 0;
+  accent-color: #1a1a1a;
+  cursor: pointer;
+}
+
+// Přiblížení: kroužky jako ikony kontaktů.
+.zoom {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.zoomValue {
+  min-width: 3.6rem;
+  height: 2.2rem;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  color: $ink;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(var(--snow-rgb), 0.5);
+  }
+}
+
+.tool {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  border: 1px solid $line-strong;
+  border-radius: 50%;
+  background: none;
+  color: $ink;
+  cursor: pointer;
+  transition:
+    background 0.22s ease,
+    color 0.22s ease,
+    border-color 0.22s ease;
+
+  svg {
+    width: 44%;
+    height: 44%;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  &:hover {
+    border-color: #1a1a1a;
+    background: #1a1a1a;
+    color: $accent;
+  }
+
+  &[data-active] {
+    border-color: #1a1a1a;
+    background: #1a1a1a;
+    color: $accent;
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+}
+
+// Jak se ovládá: gesto tučně, účinek normálně, každé na řádku.
+.hint {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 300;
+  line-height: 1.35;
+
+  b {
+    font-weight: 600;
+  }
+}
+
+/* ---------- Název a rozměr (dole ve sloupci) ---------- */
+
+.meta {
+  display: grid;
+  gap: 0.2rem;
+  margin: auto 0 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid $line;
+  font-size: 0.7rem;
+
+  b {
+    overflow: hidden;
+    font-weight: 500;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  span {
+    font-variant-numeric: tabular-nums;
+    opacity: 0.75;
+  }
+}
+
+/* ---------- Telefon na výšku: list dole ----------
+   Úzký list: pohledy jen ikonou (aktivní i s názvem), Zavřít jen kroužkem,
+   menší odsazení. List nesmí pod hlavičku — výška je omezená a ovládání
+   pod plochou se posouvá. */
+@media (max-width: 599.98px) and (orientation: portrait) {
+  .card[data-side="sheet"] {
+    grid-template-rows: auto minmax(0, 1fr);
+    max-height: calc(100svh - 104px);
+
+    .head {
+      gap: 0.5rem;
+      padding: 0.9rem 0.9rem 0.8rem;
+    }
+
+    .modes {
+      min-width: 0;
+
+      button {
+        justify-content: center;
+        width: 2.6rem;
+        padding: 0;
+
+        span,
+        i {
+          display: none;
+        }
+
+        &[data-active] {
+          width: auto;
+          padding: 0 0.9rem;
+
+          span {
+            display: inline;
+          }
+        }
+      }
+    }
+
+    .close {
+      justify-content: center;
+      width: 2.6rem;
+      padding: 0;
+
+      span {
+        display: none;
+      }
+    }
+
+    .body {
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 0.9rem;
+      min-height: 0;
+      padding: 0 0.9rem 0.9rem;
+    }
+
+    .side {
+      min-height: 0;
+      overflow: auto;
+    }
+  }
+}
+
+/* ---------- Na výšku (tablet): list dole ----------
+   Plocha přes celou šířku (výšku jí dá Card), ovládání pod ní ve dvou
+   sloupcích, ať se list vejde na obrazovku. */
+@media (min-width: 600px) and (orientation: portrait) {
+  .card[data-side="sheet"] {
+    max-height: calc(100svh - 104px);
+
+    .side {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem 2rem;
+      overflow: visible;
+
+      > section:first-child {
+        grid-column: 1 / -1;
+      }
+    }
+
+    .presets {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .meta {
+      grid-column: 1 / -1;
+      margin: 0;
+    }
+  }
+}
+
+/* Telefon: ovládání pod plochou se posouvá; plocha drží svou výšku. */
+@media (max-width: 599.98px) and (orientation: portrait) {
+  .card[data-side="sheet"] .stage {
+    flex-shrink: 0;
+    width: 100% !important;
+  }
+
+  // Karta je v portálu nad hlavičkou — nesmí na tlačítko menu.
+  .card[data-side="sheet"] {
+    max-height: calc(100svh - 128px);
+  }
+}

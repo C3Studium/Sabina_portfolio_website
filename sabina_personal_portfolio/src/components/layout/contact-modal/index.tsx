@@ -1,16 +1,16 @@
 import { useEffect, useId, useRef, useState } from "react";
-import Image from "next/image";
 import { AnimatePresence, motion, useTransform, type MotionValue } from "framer-motion";
 import { editableIn, surfaceRoot, useStudioSurface } from "@c3studium/valecms/edit";
 import type { CopyItem, GlobalBlock } from "@/lib/site/globals";
 import { decodeMarked } from "@/lib/site/marks";
 import Lines from "@/components/home/lines";
-import MeasureText from "@/components/common/measure-text";
 import SmokeText from "@/components/common/smoke-text";
-import { SketchText } from "@/components/home/info/reveal";
-import { NAV_ITEMS } from "../nav-items";
 import { useFormBuild } from "./build";
-import ProjectSelect from "./select";
+import Brief from "./brief";
+import { CopyIcon } from "./brief-icons";
+import LayerStack from "./layer-stack";
+import Geometry from "./geometry";
+import BauhausBg from "./bauhaus-bg";
 
 // Vstup a odchod modálu: rozmazané pozadí, panel a v něm prvky po ose x —
 // lišta a úvod (na šířku) zleva, formulář zprava. Odchod je tentýž pohyb obráceně a rychleji — prvky odjedou dřív,
@@ -45,16 +45,12 @@ const slide = (from: string, away: string) =>
   }) as const;
 const ITEM_LEFT = slide("-2.6vw", "-1.6vw");
 const ITEM = slide("2.4vw", "1.6vw");
-
-// Text pole jako štítek rámečku stavby: bez hvězdičky povinnosti a závorky
-// („Vaše jméno *" → „Vaše jméno", „Typ projektu (nepovinné)" → „Typ projektu").
-// Štítek je značka vrstvy, ne věta — delší text (placeholder zprávy)
-// nahradí krátké slovo `short`.
-const TAG_MAX = 16;
-const tagOf = (text: string, short?: string) => {
-  const clean = text.replace(/\(.*?\)/g, "").replace(/\*/g, "").split(/\s+[—–-]\s+/)[0].trim();
-  return short && clean.length > TAG_MAX ? short : clean;
-};
+// Pruh nad nadpisem se vytáhne zleva.
+const BAR = {
+  hidden: { scaleX: 0 },
+  shown: { scaleX: 1, transition: { duration: 0.7, ease: EASE_OUT, delay: 0.35 } },
+  exit: { scaleX: 0, transition: { duration: 0.2, ease: EASE_IN } },
+} as const;
 
 // Nadpis úvodu, když blok žádný nemá — tentýž zápis, jaký zakládá seed.
 const FALLBACK_HEADLINE = "Pustíme se\ndo něčeho,\nco *funguje*?";
@@ -108,7 +104,7 @@ const FALLBACK = {
   ] satisfies ChannelFallback[],
   formEyebrow: "Poslat zprávu",
   formTitle: "Mám zájem o spolupráci.",
-  formLead: "Nechte mi jméno a telefon — ozvu se vám osobně a probereme váš projekt.",
+  formLead: "Pár kliknutí — vyberte, co sedí, a na konci odešlete. Ozvu se s návrhem postupu.",
   placeholders: {
     name: "Vaše jméno *",
     phone: "Telefon *",
@@ -171,22 +167,6 @@ const textAt = (
   return (typeof value === "string" && value.trim()) || zaloha;
 };
 
-/**
- * Cíl kanálu se odvozuje z jeho hodnoty, ne z vlastního pole: kdyby editor
- * přepsal číslo a odkaz zůstal starý, volalo by tlačítko jinam, než ukazuje.
- * Dostupnost a schůzka zatím nikam nevedou.
- */
-const channelHref = (icon: ChannelIconName, value: string) => {
-  if (icon === "phone") return `tel:${value.replace(/\s+/g, "")}`;
-  if (icon === "mail") return `mailto:${value}`;
-  return null;
-};
-
-const MESSAGE_LIMIT = 300;
-
-// Modal JE cíl tlačítka „Domluvit spolupráci", takže odpovídající položka
-// navigace se v jeho liště tváří jako aktivní.
-const ACTIVE_NAV = "#spoluprace";
 
 function ArrowIcon() {
   return (
@@ -196,14 +176,6 @@ function ArrowIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" />
     </svg>
   );
 }
@@ -264,7 +236,6 @@ type ContactModalProps = {
 };
 
 export default function ContactModal({ open, onClose, copy = null }: ContactModalProps) {
-  const [message, setMessage] = useState("");
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -282,10 +253,15 @@ export default function ContactModal({ open, onClose, copy = null }: ContactModa
     .map((line) => decodeMarked(line))
     .filter((line) => line.length);
 
+  // Starší záznam v databázi nemá řádek souhlasu: na jeho místě (16) už
+  // začínají typy projektu. Pak souhlas z kódu a typy od 16.
+  const consentInCms = /souhlas/i.test(items?.[LINES.consent]?.label ?? "");
+  const consentText = consentInCms ? textAt(items, LINES.consent, "label", FALLBACK.consent) : FALLBACK.consent;
+
   // Typy projektu jsou ocas seznamu — cokoli od `projectTypesFrom` dál.
   // Prázdný ocas znamená „v CMS nic", ne „žádné typy", proto záloha.
   const projectTypes = (items ?? [])
-    .slice(LINES.projectTypesFrom)
+    .slice(consentInCms || !items?.[LINES.consent] ? LINES.projectTypesFrom : LINES.consent)
     .map((item) => item.label.trim())
     .filter(Boolean);
   const types = projectTypes.length ? projectTypes : FALLBACK.projectTypes;
@@ -294,7 +270,6 @@ export default function ContactModal({ open, onClose, copy = null }: ContactModa
   // rámečkem a konturou. Ve Studiu stojí formulář hotový.
   const editing = Boolean(copy?.docId);
   const build = useFormBuild({ active: isOpen, disabled: studioOpen || editing, panelRef });
-  const [agreed, setAgreed] = useState(false);
   const formTitle = textAt(items, LINES.formTitle, "label", FALLBACK.formTitle);
   const formLead = textAt(items, LINES.formLead, "label", FALLBACK.formLead);
   const submitLabel = textAt(items, LINES.submit, "label", FALLBACK.submit);
@@ -315,15 +290,33 @@ export default function ContactModal({ open, onClose, copy = null }: ContactModa
       if (event.key === "Escape") onClose();
     }
 
+    // Modal nemá vlastní lištu: začíná pod hlavičkou webu, která stojí nad
+    // ním (její výzva je teď „Zavřít"). Výška hlavičky se mění podle
+    // zarážek, proto se měří (CSS: --header-bottom).
+    const root = document.documentElement;
+    const placeUnderHeader = () => {
+      const header = document.querySelector<HTMLElement>("header[data-motion-hold]");
+      if (!header) return;
+      // Tlačítka (menu, výzva) můžou z boxu hlavičky přečnívat — měří se i ona.
+      const bottoms = [header, ...Array.from(header.querySelectorAll<HTMLElement>(":scope > *, button"))]
+        .map((el) => el.getBoundingClientRect())
+        .filter((box) => box.height > 0 && box.bottom < window.innerHeight / 2)
+        .map((box) => box.bottom);
+      root.style.setProperty("--header-bottom", `${Math.round(Math.max(...bottoms) + 8)}px`);
+    };
+    placeUnderHeader();
+
     const lenis = window.lenisInstance;
     lenis?.stop();
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", handleKey);
+    window.addEventListener("resize", placeUnderHeader);
 
     return () => {
       lenis?.start();
       document.body.style.overflow = "";
       window.removeEventListener("keydown", handleKey);
+      window.removeEventListener("resize", placeUnderHeader);
     };
   }, [isOpen, onClose]);
 
@@ -346,6 +339,9 @@ export default function ContactModal({ open, onClose, copy = null }: ContactModa
           <motion.div
             {...surfaceRoot(SURFACE)}
             ref={panelRef}
+            // Lenis je při otevřeném modalu zastavený a kolečko i dotyk by
+            // pohltil — panel se posouvá sám (nativní scroll).
+            data-lenis-prevent=""
             className={styles.panel}
             role="dialog"
             aria-modal="true"
@@ -358,61 +354,17 @@ export default function ContactModal({ open, onClose, copy = null }: ContactModa
                 ditherovaná, ne hladká. */}
             <div className={styles.grain} aria-hidden="true" />
 
-            {/* Lišta: na šířku značka, navigace a křížek; na výšku jen křížek
-                v rohu karty (zbytek schová CSS). */}
-            <motion.div className={styles.bar} variants={ITEM_LEFT}>
-              <span className={styles.brand}>
-                {/* `alt` prázdný i s obrázkem z CMS: jméno je hned vedle jako
-                    text a čtečka by ho slyšela dvakrát. */}
-                <Image
-                  {...edit.image("image")}
-                  src={copy?.image?.src || FALLBACK.logo}
-                  alt=""
-                  width={64}
-                  height={58}
-                  className={styles.brandMark}
-                />
-                <span className={styles.brandText}>
-                  <span className={styles.brandName} {...edit(`items.${LINES.brand}.label`)}>
-                    {textAt(items, LINES.brand, "label", FALLBACK.brandName)}
-                  </span>
-                  <span className={styles.brandSurname} {...edit(`items.${LINES.brand}.value`)}>
-                    {textAt(items, LINES.brand, "value", FALLBACK.brandSurname)}
-                  </span>
-                </span>
-              </span>
-
-              {/* Navigace bez anotace schválně: názvy rout sdílené s hlavičkou
-                  (../nav-items), ne texty bloku. */}
-              <nav className={styles.nav} aria-label="Hlavní navigace">
-                {NAV_ITEMS.map((item) => (
-                  <a
-                    key={item.href}
-                    className={`${styles.navLink} ${item.href === ACTIVE_NAV ? styles.isActive : ""}`}
-                    href={item.href}
-                    onClick={onClose}
-                  >
-                    {item.label}
-                  </a>
-                ))}
-              </nav>
-
-              {/* Popisek je atribut, na stránce se kliknout nedá — upravuje se
-                  ve formuláři povrchu. */}
-              <button
-                type="button"
-                className={styles.close}
-                onClick={onClose}
-                aria-label={textAt(items, LINES.close, "label", FALLBACK.close)}
-              >
-                <CloseIcon />
-              </button>
-            </motion.div>
-
             {/* Mřížka: na šířku úvod a kontakty vlevo, formulář vpravo; na
                 výšku formulář a pod ním kontakty, úvod schovaný (CSS). */}
             <div className={styles.body}>
               <div className={styles.intro}>
+                {/* Rozložený banner (vrstvy jako ve Figmě), krátký pruh a
+                    nadpis až dole. */}
+                {/* Sotva viditelná kresba v uhlovém sloupci, za vrstvami. */}
+                <div className={styles.introBg}>
+                  <Geometry variant="dim" className={styles.introGeo} />
+                </div>
+                <LayerStack />
                 <motion.p className={styles.eyebrow} variants={ITEM_LEFT}>
                   <span className={styles.eyebrowDot} aria-hidden="true" />
                   <span className={styles.eyebrowArrow} aria-hidden="true">
@@ -428,6 +380,7 @@ export default function ContactModal({ open, onClose, copy = null }: ContactModa
                 {/* Pole `headline` bloku: řádky oddělené Enterem, zvýraznění
                     hvězdičkami („co *funguje*?"). Řádky jsou <br>, ne spany —
                     překryv čte <br> jako konec řádku. */}
+                <motion.span className={styles.shapeBar} variants={BAR} aria-hidden="true" />
                 <motion.h2 className={styles.headline} variants={ITEM_LEFT} {...edit("headline", "text", "highlight")}>
                   <Lines lines={headline} markClass={styles.accent} trailClass="" />
                 </motion.h2>
@@ -438,6 +391,8 @@ export default function ContactModal({ open, onClose, copy = null }: ContactModa
               </div>
 
               <div className={styles.formCol}>
+                {/* Bauhaus tvary úplně vzadu za formulářem; naskočí poslední. */}
+                <BauhausBg className={styles.formBg} />
                 <motion.p className={styles.formEyebrow} variants={ITEM}>
                   <span {...edit(`items.${LINES.formEyebrow}.label`)}>
                     {textAt(items, LINES.formEyebrow, "label", FALLBACK.formEyebrow)}
@@ -465,173 +420,25 @@ export default function ContactModal({ open, onClose, copy = null }: ContactModa
                   {...edit(`items.${LINES.formLead}.label`)}
                 />
 
-                {/* Formulář zatím nikam neodesílá, backend neexistuje.
-                    Placeholdery a typy projektu jsou atributy a položky
-                    seznamu, na stránce se kliknout nedají — upravují se ve
-                    formuláři povrchu „Kontakt". */}
-                <form
-                  className={styles.form}
-                  onSubmit={(event) => event.preventDefault()}
-                >
-                  {/* Pole se postaví jako tlačítko a souhlas pod nimi (a výzva
-                      v CTA): rámeček se štítkem, kontura, výplň. Kontura je
-                      `ghost` — kopie pole bez ovládacích prvků. */}
-                  <div className={styles.formRow}>
-                    <SketchText
-                      progress={build.part.name}
-                      from={0}
-                      to={1}
-                      still={build.still}
-                      tag={tagOf(placeholder.name)}
-                      className={styles.fieldBuild}
-                      ghost={<span className={styles.field}>{placeholder.name}</span>}
-                    >
-                      <input
-                        className={styles.field}
-                        type="text"
-                        name="jmeno"
-                        data-build="name"
-                        placeholder={placeholder.name}
-                        autoComplete="name"
-                        required
-                      />
-                    </SketchText>
-                    <SketchText
-                      progress={build.part.phone}
-                      from={0}
-                      to={1}
-                      still={build.still}
-                      tag={tagOf(placeholder.phone)}
-                      className={styles.fieldBuild}
-                      ghost={
-                        <span className={styles.fieldWrap}>
-                          <span className={styles.field}>{placeholder.phone}</span>
-                        </span>
-                      }
-                    >
-                      <span className={styles.fieldWrap}>
-                        <input
-                          className={styles.field}
-                          type="tel"
-                          name="telefon"
-                          placeholder={placeholder.phone}
-                          autoComplete="tel"
-                          required
-                        />
-                        <span className={styles.fieldIcon} aria-hidden="true">
-                          <PhoneFieldIcon />
-                        </span>
-                      </span>
-                    </SketchText>
-                  </div>
-
-                  {/* Typ projektu leží nad zprávou: rozbalený seznam ji překrývá. */}
-                  <SketchText
-                    progress={build.part.type}
-                    from={0}
-                    to={1}
-                    still={build.still}
-                    tag={tagOf(placeholder.type)}
-                    className={`${styles.fieldBuild} ${styles.typeBuild}`}
-                    ghost={<span className={`${styles.field} ${styles.selectButton}`}>{placeholder.type}</span>}
-                  >
-                    <ProjectSelect name="typ" placeholder={placeholder.type} options={types} />
-                  </SketchText>
-
-                  <SketchText
-                    progress={build.part.message}
-                    from={0}
-                    to={1}
-                    still={build.still}
-                    tag={tagOf(placeholder.message, "Zpráva")}
-                    className={styles.fieldBuild}
-                    ghost={<span className={`${styles.field} ${styles.textarea}`}>{placeholder.message}</span>}
-                  >
-                    <span className={styles.textareaWrap}>
-                      <textarea
-                        className={`${styles.field} ${styles.textarea}`}
-                        name="zprava"
-                        placeholder={placeholder.message}
-                        maxLength={MESSAGE_LIMIT}
-                        value={message}
-                        onChange={(event) => setMessage(event.target.value)}
-                      />
-                      <span className={styles.counter} aria-hidden="true">
-                        {message.length} / {MESSAGE_LIMIT}
-                      </span>
-                    </span>
-                  </SketchText>
-
-                  {/* Souhlas se zpracováním údajů — povinný: bez zaškrtnutí
-                      prohlížeč formulář neodešle (`required`) a tlačítko je
-                      ztlumené. Staví se jako pole (rámeček → kontura →
-                      výplň), po zprávě. */}
-                  <SketchText
-                    progress={build.part.consent}
-                    from={0}
-                    to={1}
-                    still={build.still}
-                    tag="Souhlas"
-                    className={styles.consentBuild}
-                    style={{ display: "block" }}
-                    ghost={
-                      <span className={styles.consent}>
-                        <span className={styles.consentBox} />
-                        <span className={styles.consentLabel}>
-                          {textAt(items, LINES.consent, "label", FALLBACK.consent)}
-                        </span>
-                      </span>
+                {/* Poptávka v krocích (brief.tsx): návštěvník jen kliká na
+                    možnosti, na konci nechá jméno a kontakt a odešle. Nastoupí
+                    s postupem stavby (průhlednost) — ne přes SketchText, ten by
+                    obsah vykreslil dvakrát a kroky by měly dva stavy.
+                    Odeslání zatím nikam nevede, backend neexistuje. */}
+                <motion.div className={styles.briefWrap} style={{ opacity: build.part.name }}>
+                  <Brief
+                    types={types}
+                    namePlaceholder={placeholder.name}
+                    contactPlaceholder={`${placeholder.phone.replace(/\s*\*$/, "")} nebo e-mail *`}
+                    notePlaceholder={placeholder.message}
+                    consentLabel={
+                      <span {...(consentInCms ? edit(`items.${LINES.consent}.label`) : {})}>{consentText}</span>
                     }
-                  >
-                    <label className={styles.consent}>
-                      <input
-                        type="checkbox"
-                        name="souhlas"
-                        className={styles.consentInput}
-                        checked={agreed}
-                        onChange={(event) => setAgreed(event.target.checked)}
-                        required
-                      />
-                      <span className={styles.consentBox} aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                          <path d="m5 12.5 4.5 4.5L19 7" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </span>
-                      <span className={styles.consentLabel} {...edit(`items.${LINES.consent}.label`)}>
-                        {textAt(items, LINES.consent, "label", FALLBACK.consent)}
-                      </span>
-                    </label>
-                  </SketchText>
-
-                  {/* Tlačítko se postaví poslední: rámeček (BuildFrame), pak
-                      kontura a výplň (SketchText) — jako portrét. Postavené
-                      měří MeasureText jako výzvu v CTA: rámeček přes písmena
-                      a kolem kroužku se šipkou. */}
-                  <MeasureText enabled={build.built && !editing} sweep={build.built} className={styles.submitMeasure}>
-                    <SketchText
-                      progress={build.part.button}
-                      from={0}
-                      to={1}
-                      still={build.still}
-                      tag={submitLabel.split(/\s+[—–-]\s+/)[0]}
-                      className={styles.submitBuild}
-                      style={{ display: "block" }}
-                      ghost={
-                        <span className={styles.submit}>
-                          <SubmitBody label={submitLabel} measure={false} />
-                        </span>
-                      }
-                    >
-                      <button type="submit" className={styles.submit} data-ready={agreed ? "" : undefined}>
-                        <SubmitBody
-                          label={submitLabel}
-                          measure={build.built && !editing}
-                          edit={edit(`items.${LINES.submit}.label`)}
-                        />
-                      </button>
-                    </SketchText>
-                  </MeasureText>
-                </form>
+                    submitBody={
+                      <SubmitBody label={submitLabel} measure={false} edit={edit(`items.${LINES.submit}.label`)} />
+                    }
+                  />
+                </motion.div>
 
                 <p className={styles.privacy}>
                   <span className={styles.privacyIcon} aria-hidden="true">
@@ -722,37 +529,97 @@ type ChannelRowProps = {
   annotate: (key: "label" | "value" | "note") => Record<string, string | undefined>;
 };
 
-// Telefon a e-mail jsou proklikávací, dostupnost a schůzka zatím ne —
-// proto se obal přepíná mezi <a> a <span>.
+// Telefon a e-mail se klikem zkopírují (tlačítko); dostupnost a schůzka
+// zatím nikam nevedou (span). Šipka je uhlová; na myši při najetí zezelená
+// v černém kroužku a vedle naskočí „Klikněte pro zkopírování". Na dotyku je
+// místo šipky ikona kopírování (CSS podle `hover`).
+const COPY_HINT = "Klikněte pro zkopírování";
+const COPIED = "Zkopírováno";
+
 function ChannelRow({ icon, label, value, note, annotate }: ChannelRowProps) {
-  const href = channelHref(icon, value);
+  const copyable = icon === "phone" || icon === "mail";
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    const done = () => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    };
+    navigator.clipboard?.writeText(value.trim()).then(done, done);
+  };
   const content = (
     <>
       <span className={styles.channelIcon} aria-hidden="true">
         <ChannelIcon name={icon} />
       </span>
       <span className={styles.channelText}>
-        <span className={styles.channelLabel} {...annotate("label")}>{label}</span>
-        <span className={styles.channelValue} {...annotate("value")}>{value}</span>
+        {/* Popisek a nápověda kopírování v jedné buňce — při najetí se
+            vystřídají, hodnotu pod nimi nic nepřekryje. */}
+        <span className={styles.channelLabelSlot}>
+          <span className={styles.channelLabel} {...annotate("label")}>{label}</span>
+          {copyable ? (
+            <span className={`${styles.channelLabel} ${styles.channelHint}`} aria-hidden="true">
+              {copied ? COPIED : COPY_HINT}
+            </span>
+          ) : null}
+        </span>
+        <span className={styles.channelValue} {...annotate("value")}>
+          <BreakableValue value={value} editable={Object.keys(annotate("value")).length > 0} />
+        </span>
         {note && (
           <span className={styles.channelNote} {...annotate("note")}>{note}</span>
         )}
       </span>
       <span className={styles.channelArrow} aria-hidden="true">
-        <ArrowIcon />
+        {copyable && copied ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="m5 12.5 4.5 4.5L19 7" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ) : (
+          <>
+            <span className={styles.arrowGlyph}>
+              <ArrowIcon />
+            </span>
+            {copyable ? (
+              <span className={styles.copyGlyph}>
+                <CopyIcon />
+              </span>
+            ) : null}
+          </>
+        )}
       </span>
     </>
   );
 
-  if (href) {
+  if (copyable) {
     return (
-      <a className={styles.channelLink} href={href}>
+      <button
+        type="button"
+        className={styles.channelLink}
+        data-copy=""
+        data-copied={copied || undefined}
+        onClick={copy}
+        aria-label={`${label}: ${value} — ${copied ? COPIED : COPY_HINT}`}
+      >
         {content}
-      </a>
+      </button>
     );
   }
 
   return <span className={styles.channelLink}>{content}</span>;
+}
+
+// E-mail se smí zalomit jen za zavináčem (úzký modul kontaktů), jinak celý.
+// Ve Studiu čistý text — překryv ho upravuje přímo v DOMu.
+function BreakableValue({ value, editable }: { value: string; editable: boolean }) {
+  const at = value.indexOf("@");
+  if (editable || at < 0) return <>{value}</>;
+  return (
+    <>
+      {value.slice(0, at + 1)}
+      <wbr />
+      {value.slice(at + 1)}
+    </>
+  );
 }
 
 // Krátká linka s hrotem doleva před eyebrow textem, jak ji má návrh.
@@ -760,16 +627,6 @@ function TailArrowIcon() {
   return (
     <svg viewBox="0 0 22 8" fill="none" stroke="currentColor" strokeWidth="1.2">
       <path d="M22 4H1M4.4 1.2 1 4l3.4 2.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-// Drobný glyf v pravé části pole pro telefon.
-function PhoneFieldIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3">
-      <rect x="7" y="2.6" width="10" height="18.8" rx="2.2" />
-      <path d="M11 18.6h2" strokeLinecap="round" />
     </svg>
   );
 }
