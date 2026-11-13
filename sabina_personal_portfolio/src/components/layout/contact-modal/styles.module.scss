@@ -1540,6 +1540,71 @@ button.channelLink {
   }
 }
 
+/* ---------- Výzva k posunu (jen telefon na výšku) ---------- */
+// Formulář je pod uhlovým úvodem a z prvního pohledu není vidět, že pokračuje.
+// Vpravo dole v úvodu text a šipka, která se pohupuje; po posunu panelu zhasne.
+.scrollHint {
+  display: none;
+}
+
+@media (orientation: portrait) and (max-width: 599.98px) {
+  // V toku pod nadpisem, zarovnaná vpravo — na úzkém telefonu (SE) by se
+  // absolutně umístěná výzva srazila s posledním řádkem nadpisu.
+  .scrollHint {
+    display: block;
+    align-self: flex-end;
+    margin-top: 0.6vh;
+  }
+}
+
+.scrollHintInner {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: $snow-soft;
+  transition: opacity 0.3s ease;
+}
+
+.panel[data-scrolled] .scrollHintInner {
+  opacity: 0;
+}
+
+.scrollHintArrow {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 1px solid rgba(var(--snow-rgb), 0.35);
+  border-radius: 50%;
+  color: var(--green);
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    animation: scroll-hint-nudge 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes scroll-hint-nudge {
+  0%,
+  100% {
+    transform: translateY(-2px);
+  }
+
+  50% {
+    transform: translateY(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrollHintArrow svg {
+    animation: none;
+  }
+}
+
 /* ---------- Bauhaus: hlavička formuláře ---------- */
 // Nadtitulek „Poslat zprávu" opakoval úvod a linka zabírala výšku: pryč.
 // Na šířku nadpis vlevo a text vpravo v jedné řadě, pod nimi poptávka.

@@ -52,6 +52,14 @@ const BAR = {
   exit: { scaleX: 0, transition: { duration: 0.2, ease: EASE_IN } },
 } as const;
 
+// Výzva k posunu na telefonu na výšku — naskočí, až úvod dojede.
+const HINT = {
+  hidden: { opacity: 0 },
+  shown: { opacity: 1, transition: { duration: 0.5, ease: "easeOut", delay: 0.9 } },
+  exit: { opacity: 0, transition: { duration: 0.15 } },
+} as const;
+const SCROLL_HINT = "Scrollujte dolů";
+
 // Nadpis úvodu, když blok žádný nemá — tentýž zápis, jaký zakládá seed.
 const FALLBACK_HEADLINE = "Pustíme se\ndo něčeho,\nco *funguje*?";
 import styles from "./styles.module.scss";
@@ -175,6 +183,14 @@ function ArrowIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function DownArrowIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M12 4.5v14M5.5 12 12 18.5 18.5 12" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -307,6 +323,11 @@ export default function ContactModal({ open, onClose, copy = null }: ContactModa
     };
     placeUnderHeader();
 
+    // Výzva „Scrollujte dolů" zhasne, jakmile se panel posune.
+    const panel = panelRef.current;
+    const markScrolled = () => panel?.toggleAttribute("data-scrolled", panel.scrollTop > 24);
+    panel?.addEventListener("scroll", markScrolled, { passive: true });
+
     const lenis = window.lenisInstance;
     lenis?.stop();
     document.body.style.overflow = "hidden";
@@ -318,6 +339,7 @@ export default function ContactModal({ open, onClose, copy = null }: ContactModa
       document.body.style.overflow = "";
       window.removeEventListener("keydown", handleKey);
       window.removeEventListener("resize", placeUnderHeader);
+      panel?.removeEventListener("scroll", markScrolled);
     };
   }, [isOpen, onClose]);
 
@@ -389,6 +411,17 @@ export default function ContactModal({ open, onClose, copy = null }: ContactModa
                 <motion.p className={styles.lead} variants={ITEM_LEFT} {...edit("body")}>
                   {copy?.body?.trim() || FALLBACK.lead}
                 </motion.p>
+
+                {/* Telefon na výšku: formulář je pod úvodem a nikdo neví, že
+                    se má posunout dolů. Po prvním posunu panelu zmizí (CSS). */}
+                <motion.span className={styles.scrollHint} variants={HINT} aria-hidden="true">
+                  <span className={styles.scrollHintInner}>
+                    {SCROLL_HINT}
+                    <span className={styles.scrollHintArrow}>
+                      <DownArrowIcon />
+                    </span>
+                  </span>
+                </motion.span>
               </div>
 
               <div className={styles.formCol}>
