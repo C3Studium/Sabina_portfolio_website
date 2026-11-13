@@ -56,6 +56,14 @@ export interface FlexItem {
   href?: string;
   /** Text tlačítka v panelu nad kartou. */
   cta?: string;
+  /**
+   * Rozměry obrázku v px (z knihovny médií / zálohy). S nimi má karta
+   * správný poměr stran od PRVNÍHO snímku; bez nich se do načtení textury
+   * kreslí 4 : 5 a pak skočí. Skutečná velikost načteného obrázku má
+   * přednost, kdyby se lišily.
+   */
+  width?: number;
+  height?: number;
 }
 
 export type Curl = "twist" | "rise" | "fall";
@@ -580,16 +588,20 @@ export function createFlexCarousel(
       magFilter: gl.LINEAR,
       anisotropy,
     });
+    // Známé rozměry obrázku (CMS / záloha) dají kartě správný poměr hned;
+    // bez nich 4 : 5 do načtení textury (`show` níž ho přepíše skutečným).
+    const known: [number, number] | null =
+      item.width && item.height && item.width > 0 && item.height > 0 ? [item.width, item.height] : null;
     const slot: Slot = {
       item,
       index,
       texture,
-      aspect: 0.8,
+      aspect: known ? known[0] / known[1] : 0.8,
       loaded: false,
       failed: false,
       ready: 0,
       color: [0.5, 0.5, 0.5],
-      image: [1, 1],
+      image: known ?? [1, 1],
       focus: 0,
       hoverAt: 0,
       layerCanvas: document.createElement("canvas"),

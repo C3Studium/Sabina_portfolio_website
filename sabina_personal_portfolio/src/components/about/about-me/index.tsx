@@ -3,6 +3,7 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { motion, useReducedMotion } from "framer-motion";
 import { editableIn } from "@c3studium/valecms/edit";
+import { inStudio } from "@/lib/editing";
 import MeasureText from "@/components/common/measure-text";
 import TypeText from "@/components/common/type-text";
 import type { TypeSegment } from "@/components/common/type-text/engine";
@@ -382,7 +383,7 @@ export default function AboutMe({ content = null }: { content?: AboutContent | n
   const editCards = editableIn(highlights?.docId ?? null);
 
   // Ve Studiu (editační rám) bez animací — překryv čte a přepisuje DOM.
-  const editing = Boolean(me?.docId || lead?.docId);
+  const editing = inStudio();
   const { go } = useGate();
   const reduce = useReducedMotion();
   const enter = (delay: number) => (reduce ? { duration: 0 } : { duration: RISE_TIME, ease: ENTRANCE, delay });

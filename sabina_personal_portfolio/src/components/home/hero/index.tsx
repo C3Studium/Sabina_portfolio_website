@@ -3,7 +3,8 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { motion, useMotionValue, useMotionValueEvent, useScroll, useTransform } from "framer-motion";
 import { useRefRegistry } from "@/providers/RefContext";
-import { editableIn, editableDoc } from "@c3studium/valecms/edit";
+import { editable, editableIn, editableDoc } from "@c3studium/valecms/edit";
+import { inStudio } from "@/lib/editing";
 import type { Project } from "@/lib/site/projects";
 import { usePerformance } from "@/providers/PerformanceProvider";
 import { cvh, lerp, PORTRAIT_PHONE, PORTRAIT_TABLET, useLandscapeFluid, useMedia, viewportHeight } from "@/lib/fluid";
@@ -265,7 +266,7 @@ export default function Hero({
   // je říká obalu nadpisu — tady ji nese platné slovo TextMorph. V editačním
   // rámu Studia zůstávají obyčejným textem — překryv je čte a přepisuje
   // přímo v DOMu.
-  const editing = Boolean(copy?.docId);
+  const editing = inStudio();
   // Zelené slovo na pozici `order` (napříč řádky): obě podoby z dokumentu
   // `heroWord`, co chybí, dodá nadpis (konečná) a FALLBACK_ALTERNATES (úvod).
   const wordAt = (order: number, lineWord: string): Word => {
@@ -295,11 +296,25 @@ export default function Hero({
     (word) => word.final,
   );
   const greensIn = (row: number) => greens.filter((_, k) => Math.min(k + 1, rows.length - 1) === row);
-  // Ve Studiu je zelené slovo vlastní dokument: klik otevře obě podoby.
+  // Ve Studiu se obě podoby zeleného slova (dokument `heroWord`) upravují
+  // PŘÍMO V MÍSTĚ jako bílý text řádku: slovo v nadpisu je pole `final`, nad
+  // ním stojí štítek s polem `intro` (podoba při načtení). Dřív klik otvíral
+  // formulář dokumentu — jenže uložení z formuláře stránku nepřekreslí
+  // (překryv po něm jen zavře okno a nic nenačte znovu), takže nové slovo
+  // bylo vidět až po Obnovit. Úprava v místě nechá nový text rovnou v DOMu
+  // (překryv je „optimistický": DOM je jeho stav), stejně jako u bílého textu.
   // Mimo Studio se přelévá (TextMorph).
   const renderGreen = (word: Word) =>
     editing ? (
-      <span {...editableDoc(word.id ?? null, "heroWord")}>{word.final}</span>
+      <span className={styles.editWord}>
+        <span {...editable(word.id ?? null, "final")}>{word.final}</span>
+        {word.id ? (
+          <span className={styles.editIntro} aria-hidden="true">
+            <span className={styles.editIntroTag}>při načtení</span>
+            <span {...editable(word.id, "intro")}>{word.intro}</span>
+          </span>
+        ) : null}
+      </span>
     ) : (
       <TextMorph words={[word.intro, word.final]} index={wordIndex} />
     );
@@ -316,6 +331,9 @@ export default function Hero({
     return {
       src: card.image.src,
       alt: card.image.alt,
+      // Poměr karty od prvního snímku (engine jinak čeká na texturu).
+      width: card.image.width,
+      height: card.image.height,
       title,
       subtitle,
       href: card.href,

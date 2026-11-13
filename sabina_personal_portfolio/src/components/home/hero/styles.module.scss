@@ -621,3 +621,35 @@ $track-width: 160vw;
     }
   }
 }
+
+/* ---------- Studio: zelené slovo v místě ----------
+   Obě podoby dokumentu `heroWord` se upravují přímo v nadpisu (hero/index.tsx
+   renderGreen): slovo samo je pole `final`, štítek nad ním pole `intro`.
+   Jen v editačním rámu Studia — na webu se nevykreslí. */
+
+.editWord {
+  position: relative;
+  display: inline-block;
+}
+
+.editIntro {
+  position: absolute;
+  left: 0.04em;
+  bottom: 100%;
+  display: flex;
+  gap: 0.6em;
+  // Malý popisek jako štítky měřicích rámečků (MeasureText); `em` je
+  // z nadpisu, strop ať na 2K nevyroste.
+  font-size: clamp(11px, 0.07em, 18px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  white-space: nowrap;
+  color: $accent;
+  transform: translateY(-0.35em);
+}
+
+.editIntroTag {
+  color: var(--snow);
+  opacity: 0.6;
+}

@@ -11,6 +11,7 @@ import { markTyped } from "@/components/home/typing";
 import Image from "next/image";
 import Link from "next/link";
 import { editableDoc, editableIn } from "@c3studium/valecms/edit";
+import { inStudio } from "@/lib/editing";
 import type { Service, StackItem, StatItem } from "@/lib/site/home";
 import Lines, {
   hasLines,
@@ -216,7 +217,7 @@ export default function Info({
     target: sectionRef,
     offset: ["start start", "end end"],
   });
-  const editing = Boolean(copy?.docId);
+  const editing = inStudio();
   // Hotový stav bez stavby a bez myši: Studio a okno sekce. Statické karty
   // (místo balíčku) ale jen ve Studiu — překryv je čte jako dokumenty.
   const still = editing || popup;

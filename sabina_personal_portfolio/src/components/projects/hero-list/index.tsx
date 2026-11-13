@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { editableDoc, editableIn } from "@c3studium/valecms/edit";
+import { inStudio } from "@/lib/editing";
 import DepthRibbon, { type DepthRibbonHandle, type DepthRibbonItem } from "@/components/3D/DepthRibbon";
 import ScrollPlaceholder from "@/components/common/scroll-placeholder";
 import { openContact } from "@/components/layout/contact-modal/open";
@@ -133,7 +134,7 @@ export default function HeroList({ copy = null, labels = null, projects = null }
   const edit = editableIn(copy?.docId ?? null);
   // `docId` je jen v konceptu pro Studio — tam ribbon stojí a karty jsou
   // klikací cíle projektů.
-  const editing = Boolean(copy?.docId || labels?.docId);
+  const editing = inStudio();
 
   const ribbon = useRef<DepthRibbonHandle>(null);
   // Kolečko kdekoli v sekci jede po dráze (i nad nadpisem) — stránka nescrolluje.

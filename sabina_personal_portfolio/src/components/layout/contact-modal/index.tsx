@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion, useTransform, type MotionValue } from "framer-motion";
 import { editableIn, surfaceRoot, useStudioSurface } from "@c3studium/valecms/edit";
+import { inStudio } from "@/lib/editing";
 import type { CopyItem, GlobalBlock } from "@/lib/site/globals";
 import { decodeMarked } from "@/lib/site/marks";
 import Lines from "@/components/home/lines";
@@ -283,7 +284,7 @@ export default function ContactModal({ open, onClose, copy = null }: ContactModa
 
   // Stavba formuláře (build.ts): text z kouře, pole, souhlas a tlačítko
   // rámečkem a konturou. Ve Studiu stojí formulář hotový.
-  const editing = Boolean(copy?.docId);
+  const editing = inStudio();
   const build = useFormBuild({ active: isOpen, disabled: studioOpen || editing, panelRef });
   // Horní linka pásu kontaktů (CSS `--draw`), viz SlideIn.
   const channelDraw = useTransform(build.channels, channelLine);

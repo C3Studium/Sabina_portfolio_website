@@ -49,6 +49,7 @@ import {
 } from "./steps";
 import { PROCESS, PROCESS_PINNED } from "@/components/home/designer-timeline";
 import { editableDoc, editableIn } from "@c3studium/valecms/edit";
+import { inStudio } from "@/lib/editing";
 import type { ProcessDetail, ProcessStep } from "@/lib/site/home";
 import Lines, { hasLines, picture, text, type MarkedLine } from "../lines";
 import styles from "./styles.module.scss";
@@ -1025,7 +1026,7 @@ export default function Process({
     (node: HTMLElement | null) => registry.register("process-hint", node, NO_SNAP),
     [registry],
   );
-  const editing = Boolean(copy?.docId);
+  const editing = inStudio();
   const narrow = useSyncExternalStore(subscribeNarrow, readNarrow, () => false);
   // Hotový stav bez stavby a bez myši: Studio, úzké okno a okno sekce.
   const still = editing || narrow || popup;

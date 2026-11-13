@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { editableIn } from "@c3studium/valecms/edit";
+import { inStudio } from "@/lib/editing";
 import type { CopyItem, GlobalBlock } from "@/lib/site/globals";
 import { useRegisterRef } from "@/providers/RefContext";
 import MeasureText from "@/components/common/measure-text";
@@ -203,7 +204,7 @@ export default function Header({ onContactClick, contactOpen = false, onContactC
   // obejme — jméno, o kousek později příjmení. Bez úvodu (`?nopl=1`,
   // omezený pohyb) ho pustí brána `go`. Ve Studiu zůstává obyčejným
   // textem: překryv ho čte a přepisuje přímo v DOMu.
-  const editing = Boolean(copy?.docId);
+  const editing = inStudio();
   const { go } = useGate();
   const nameIn = useIntroAt(LOGO.name) || go;
   const surnameIn = useIntroAt(LOGO.name + 0.15) || go;

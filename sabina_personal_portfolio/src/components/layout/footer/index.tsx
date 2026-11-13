@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { editableDoc, editableIn } from "@c3studium/valecms/edit";
+import { inStudio } from "@/lib/editing";
 import type { CopyItem, GlobalBlock, SocialLink } from "@/lib/site/globals";
 import { useRegisterRef } from "@/providers/RefContext";
 import MeasureText from "@/components/common/measure-text";
@@ -163,7 +164,7 @@ export default function Footer({ copy = null, socials = null }: FooterProps) {
   const edit = editableIn(copy?.docId ?? null);
   const items = copy?.items;
   // Ve Studiu bez MeasureText — překryv čte a přepisuje text přímo v DOMu.
-  const editing = Boolean(copy?.docId);
+  const editing = inStudio();
   const brandRef = useRegisterRef("footer.brand", { pad: PAD.brand });
   const links: SocialLink[] = socials?.length
     ? socials

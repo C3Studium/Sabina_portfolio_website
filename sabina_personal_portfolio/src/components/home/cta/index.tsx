@@ -14,6 +14,7 @@ import { openContact } from "@/components/layout/contact-modal/open";
 import { BuildFrame, SketchText, softMask } from "@/components/home/info/reveal";
 import { ease, within, type Window } from "@/components/home/info/choreography";
 import { editableDoc, editableIn } from "@c3studium/valecms/edit";
+import { inStudio } from "@/lib/editing";
 import type { HeroWord, Reference } from "@/lib/site/home";
 import { lerp, PORTRAIT_PHONE, PORTRAIT_TABLET, useLandscapeFluid, useMedia } from "@/lib/fluid";
 import Lines, {
@@ -490,7 +491,7 @@ export default function Cta({
   // Nadpis je pole `title` bloku (dřív nadtitulek); dlouhá otázka
   // z `headline` se už nekreslí.
   const title = text(copy?.eyebrow, FALLBACK.title);
-  const editing = Boolean(copy?.docId);
+  const editing = inStudio();
   const mark = copy?.labelMark;
   const lead = line(AT.lead, FALLBACK.lead);
   const action = text(copy?.action, FALLBACK.action);
