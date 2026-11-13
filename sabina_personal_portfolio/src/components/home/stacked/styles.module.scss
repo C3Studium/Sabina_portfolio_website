@@ -135,6 +135,27 @@ $line: rgba(var(--snow-rgb), 0.14);
 }
 
 .hero {
+  // Bannery z úvodu za portrétem (src/motion/intro/IntroBanners.tsx) přes
+  // celou sekci, pod nadpisem i portrétem; nahoře je tlumí maska, ať
+  // nezalezou do nadpisu. Plátno je absolutní — šířku stránky nemění.
+  .introBanners {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+    mask-image: linear-gradient(180deg, transparent 0, transparent 26%, rgba(0, 0, 0, 0.55) 42%, #000 58%);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, transparent 26%, rgba(0, 0, 0, 0.55) 42%, #000 58%);
+  }
+
+  .display,
+  .portrait {
+    position: relative;
+    z-index: 1;
+  }
+
   .portrait {
     width: 78%;
     margin: 2rem auto 0;

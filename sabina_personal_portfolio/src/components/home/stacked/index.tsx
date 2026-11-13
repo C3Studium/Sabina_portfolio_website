@@ -7,9 +7,15 @@
 //
 // Kotvy sekcí (#sluzby, #proces, #spoluprace) sedí s menu (section-popup/open).
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type Ref } from "react";
 import { useMotionValue } from "framer-motion";
 import dynamic from "next/dynamic";
+import IntroBanners from "@/motion/intro/IntroBanners";
+import { BANNERS_IN } from "@/motion/intro/timeline";
+import { useIntroAt, useIntroRan } from "@/motion/intro/useIntroAt";
+import { useGate } from "@/motion/LoadProvider";
+import { usePerformance } from "@/providers/PerformanceProvider";
+import { inStudio } from "@/lib/editing";
 import Image from "next/image";
 import Link from "next/link";
 import type { FlexControls } from "@/components/3D/FlexCarousel";
@@ -54,9 +60,9 @@ function Kicker({ no, children }: { no?: string; children: ReactNode }) {
   );
 }
 
-function Picture({ image, sizes = "(max-width: 600px) 80vw, 40vw", className }: { image: Img; sizes?: string; className?: string }) {
+function Picture({ image, sizes = "(max-width: 600px) 80vw, 40vw", className, ref }: { image: Img; sizes?: string; className?: string; ref?: Ref<HTMLSpanElement> }) {
   return (
-    <span className={className ? `${styles.picture} ${className}` : styles.picture} style={{ "--ar": ratio(image) } as CSSProperties}>
+    <span ref={ref} className={className ? `${styles.picture} ${className}` : styles.picture} style={{ "--ar": ratio(image) } as CSSProperties}>
       <Image src={image.src} alt={image.alt} fill sizes={sizes} />
     </span>
   );
@@ -95,6 +101,9 @@ export function HeroStacked({ copy, projects }: { copy?: HeroCopy | null; projec
   const items = cards.map((card) => ({
     src: card.image.src,
     alt: card.image.alt,
+    // Poměr karty od prvního snímku (engine jinak čeká na texturu).
+    width: card.image.width,
+    height: card.image.height,
     title: card.title,
     subtitle: card.tagline,
     href: card.href,
@@ -105,13 +114,38 @@ export function HeroStacked({ copy, projects }: { copy?: HeroCopy | null; projec
   const controls = useRef<FlexControls | null>(null);
   // Klepnutí na banner otevře detail s vrstvami ve 3D (study/inspector).
   const inspect = useInspect();
+  // Bannery z úvodu za portrétem (IntroBanners) — tatáž tlumená vrstva se
+  // slovy a tvary jako v plné verzi, ve smyčce. S úvodem opony podle jeho
+  // času (BANNERS_IN), bez úvodu s bránou `go`. Ve Studiu nic.
+  const portraitRef = useRef<HTMLSpanElement>(null);
+  const introRan = useIntroRan();
+  const bannersCue = useIntroAt(BANNERS_IN);
+  const { go } = useGate();
+  const { reducedMotion } = usePerformance();
+  const editing = inStudio();
   return (
     <>
       <section className={`${styles.section} ${styles.hero}`} aria-label="Úvod" data-scroll-label="Úvod">
+        {!editing && (
+          <IntroBanners
+            sources={cards.map((card) => card.image.src)}
+            area={portraitRef}
+            show={introRan ? bannersCue : go}
+            delay={introRan ? 0 : 0.5}
+            still={reducedMotion}
+            // Telefon: bannery o něco menší, spodky u spodní hrany sekce
+            // (portrét tam končí), slova a tvary přes celou šířku — nadpisu
+            // se vyhnou samy (banners.ts), vršek plátna navíc tlumí maska.
+            scale={0.82}
+            baseline={0.985}
+            fieldLeft={0.04}
+            className={styles.introBanners}
+          />
+        )}
         <h1 className={styles.display}>
           <Lines lines={rows} markClass={styles.green} />
         </h1>
-        <Picture image={portrait} className={styles.portrait} sizes="(max-width: 600px) 70vw, 35vw" />
+        <Picture ref={portraitRef} image={portrait} className={styles.portrait} sizes="(max-width: 600px) 70vw, 35vw" />
       </section>
       <section className={styles.section} aria-label="Ukázky prací" data-scroll-label="Ukázky prací">
         <Kicker>Ukázky prací</Kicker>
