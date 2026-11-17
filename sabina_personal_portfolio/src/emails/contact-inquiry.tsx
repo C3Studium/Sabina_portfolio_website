@@ -1,41 +1,57 @@
 // Nová poptávka pro Sabinu: kdo, jak se ozvat, co vybral, poznámka. Odpověď
 // na e-mail jde rovnou návštěvníkovi (Reply-To nastavuje lib/mail/contact).
+//
+// Texty jdou přepsat ve Studiu (E-maily) — `texts` jsou přepisy nad výchozím
+// zněním z ./texts.ts; bez nich (náhled `pnpm email`) platí výchozí.
 
 import { Section, Text } from "@react-email/components";
 import { ACCENT, Button, Headline, Kicker, Lead, Note, Rows, SNOW_SOFT, Shell } from "./shell";
+import { INQUIRY, defaultsOf, fill, paragraphs, type MailTexts } from "./texts";
 import { emailOf, type ContactPayload } from "./types";
 
-export default function ContactInquiry({ name, phone, email: emailField, contact, channel, note, answers, sentAt }: ContactPayload & { sentAt?: string }) {
+const HOW: Record<string, string> = {
+  "Zavolejte mi": "zavolat",
+  "Napište e-mail": "napsat e-mail",
+  "Zpráva na WhatsApp": "napsat na WhatsApp",
+};
+
+export default function ContactInquiry({
+  name,
+  phone,
+  email: emailField,
+  contact,
+  channel,
+  note,
+  answers,
+  sentAt,
+  texts,
+}: ContactPayload & { sentAt?: string; texts?: MailTexts }) {
+  const t = { ...defaultsOf(INQUIRY.fields), ...texts };
   const email = emailOf(emailField) ?? emailOf(contact);
   const what = answers.find((a) => a.key === "what")?.values.join(", ");
   const when = answers.find((a) => a.key === "when")?.values[0];
+  const vars = { jméno: name, jak: HOW[channel] ?? channel.toLowerCase(), co: what, kontakt: contact };
+  const lead = paragraphs(fill(t.lead, vars));
+  const footer = paragraphs(fill(t.footer, vars));
   return (
     <Shell preview={`${name} — ${what || "nová poptávka"}${when ? ` · ${when.toLowerCase()}` : ""}`}>
-      <Kicker no="01">Nová poptávka{sentAt ? ` · ${sentAt}` : ""}</Kicker>
+      <Kicker no="01">
+        {fill(t.kicker, vars)}
+        {sentAt ? ` · ${sentAt}` : ""}
+      </Kicker>
       <Headline accent={name} rest={what || "Poptávka z webu"} />
-      <Lead>
-        Chce, abyste se ozvala: <b>{channel.toLowerCase()}</b>
-        {email ? (
-          <>
-            {" "}
-            — na <b>{email}</b>.
-          </>
-        ) : (
-          <>
-            {" "}
-            — <b>{contact}</b>.
-          </>
-        )}
-      </Lead>
+      {lead.map((line, i) => (
+        <Lead key={i}>{line}</Lead>
+      ))}
 
       {note.trim() ? (
         <Note>
-          <span style={{ display: "block", fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", opacity: 0.6, marginBottom: 6 }}>Poznámka od klienta</span>
+          <span style={{ display: "block", fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", opacity: 0.6, marginBottom: 6 }}>{fill(t.noteTitle, vars)}</span>
           {note.trim()}
         </Note>
       ) : null}
 
-      <Kicker no="02">Odpovědi</Kicker>
+      <Kicker no="02">{fill(t.answers, vars)}</Kicker>
       <Rows
         rows={[
           { label: "Jméno", value: name },
@@ -49,15 +65,23 @@ export default function ContactInquiry({ name, phone, email: emailField, contact
         {email ? <Button href={`mailto:${email}?subject=${encodeURIComponent("Re: vaše poptávka")}`}>Odpovědět</Button> : null}
         {/^[+\d][\d\s()-]{6,}$/.test(phone.trim()) ? <Button href={`tel:${phone.replace(/[\s()-]/g, "")}`}>Zavolat</Button> : null}
       </Section>
-      <Text style={{ margin: "22px 0 0", fontSize: 13, lineHeight: "21px", color: SNOW_SOFT }}>
-        Návštěvník dostal potvrzení{email ? "" : " jen na obrazovce (nechal telefon, ne e-mail)"}. Souhlas se zpracováním údajů{" "}
-        <span style={{ color: ACCENT }}>zaškrtl</span>.
-      </Text>
+      {footer.map((line, i) => (
+        <Text key={i} style={{ margin: i ? "6px 0 0" : "22px 0 0", fontSize: 13, lineHeight: "21px", color: SNOW_SOFT }}>
+          {i === footer.length - 1 ? (
+            <>
+              {line.replace(/zaškrtl\.?$/, "")}
+              {/zaškrtl\.?$/.test(line) ? <span style={{ color: ACCENT }}>zaškrtl.</span> : null}
+            </>
+          ) : (
+            line
+          )}
+        </Text>
+      ))}
     </Shell>
   );
 }
 
-/** Ukázková data pro náhled (`pnpm email`). */
+/** Ukázková data pro náhled (`pnpm email` i obrazovka E-maily ve Studiu). */
 ContactInquiry.PreviewProps = {
   name: "Jana Nováková",
   phone: "+420 777 123 456",

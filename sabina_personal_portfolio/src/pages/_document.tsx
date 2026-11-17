@@ -7,32 +7,29 @@ import { preloadHtmlProps } from "@c3studium/valecms/motion";
 // než styly a skripty stránky, proto inline v <head>.
 import { BOOT as MOTION_BOOT } from "@/lib/motion-preference";
 
-// Jen tvar GTM-XXXXXXX: hodnota jde do adresy skriptu v <head>.
-const GTM_ID = /^GTM-[A-Z0-9]{4,12}$/.test(process.env.NEXT_PUBLIC_GTM_ID?.trim() ?? "") ? process.env.NEXT_PUBLIC_GTM_ID!.trim() : "";
+// Značka Google (kontejner GTM) — natvrdo, ať nezávisí na proměnné ve
+// Vercelu; NEXT_PUBLIC_GTM_ID ji jen může přepsat (jen tvar GTM-XXXXXXX).
+const GTM_ID = /^GTM-[A-Z0-9]{4,12}$/.test(process.env.NEXT_PUBLIC_GTM_ID?.trim() ?? "") ? process.env.NEXT_PUBLIC_GTM_ID!.trim() : "GTM-PV9DWBCM";
 
 export default function Document() {
   return (
     <Html lang="cs" {...preloadHtmlProps()}>
       <Head>
+        {/* Značka Google, doslova jak ji Google vydává („hned za prvek <head>"):
+            skript kontejneru a pak dataLayer + gtag('js'). Jediný přídavek je
+            Consent Mode v2 před gtag('js'): výchozí stav „denied", takže bez
+            souhlasu žádné cookies; providers/Analytics po kliknutí v liště
+            pošle „granted". */}
+        <script async src={`https://www.googletagmanager.com/gtm.js?id=${GTM_ID}`} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "\n  window.dataLayer = window.dataLayer || [];\n  function gtag(){dataLayer.push(arguments);}\n" +
+              "  gtag('consent', 'default', {ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',functionality_storage:'granted',security_storage:'granted',wait_for_update:500});\n" +
+              "  gtag('set', 'ads_data_redaction', true);\n  gtag('js', new Date());\n",
+          }}
+        />
         <script dangerouslySetInnerHTML={{ __html: MOTION_BOOT }} />
-        {/* Google Tag Manager hned v <head>, jak to Google chce (jinak jeho
-            kontrola značku „nevidí"). Měření ale začíná až po souhlasu:
-            Consent Mode v2 má výchozí stav „denied" dřív, než se kontejner
-            načte — bez souhlasu žádné cookies; providers/Analytics pak po
-            kliknutí v liště pošle „granted". ID z NEXT_PUBLIC_GTM_ID. */}
-        {GTM_ID ? (
-          <>
-            <script
-              dangerouslySetInnerHTML={{
-                __html:
-                  "window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}" +
-                  'gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied",functionality_storage:"granted",security_storage:"granted",wait_for_update:500});' +
-                  'gtag("set","ads_data_redaction",true);gtag("js",new Date());',
-              }}
-            />
-            <script async src={`https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(GTM_ID)}`} />
-          </>
-        ) : null}
       </Head>
       <body>
         <Main />

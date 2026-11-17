@@ -10,6 +10,8 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 
 import '@c3studium/valecms/server/registerSchemas.js'
 import { handleCmsRequest } from '@c3studium/valecms/server/handlers/index.js'
+// Katalog e-mailů webu → obrazovka E-maily ve Studiu (src/lib/mail/catalog).
+import { mails } from '@/lib/mail/catalog'
 
 export const config = {
     api: {
@@ -20,5 +22,5 @@ export const config = {
 }
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-    return handleCmsRequest(req, res)
+    return handleCmsRequest(req, res, { mails })
 }

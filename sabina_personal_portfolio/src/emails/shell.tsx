@@ -23,8 +23,18 @@ export const LINE = "#2d3542";
 
 export const FONT = "Poppins, 'Segoe UI', Helvetica, Arial, sans-serif";
 
-/** Adresa webu pro odkazy a logo (produkce z prostředí, náhled na ostrou doménu). */
-export const siteUrl = () => (process.env.NEXT_PUBLIC_SITE_URL || "https://www.sgrafika.cz").replace(/\/+$/, "");
+/** Ostrá doména — logo a odkazy v e-mailu musí vést sem, nikdy na localhost. */
+const PRODUCTION = "https://www.sgrafika.cz";
+
+/**
+ * Adresa webu pro odkazy a logo. Z prostředí, ale `localhost` (vývoj, nebo
+ * `.env.local` zkopírovaný do Vercelu) se nikdy nepošle: v cizí schránce by
+ * logo bylo rozbitý obrázek a tlačítka by vedla nikam.
+ */
+export const siteUrl = () => {
+  const own = String(process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/+$/, "");
+  return !own || /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?$/i.test(own) ? PRODUCTION : own;
+};
 
 export function Shell({ preview, children }: { preview: string; children: ReactNode }) {
   const site = siteUrl();

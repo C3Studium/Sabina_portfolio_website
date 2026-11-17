@@ -16,9 +16,12 @@
 import { render } from "@react-email/render";
 import { createElement } from "react";
 import { Resend } from "resend";
+import { mailTexts } from "@c3studium/valecms/server/mails.js";
 import ContactConfirmation from "@/emails/contact-confirmation";
 import ContactInquiry from "@/emails/contact-inquiry";
+import { CONFIRMATION, INQUIRY, fill } from "@/emails/texts";
 import { emailOf, type ContactPayload } from "@/emails/types";
+import { mails } from "./catalog";
 
 const env = (name: string) => String(process.env[name] || "").trim();
 
@@ -37,13 +40,17 @@ export async function sendContactMails(payload: ContactPayload): Promise<SendRes
   const customer = emailOf(payload.email) ?? emailOf(payload.contact);
   const sentAt = stamp();
 
-  const inquiry = createElement(ContactInquiry, { ...payload, sentAt });
+  // Texty ze Studia (E-maily) — přepis nad výchozím zněním z src/emails/texts.
+  // Bez databáze přijde výchozí; obě čtení naráz, ať poptávka nečeká dvakrát.
+  const [ownerCopy, customerCopy] = await Promise.all([mailTexts(mails, INQUIRY.key), mailTexts(mails, CONFIRMATION.key)]);
+
+  const inquiry = createElement(ContactInquiry, { ...payload, sentAt, texts: ownerCopy.texts });
   const what = payload.answers.find((a) => a.key === "what")?.values.join(", ");
   const owner = await resend.emails.send({
     from,
     to,
     replyTo: customer ?? undefined,
-    subject: `Poptávka: ${payload.name}${what ? ` — ${what}` : ""}`,
+    subject: fill(ownerCopy.subject, { jméno: payload.name, co: what }),
     html: await render(inquiry),
     text: await render(inquiry, { plainText: true }),
   });
@@ -51,12 +58,12 @@ export async function sendContactMails(payload: ContactPayload): Promise<SendRes
 
   let customerId: string | undefined;
   if (customer) {
-    const confirmation = createElement(ContactConfirmation, payload);
+    const confirmation = createElement(ContactConfirmation, { ...payload, texts: customerCopy.texts });
     const res = await resend.emails.send({
       from,
       to: customer,
       replyTo: to,
-      subject: "Poptávka dorazila — ozvu se do 24 hodin",
+      subject: fill(customerCopy.subject, { jméno: payload.name.trim().split(/\s+/)[0] }),
       html: await render(confirmation),
       text: await render(confirmation, { plainText: true }),
     });
