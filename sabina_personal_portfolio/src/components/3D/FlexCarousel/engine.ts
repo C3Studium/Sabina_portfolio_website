@@ -143,6 +143,8 @@ export type Preset = keyof typeof BEND_PRESETS;
 const FIT_ASPECT: Partial<Record<Fit, number>> = { portrait: 0.75, square: 1, landscape: 4 / 3 };
 const TAPS = 12;
 const PIXEL_BUDGET = 4.5e6;
+// Nejkratší rozestup snímků (ms): 60 fps s tolerancí 2 ms na 120 Hz displeji.
+const FRAME_MIN_MS = 1000 / 60 - 2;
 // Dotyk: strop DPR (iPhone má DPR 3 a sdílí GPU s celou stránkou). Platí
 // i při každém resize — dřív ho resize přepsal zpátky na 2.
 const TOUCH_DPR = 1.5;
@@ -908,6 +910,12 @@ export function createFlexCarousel(
   const frame = (now: number) => {
     raf = 0;
     if (!alive) return;
+    // Strop 60 fps: na displeji 120 Hz (MacBook Pro) by se kreslilo dvakrát
+    // tolik snímků za stejný pohyb a GPU by chybělo všemu ostatnímu.
+    if (now - last < FRAME_MIN_MS) {
+      if (visible) raf = requestAnimationFrame(frame);
+      return;
+    }
     const s = settingsRef.current;
     const dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000));
     last = now;

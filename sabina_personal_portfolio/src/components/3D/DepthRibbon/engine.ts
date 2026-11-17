@@ -27,6 +27,10 @@ import { isTouchDevice, releaseContext, sceneImage } from "@/lib/device";
 // plné fotky v šířce 640 a bez sazby při posunu (druhé plátno přes celou
 // obrazovku). Obrázků je na dotyku polovina (projects/hero-list).
 const TOUCH = { atlas: 1024, dpr: 1, image: 640, photos: 2, cards: 28 };
+// Nejvýš tolik pixelů plátna (šířka × výška × dpr²) — viz resize.
+const PIXEL_BUDGET = 4.5e6;
+// Nejkratší rozestup snímků (ms): 60 fps s tolerancí 2 ms na 120 Hz displeji.
+const FRAME_MIN_MS = 1000 / 60 - 2;
 const DESKTOP_PHOTOS = 8;
 
 export type DepthRibbonPath = "loop" | "knot" | "wave" | "ring";
@@ -1116,9 +1120,12 @@ export const createRibbon = (
     // (přechod, nástup), uložil se zmenšený rozměr, a protože transformace
     // ResizeObserver nespustí, zůstal: plátno se natáhlo na skutečný box,
     // ale popisek karty (2D) počítal se zmenšeným — seděl menší a vlevo nahoře.
-    const nextDpr = Math.min(window.devicePixelRatio || 1, Math.max(touch ? Math.min(settings.dpr, TOUCH.dpr) : settings.dpr, 0.5));
     const nextWidth = Math.max(1, root.clientWidth);
     const nextHeight = Math.max(1, root.clientHeight);
+    // Rozpočet pixelů jako u FlexCarousel: na Retině (MacBook 1728×1117 @2 =
+    // 7,7 Mpx) by dpr 2 znamenalo čtyřnásobek práce proti monitoru 2560 @1.
+    const budgetDpr = Math.sqrt(PIXEL_BUDGET / (nextWidth * nextHeight));
+    const nextDpr = Math.min(window.devicePixelRatio || 1, Math.max(touch ? Math.min(settings.dpr, TOUCH.dpr) : settings.dpr, 0.5), Math.max(budgetDpr, 1));
     if (nextWidth === width && nextHeight === height && nextDpr === dpr) return false;
     width = nextWidth;
     height = nextHeight;
@@ -1608,6 +1615,12 @@ export const createRibbon = (
   function frame(now: number) {
     raf = 0;
     if (destroyed || lost) return;
+    // Strop 60 fps: na displeji 120 Hz (MacBook Pro) by scéna kreslila
+    // dvakrát tolik snímků za stejný pohyb a brala GPU všemu ostatnímu.
+    if (last && now - last < FRAME_MIN_MS) {
+      raf = requestAnimationFrame(frame);
+      return;
+    }
     const settings = settingsRef.current;
     const dt = last ? Math.min(Math.max((now - last) / 1000, 0), 0.05) : 1 / 60;
     last = now;

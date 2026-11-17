@@ -195,7 +195,10 @@ export type Layered = {
 
 export function createLayered(image: HTMLImageElement, map: HTMLImageElement, data: LayersData, look: Look): Layered | null {
   const canvas = document.createElement("canvas");
-  const gl = canvas.getContext("webgl2", { premultipliedAlpha: true, alpha: true, preserveDrawingBuffer: true, antialias: false });
+  // Bez `preserveDrawingBuffer`: obraz se přenáší na 2D plátno hned po
+  // vykreslení v témže kroku (draw níž), takže zachovávat ho netřeba — a v
+  // Safari každé zachování znamená kopii navíc při každém snímku.
+  const gl = canvas.getContext("webgl2", { premultipliedAlpha: true, alpha: true, preserveDrawingBuffer: false, antialias: false });
   if (!gl) return null;
   const vs = compile(gl, gl.VERTEX_SHADER, VERTEX);
   const fs = compile(gl, gl.FRAGMENT_SHADER, FRAGMENT);
@@ -280,7 +283,11 @@ export function createLayered(image: HTMLImageElement, map: HTMLImageElement, da
     count: layers.length,
     draw: (ctx, box, u, dpr, alpha) => {
       if (u <= 0 || u >= 1) return;
-      render(u, Math.max(1, Math.round(box.w * dpr)), Math.max(1, Math.round(box.h * dpr)));
+      // Přenos WebGL → 2D jde v Safari přes procesor: na Retině (dpr 2) je to
+      // 4× víc pixelů než na běžném monitoru, proto strop 1,5 — obraz je
+      // ztlumený a rozmazaný stavbou, rozdíl není vidět.
+      const glDpr = Math.min(dpr, 1.5);
+      render(u, Math.max(1, Math.round(box.w * glDpr)), Math.max(1, Math.round(box.h * glDpr)));
       ctx.globalAlpha = alpha;
       ctx.drawImage(canvas, box.x, box.y, box.w, box.h);
       ctx.globalAlpha = 1;

@@ -13,6 +13,7 @@ import type { HomeContent } from "@/lib/site/home-content";
 import { CONTACT_CLOSE_EVENT, CONTACT_OPEN_EVENT } from "@/components/layout/contact-modal/open";
 import ShaderBackground from "@/components/layout/shader-background";
 import Cursor from "@/components/common/cursor";
+import Stats from "@/components/common/stats";
 import Scrollbar from "@/components/common/scrollbar";
 import { withStudio } from "@c3studium/valecms";
 import type { GlobalCopy } from "@/lib/site/globals";
@@ -159,6 +160,8 @@ function App({ Component, pageProps, router }: AppProps) {
       <ShaderBackground />
       {/* Tečka za myší. Jen pro jemný ukazatel; na dotyku se nespustí. */}
       <Cursor />
+      {/* `?stats=1`: čísla o plynulosti do rohu (hlášení z Macu). */}
+      <Stats />
       <Header
         onContactClick={() => setContactOpen(true)}
         onContactClose={() => setContactOpen(false)}

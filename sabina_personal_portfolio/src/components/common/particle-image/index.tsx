@@ -1,5 +1,32 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+
+// Nejkratší rozestup snímků (ms): 60 fps s tolerancí 2 ms na 120 Hz displeji.
+const FRAME_MIN_MS = 1000 / 60 - 2;
+
+/**
+ * Takt plátna v režimu `frameloop="demand"`: každý snímek displeje se
+ * podívá, jestli od posledního kresleného uběhlo aspoň FRAME_MIN_MS, a jen
+ * pak si řekne o snímek (`invalidate`). Delta v `useFrame` pak kryje
+ * i přeskočené snímky, simulace jede stejnou rychlostí.
+ */
+function Ticker({ on }: { on: boolean }) {
+  const invalidate = useThree((state) => state.invalidate);
+  useEffect(() => {
+    if (!on) return undefined;
+    let raf = 0;
+    let last = 0;
+    const tick = (now: number) => {
+      raf = requestAnimationFrame(tick);
+      if (now - last < FRAME_MIN_MS) return;
+      last = now;
+      invalidate();
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [on, invalidate]);
+  return null;
+}
 import * as THREE from "three";
 import styles from "./styles.module.scss";
 
@@ -1020,7 +1047,10 @@ export default function ParticleImage({
         <Canvas
           className={styles.canvas}
           dpr={[1, Math.min(Math.max(dpr, 1), 2)]}
-          frameloop={inView && !paused ? "always" : "demand"}
+          /* Vždy „demand": snímky si říká Ticker nejvýš 60× za sekundu —
+             na displeji 120 Hz (MacBook Pro) by „always" simulovalo
+             i kreslilo dvakrát tolik snímků za stejný pohyb. */
+          frameloop="demand"
           gl={{
             antialias: false,
             alpha: true,
@@ -1028,6 +1058,7 @@ export default function ParticleImage({
             powerPreference: "high-performance",
           }}
         >
+          <Ticker on={inView && !paused} />
           {source && source.coverage > 0.01 && (
             <ParticleField
               source={source}
