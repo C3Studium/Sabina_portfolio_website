@@ -57,20 +57,22 @@ var reduced=level==="reduced";
 var root=document.documentElement;root.setAttribute("data-motion",level);
 var orig=window.matchMedia;if(typeof orig!=="function")return;
 var sys=false;try{sys=orig.call(window,Q).matches}catch(e){}
-var ls=[];
-var mql={media:Q,matches:reduced,onchange:null,
+var norm=function(s){return String(s).replace(/\\s+/g,"").toLowerCase()};
+/* Každý dotaz na prefers-reduced-motion dostane vlastní objekt: framer se
+   ptá "(prefers-reduced-motion)" bez hodnoty, jiní "(…: reduce)", někdo
+   "(…: no-preference)" (opačná polarita). Všechny se řídí volbou. */
+var made=[];
+var make=function(media,inverse){var ls=[];var o={media:media,matches:inverse?!reduced:reduced,onchange:null,
 addEventListener:function(t,f){if(t==="change"&&f)ls.push(f)},
 removeEventListener:function(t,f){ls=ls.filter(function(x){return x!==f})},
 addListener:function(f){if(f)ls.push(f)},
 removeListener:function(f){ls=ls.filter(function(x){return x!==f})},
 dispatchEvent:function(){return true}};
-var norm=function(s){return String(s).replace(/\\s+/g,"").toLowerCase()};
-window.matchMedia=function(s){return norm(s)===norm(Q)?mql:orig.call(window,s)};
-window.__motion={system:sys,set:function(next){var lv=next==="some"||next==="reduced"?next:"full";var m=lv==="reduced";mql.matches=m;
+made.push({o:o,inverse:inverse,fire:function(){var ev={matches:o.matches,media:media,type:"change"};ls.slice().forEach(function(f){try{f(ev)}catch(e){}});if(typeof o.onchange==="function")try{o.onchange(ev)}catch(e){}}});return o};
+window.matchMedia=function(s){var n=norm(s);if(n.indexOf("prefers-reduced-motion")<0)return orig.call(window,s);return make(String(s),n.indexOf("no-preference")>=0)};
+window.__motion={system:sys,set:function(next){var lv=next==="some"||next==="reduced"?next:"full";reduced=lv==="reduced";
 root.setAttribute("data-motion",lv);
-var ev={matches:m,media:Q,type:"change"};
-ls.slice().forEach(function(f){try{f(ev)}catch(e){}});
-if(typeof mql.onchange==="function")try{mql.onchange(ev)}catch(e){}
+made.forEach(function(m){m.o.matches=m.inverse?!reduced:reduced;m.fire()});
 try{window.dispatchEvent(new Event("motionchange"))}catch(e){}}};
 }catch(e){}})();`;
 
