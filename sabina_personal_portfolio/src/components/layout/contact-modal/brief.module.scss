@@ -836,3 +836,21 @@ $line: rgba(var(--charcoal-rgb), 0.22);
     gap: 0.9vh;
   }
 }
+
+// Hláška, když odeslání selže (brief.tsx) — pod pruhem s tlačítkem.
+.sendError {
+  margin: 1.2vh 0 0;
+  font-size: clamp(0.78rem, 1.3vh, 0.95rem);
+  line-height: 1.5;
+  color: #b3261e;
+}
+
+// Past na roboty: pole mimo obraz, člověk ho nevidí.
+.trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}

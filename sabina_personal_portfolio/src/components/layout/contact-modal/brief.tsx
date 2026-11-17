@@ -10,7 +10,9 @@
 // stav podkladů (logo, fotky, texty — určuje rozsah i cenu), termín
 // a rozpočet. S nimi může první odpověď rovnou obsahovat návrh postupu.
 //
-// Odeslání zatím nikam nevede (backend neexistuje) — zobrazí potvrzení.
+// Odeslání: POST /api/contact (lib/mail/contact) — Sabině poptávka, návštěvníkovi
+// potvrzení, když nechal e-mail. Pak shrnutí na obrazovce; při chybě zůstane
+// formulář s hláškou a jde to zkusit znovu.
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -122,7 +124,38 @@ export default function Brief({
   const [note, setNote] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [failed, setFailed] = useState(false);
+  // Past na roboty: skryté pole, které člověk nevidí a nevyplní.
+  const [website, setWebsite] = useState("");
   const titleId = useId();
+
+  const send = async () => {
+    setSending(true);
+    setFailed(false);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          contact: contact.trim(),
+          channel,
+          note: note.trim(),
+          agreed,
+          website,
+          answers: qs.map((x) => ({ key: x.key, label: x.label, values: answers[x.key] ?? [] })),
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean };
+      if (res.ok && data.ok) setSent(true);
+      else setFailed(true);
+    } catch {
+      setFailed(true);
+    } finally {
+      setSending(false);
+    }
+  };
 
   // Pruh se Zpět / Dál je přilepený u spodní hrany posouvaného panelu.
   // Podklad dostane, jen když opravdu visí přes obsah (bottom: -1px →
@@ -177,9 +210,19 @@ export default function Brief({
       aria-labelledby={titleId}
       onSubmit={(event) => {
         event.preventDefault();
-        if (step === last && ready) setSent(true);
+        if (step === last && ready && !sending) void send();
       }}
     >
+      <input
+        type="text"
+        name="website"
+        value={website}
+        onChange={(e) => setWebsite(e.target.value)}
+        className={styles.trap}
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+      />
       {/* Postup: čárky s názvy kroků přes celou šířku; klik na hotový krok
           se do něj vrátí. Číslo kroku stojí velké u otázky (StepHead). */}
       <div className={styles.progress}>
@@ -327,11 +370,16 @@ export default function Brief({
             <Arrow />
           </button>
         ) : (
-          <button type="submit" className={`${base.submit} ${styles.send}`} data-ready={ready ? "" : undefined} disabled={!ready}>
+          <button type="submit" className={`${base.submit} ${styles.send}`} data-ready={ready ? "" : undefined} disabled={!ready || sending} aria-busy={sending || undefined}>
             {submitBody}
           </button>
         )}
       </div>
+      {failed ? (
+        <p className={styles.sendError} role="alert">
+          Odeslání se nepovedlo. Zkuste to prosím ještě jednou — nebo mi napište rovnou na e-mail z kontaktů níž.
+        </p>
+      ) : null}
     </form>
   );
 }
