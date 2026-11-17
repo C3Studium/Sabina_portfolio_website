@@ -25,7 +25,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   motion,
   motionValue,
-  springValue,
   useAnimationFrame,
   useReducedMotion,
   type MotionValue,
@@ -71,16 +70,49 @@ const DRAG_LABEL = "Táhnout";
 const DRAG_SPREAD = 11;
 
 type Dot = {
+  /** Cíl (myš nebo roh cíle). */
   x: MotionValue<number>;
   y: MotionValue<number>;
+  /** Poloha tečky na pružině — píše ji smyčka níž. */
   springX: MotionValue<number>;
   springY: MotionValue<number>;
+  vx: number;
+  vy: number;
 };
 
-const createDot = (): Dot => {
-  const x = motionValue(0);
-  const y = motionValue(0);
-  return { x, y, springX: springValue(x, SPRING), springY: springValue(y, SPRING) };
+const createDot = (): Dot => ({
+  x: motionValue(0),
+  y: motionValue(0),
+  springX: motionValue(0),
+  springY: motionValue(0),
+  vx: 0,
+  vy: 0,
+});
+
+// Vlastní pružina místo `springValue` z frameru: ta při každém novém cíli
+// (každý pohyb myši) rozjede novou animaci z odhadnuté rychlosti, a odhad
+// závisí na délce snímku — na 120 Hz displeji (MacBook) tečka jela jinak než
+// na 60 Hz. Tohle integruje stejnou rovnici pevným krokem, takže se chová
+// stejně při jakémkoli taktu displeje.
+const SPRING_STEP = 1 / 240;
+const stepSpring = (dot: Dot, dt: number) => {
+  const k = SPRING.stiffness / SPRING.mass;
+  const c = SPRING.damping / SPRING.mass;
+  let px = dot.springX.get();
+  let py = dot.springY.get();
+  const tx = dot.x.get();
+  const ty = dot.y.get();
+  let remaining = Math.min(dt, 0.05);
+  while (remaining > 0) {
+    const h = Math.min(SPRING_STEP, remaining);
+    remaining -= h;
+    dot.vx += (k * (tx - px) - c * dot.vx) * h;
+    dot.vy += (k * (ty - py) - c * dot.vy) * h;
+    px += dot.vx * h;
+    py += dot.vy * h;
+  }
+  dot.springX.set(px);
+  dot.springY.set(py);
 };
 
 const elementRect = (target: RefTarget): SnapRect => {
@@ -190,6 +222,8 @@ export default function Cursor() {
           dot.y.jump(clientY);
           dot.springX.jump(clientX);
           dot.springY.jump(clientY);
+          dot.vx = 0;
+          dot.vy = 0;
         });
         lastApplied = performance.now();
         setVisible(true);
@@ -255,19 +289,12 @@ export default function Cursor() {
   // Nad cílem se jeho obdélník může hýbat i bez pohybu myši (písmeno po
   // šťouchnutí poskakuje, MeasureText přepne písmeno) — rohy se proto
   // přepočítávají každý snímek. Mimo cíl smyčka nic nedělá.
-  useAnimationFrame(() => {
+  // Tatáž smyčka integruje pružiny teček (stepSpring) — mimo omezený pohyb,
+  // tam jedou tečky na cíl přímo.
+  useAnimationFrame((_, delta) => {
     if (hovered.current) aim();
+    if (!reduced && started.current) dots.forEach((dot) => stepSpring(dot, delta / 1000));
   });
-
-  // Pružiny jsou mimo React — při odmountování se musí odpojit ručně.
-  useEffect(
-    () => () =>
-      dots.forEach((dot) => {
-        dot.springX.destroy();
-        dot.springY.destroy();
-      }),
-    [dots],
-  );
 
   return (
     <>

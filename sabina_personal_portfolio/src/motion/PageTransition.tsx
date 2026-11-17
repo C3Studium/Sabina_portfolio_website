@@ -17,6 +17,7 @@
 
 import { useState, type CSSProperties } from "react";
 import { PageVeil, type VeilSceneProps } from "@c3studium/valecms/motion";
+import { projectNameFor } from "@/lib/project-names";
 
 import styles from "./PageTransition.module.scss";
 
@@ -40,13 +41,14 @@ const TIMES = { cover: 700, walk: 80, final: 200, reveal: 0.75 };
 // celý nástup písmen trval nejvýš ~0,26 s.
 const LETTER_STAGGER = { max: 0.035, total: 0.26 };
 
-/** Jméno cílové stránky uprostřed přechodu. Projekt má jen slug (bez
- *  diakritiky), proto obecně „Případová studie". Jinde bez jména. */
+/** Jméno cílové stránky uprostřed přechodu. Projekt: jeho jméno, pokud ho
+ *  stránka už vykreslila (lib/project-names — scéna Portfolio, karusel
+ *  hera), jinak obecně „Případová studie". Jinde bez jména. */
 const nameFor = (path: string): string | null => {
   const clean = path.split(/[?#]/)[0].replace(/\/+$/, "") || "/";
   if (clean === "/") return "Úvod";
   if (clean === "/projects") return "Portfolio";
-  if (clean.startsWith("/projects/")) return "Případová studie";
+  if (clean.startsWith("/projects/")) return projectNameFor(clean) ?? "Případová studie";
   if (clean === "/about") return "O mně";
   return null;
 };

@@ -491,6 +491,9 @@ export function createFlexCarousel(
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   // „Méně pohybu" (lib/motion-preference): nic se nehýbe samo — autoplay stojí.
   const ambient = (document.documentElement.getAttribute("data-motion") ?? "full") === "full";
+  // Strop 60 fps jen mimo „Plný pohyb": při plném pohybu jede scéna taktem
+  // displeje (120 Hz na MacBooku), stejně jako na Windows jeho taktem.
+  const capFrames = !ambient;
   const anisotropy = renderer.getExtension("EXT_texture_filter_anisotropic") ? 8 : 0;
 
   let slots: Slot[] = [];
@@ -912,9 +915,9 @@ export function createFlexCarousel(
   const frame = (now: number) => {
     raf = 0;
     if (!alive) return;
-    // Strop 60 fps: na displeji 120 Hz (MacBook Pro) by se kreslilo dvakrát
-    // tolik snímků za stejný pohyb a GPU by chybělo všemu ostatnímu.
-    if (now - last < FRAME_MIN_MS) {
+    // Strop 60 fps („Méně pohybu" / „Bez pohybu"): na 120 Hz displeji
+    // polovina snímků za stejný pohyb, GPU zbyde na ostatní.
+    if (capFrames && now - last < FRAME_MIN_MS) {
       if (visible) raf = requestAnimationFrame(frame);
       return;
     }

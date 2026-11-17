@@ -1617,9 +1617,9 @@ export const createRibbon = (
   function frame(now: number) {
     raf = 0;
     if (destroyed || lost) return;
-    // Strop 60 fps: na displeji 120 Hz (MacBook Pro) by scéna kreslila
-    // dvakrát tolik snímků za stejný pohyb a brala GPU všemu ostatnímu.
-    if (last && now - last < FRAME_MIN_MS) {
+    // Strop 60 fps jen mimo „Plný pohyb" (settings.ambient): při plném
+    // pohybu jede scéna taktem displeje jako na Windows.
+    if (!settingsRef.current.ambient && last && now - last < FRAME_MIN_MS) {
       raf = requestAnimationFrame(frame);
       return;
     }

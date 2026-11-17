@@ -21,6 +21,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { readMotionLevel, subscribeMotion } from "@/lib/motion-preference";
+import { rememberProjectName } from "@/lib/project-names";
 import {
   createRibbon,
   MAX_ITEMS,
@@ -232,6 +233,11 @@ const DepthRibbon = forwardRef<DepthRibbonHandle, DepthRibbonProps>(function Dep
   const reduced = useSyncExternalStore(subscribeToMotion, readMotion, () => false);
   // „Méně pohybu": scéna nejede a neotáčí se sama, odpovídá jen na ruku.
   const motionLevel = useSyncExternalStore(subscribeMotion, readMotionLevel, () => "full" as const);
+  // Jména projektů pro závoj přechodu (lib/project-names): odchod ze scény
+  // na projekt pak nese „Věcičky", ne obecné „Případová studie".
+  useEffect(() => {
+    items.forEach((item) => rememberProjectName(item.href, item.title ?? item.alt));
+  }, [items]);
   const [focused, setFocused] = useState(-1);
   const [lead, setLead] = useState(0);
   const [failed, setFailed] = useState(false);

@@ -5,6 +5,7 @@ import { motion, useMotionValue, useMotionValueEvent, useScroll, useTransform } 
 import { useRefRegistry } from "@/providers/RefContext";
 import { editable, editableIn, editableDoc } from "@c3studium/valecms/edit";
 import { inStudio } from "@/lib/editing";
+import { rememberProjectName } from "@/lib/project-names";
 import type { Project } from "@/lib/site/projects";
 import { usePerformance } from "@/providers/PerformanceProvider";
 import { cvh, lerp, PORTRAIT_PHONE, PORTRAIT_TABLET, useLandscapeFluid, useMedia, viewportHeight } from "@/lib/fluid";
@@ -342,6 +343,10 @@ export default function Hero({
       // („Zjistit víc", „To potřebuji") a stejný text by se tloukl.
       cta: "Prohlédnout projekt",
     };
+  });
+  // Jména projektů pro závoj přechodu (lib/project-names).
+  useEffect(() => {
+    orbitItems.forEach((item) => rememberProjectName(item.href, item.title));
   });
 
   const { scrollYProgress } = useScroll({

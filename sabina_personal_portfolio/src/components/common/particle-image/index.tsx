@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { readMotionLevel } from "@/lib/motion-preference";
 
 // Nejkratší rozestup snímků (ms): 60 fps s tolerancí 2 ms na 120 Hz displeji.
 const FRAME_MIN_MS = 1000 / 60 - 2;
@@ -14,11 +15,14 @@ function Ticker({ on }: { on: boolean }) {
   const invalidate = useThree((state) => state.invalidate);
   useEffect(() => {
     if (!on) return undefined;
+    // Strop 60 fps jen mimo „Plný pohyb" (lib/motion-preference); při plném
+    // pohybu každý snímek displeje, jako na Windows.
+    const cap = readMotionLevel() !== "full";
     let raf = 0;
     let last = 0;
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
-      if (now - last < FRAME_MIN_MS) return;
+      if (cap && now - last < FRAME_MIN_MS) return;
       last = now;
       invalidate();
     };
