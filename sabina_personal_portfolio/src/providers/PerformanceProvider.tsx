@@ -58,14 +58,22 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         // Jádra a paměť jsou hrubý odhad, ne měřítko. Stačí ale na rozhodnutí
         // "pustit tuhle animaci vůbec", což je jediné, k čemu to tu slouží.
-        const cores = navigator.hardwareConcurrency || 4
-        const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 4
+        // Chybějící údaj NENÍ „4": Safari (Mac i iPad) a Firefox `deviceMemory`
+        // vůbec nemají a starší Safari ani `hardwareConcurrency` — s náhradou 4
+        // vycházel každý Mac jako slabý stroj a přišel o shader pozadí
+        // i částice. Slabý je jen stroj, který nízké číslo doopravdy hlásí;
+        // bez údajů se dotyk (telefon, tablet) bere jako slabý a počítač jako
+        // schopný.
+        const cores = navigator.hardwareConcurrency
+        const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory
+        const coarse = window.matchMedia?.('(pointer: coarse)').matches
+        const reportedLow = (typeof cores === 'number' && cores <= 4) || (typeof memory === 'number' && memory <= 4)
+        const unknown = typeof cores !== 'number' && typeof memory !== 'number'
         // Údaje zařízení zná jen prohlížeč — nastavují se po mountu (záměr,
         // server je nezná; viz komentář u reducedMotion).
         // eslint-disable-next-line react-hooks/set-state-in-effect -- údaje zařízení po mountu
-        setLowPower(cores <= 4 || memory <= 4)
+        setLowPower(reportedLow || (unknown && Boolean(coarse)))
 
-        const coarse = window.matchMedia?.('(pointer: coarse)').matches
         setTouch(Boolean(coarse) || navigator.maxTouchPoints > 0)
         setMobile(window.matchMedia?.('(max-width: 900px)').matches ?? false)
     }, [])
