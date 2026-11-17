@@ -468,7 +468,7 @@ $text: var(--snow);
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+:global(html[data-motion="reduced"]) {
   .dim,
   .shared,
   .shared > :not(.sharedList),

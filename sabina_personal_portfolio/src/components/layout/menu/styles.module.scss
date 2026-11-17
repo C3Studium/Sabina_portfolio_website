@@ -329,7 +329,7 @@ $pad: clamp(1.25rem, 6vw, 3.5rem);
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+:global(html[data-motion="reduced"]) {
   .close,
   .linkArrow {
     transition: none;

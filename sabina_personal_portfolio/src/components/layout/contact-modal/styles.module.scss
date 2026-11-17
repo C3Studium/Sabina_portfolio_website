@@ -1599,7 +1599,7 @@ button.channelLink {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+:global(html[data-motion="reduced"]) {
   .scrollHintArrow svg {
     animation: none;
   }

@@ -333,12 +333,14 @@ $leave: cubic-bezier(0.55, 0, 0.75, 0.2);
     transform 0.7s $ease 0.3s;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  :global(html[data-veil="1"] body main) {
-    transform: none !important;
-    animation: none !important;
-  }
+// Klidnější verze (volba návštěvníka, lib/motion-preference). Selektor s
+// <html> nesmí být vnořený — vyšlo by `html[...] html[...]`.
+:global(html[data-motion="reduced"][data-veil="1"] body main) {
+  transform: none !important;
+  animation: none !important;
+}
 
+:global(html[data-motion="reduced"]) {
   .letter,
   .rule,
   .shape,

@@ -133,7 +133,7 @@ $tip: 5deg;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+:global(html[data-motion="reduced"]) {
   .rig,
   .frame rect {
     animation: none;

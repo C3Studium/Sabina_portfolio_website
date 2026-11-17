@@ -144,7 +144,7 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+:global(html[data-motion="reduced"]) {
   .caption,
   .title {
     animation: none;

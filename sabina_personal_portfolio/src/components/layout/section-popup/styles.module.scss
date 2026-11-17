@@ -85,7 +85,7 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+:global(html[data-motion="reduced"]) {
   .close {
     transition: none;
   }

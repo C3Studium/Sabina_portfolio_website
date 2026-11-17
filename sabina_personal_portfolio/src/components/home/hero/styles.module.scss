@@ -350,7 +350,7 @@ $track-width: 160vw;
 
 /* ---------- Responsivita ---------- */
 
-@media (prefers-reduced-motion: reduce) {
+:global(html[data-motion="reduced"]) {
   .card,
   .cardCtaArrow svg,
   .galleryNavButton {

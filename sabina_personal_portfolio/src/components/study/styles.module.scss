@@ -116,7 +116,7 @@ $chapters: 30px;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+:global(html[data-motion="reduced"]) {
   .board,
   .canvasFrame[data-go] .board {
     opacity: 1;
@@ -3680,7 +3680,7 @@ $px: var(--cam-s);
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+:global(html[data-motion="reduced"]) {
   .construct * {
     animation: none !important;
   }
@@ -4093,7 +4093,7 @@ $px: var(--cam-s);
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+:global(html[data-motion="reduced"]) {
   .backdrop *,
   .work[data-picked] {
     animation: none !important;

@@ -22,6 +22,7 @@ import Preloader from "@/motion/Preloader";
 import PageTransition from "@/motion/PageTransition";
 import ScenePreload from "@/motion/ScenePreload";
 import CookieBanner from "@/providers/CookieBanner";
+import MotionChoice from "@/providers/MotionChoice";
 import { Toaster } from "sonner";
 import { CookiesProvider } from "@/providers/CookiesProvider";
 import { PerformanceProvider } from "@/providers/PerformanceProvider";
@@ -197,4 +198,4 @@ function App({ Component, pageProps, router }: AppProps) {
   );
 }
 
-export default withStudio(App, { chrome: [Preloader, PageTransition, CookieBanner, Toaster], providers: [CookiesProvider, PerformanceProvider, LoadProvider, RefProvider] })
+export default withStudio(App, { chrome: [Preloader, PageTransition, CookieBanner, MotionChoice, Toaster], providers: [CookiesProvider, PerformanceProvider, LoadProvider, RefProvider] })

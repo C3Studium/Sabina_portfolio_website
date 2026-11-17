@@ -258,9 +258,11 @@ $layer-v: (
   }
 }
 
-/// The OS-level motion preference.
+/// Klidnější verze — volba NÁVŠTĚVNÍKA (lib/motion-preference), ne systému:
+/// `<html data-motion="reduced">`. Jen pro bloky na nejvyšší úrovni souboru
+/// (uvnitř pravidla by vyšlo `.x html[...]`).
 @mixin reduced-motion {
-  @media (prefers-reduced-motion: reduce) {
+  :global(html[data-motion="reduced"]) {
     @content;
   }
 }

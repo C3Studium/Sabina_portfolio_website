@@ -46,7 +46,7 @@
   user-select: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
+:global(html[data-motion="reduced"]) {
   .item {
     transition: none;
   }

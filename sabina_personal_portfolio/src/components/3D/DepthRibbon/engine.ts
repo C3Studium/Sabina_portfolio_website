@@ -1661,7 +1661,10 @@ export const createRibbon = (
       phaseClock = 0;
     }
     const pullTarget = tour === "overview" || phase === "overview" || holding || peek ? 1 : 0;
-    [pull, pullV] = springTo(pull, pullV, pullTarget, dt, reduced ? 0.05 : 1.7);
+    // „Omezit pohyb" vypíná pohyb, který si nikdo nevyžádal (jízda, glyfy,
+    // vlnění) — odpověď na scroll, tah a klik zůstává plynulá. Okamžité
+    // pružiny (0,02 s) dělaly z rychlého scrollu skoky kartami přes obrazovku.
+    [pull, pullV] = springTo(pull, pullV, pullTarget, dt, 1.7);
 
     const scrolled = time - wheelAt < 1.2;
     const stopped = hovering || !!focus || scrolled;
@@ -1669,14 +1672,14 @@ export const createRibbon = (
     const cruise = reduced || settings.paused ? 0 : settings.speed;
     const dragging = !!press && press.moved && pull < 0.5;
     if (!dragging) {
-      const glide = pendingTravel * (1 - Math.exp(-dt / (reduced ? 0.02 : 0.22)));
+      const glide = pendingTravel * (1 - Math.exp(-dt / 0.22));
       pendingTravel -= glide;
       if (Math.abs(pendingTravel) < 1e-4) pendingTravel = 0;
       s += (cruise * Math.max(rate, 0) + velocity) * dt + glide;
       velocity *= Math.exp(-dt * 1.8);
     }
     if (pendingYaw !== 0) {
-      const turn = pendingYaw * (1 - Math.exp(-dt / (reduced ? 0.02 : 0.16)));
+      const turn = pendingYaw * (1 - Math.exp(-dt / 0.16));
       pendingYaw -= turn;
       if (Math.abs(pendingYaw) < 1e-4) pendingYaw = 0;
       orbitYaw += turn;
@@ -1781,9 +1784,9 @@ export const createRibbon = (
     }
 
     if (focus) {
-      [focus.e, focus.v] = springTo(focus.e, focus.v, focus.target, dt, reduced ? 0.08 : 1.25);
+      [focus.e, focus.v] = springTo(focus.e, focus.v, focus.target, dt, 1.25);
       if (focus.target === 0) {
-        [focus.handoff, focus.handoffV] = springTo(focus.handoff, focus.handoffV, 1, dt, reduced ? 0.05 : 0.6);
+        [focus.handoff, focus.handoffV] = springTo(focus.handoff, focus.handoffV, 1, dt, 0.6);
       }
       const cardShape = shapeOfCard(focus.card);
       [focus.aspect, focus.aspectV] = springTo(
@@ -1791,7 +1794,7 @@ export const createRibbon = (
         focus.aspectV,
         focus.target ? photoUniforms.uImageAspect.value : cardShape,
         dt,
-        reduced ? 0.08 : 1.1,
+        1.1,
       );
       cardPosition(focus.card, focusPose.target);
       focusPose.dir.copy(focus.dir);
@@ -1859,7 +1862,7 @@ export const createRibbon = (
         liftSpring.velocity,
         liftTarget,
         dt,
-        reduced ? 0.05 : 0.35,
+        0.35,
       );
       if (Math.abs(liftSpring.value - liftTarget) > 1e-3 || Math.abs(liftSpring.velocity) > 1e-3) busy = true;
     }
