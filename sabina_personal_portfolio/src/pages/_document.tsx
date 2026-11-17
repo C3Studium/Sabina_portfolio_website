@@ -29,6 +29,8 @@ export default function Document() {
               "  gtag('set', 'ads_data_redaction', true);\n  gtag('js', new Date());\n",
           }}
         />
+        {/* Ahrefs Web Analytics — bez cookies, proto bez souhlasu, v <head>. */}
+        <script src="https://analytics.ahrefs.com/analytics.js" data-key="8oIyju58qgpQTaDnZqUDQw" async />
         <script dangerouslySetInnerHTML={{ __html: MOTION_BOOT }} />
       </Head>
       <body>

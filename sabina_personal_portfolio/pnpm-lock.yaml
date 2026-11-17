@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@c3studium/valecms':
-        specifier: 0.1.63
-        version: 0.1.63(next@16.3.0(@babel/core@7.29.7)(@types/node@20.19.43)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        specifier: 0.1.64
+        version: 0.1.64(next@16.3.0(@babel/core@7.29.7)(@types/node@20.19.43)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@react-email/components':
         specifier: ^1.0.12
         version: 1.0.12(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -170,8 +170,8 @@ packages:
     resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
     engines: {node: '>=6.9.0'}
 
-  '@c3studium/valecms@0.1.63':
-    resolution: {integrity: sha512-+6G1Cgit4g4CU8g7tHyhDKwAqUf2VutDphCOqul1Uf+Lc+ToDRWDeLE0Ss7FY16rCWeNL7Tm0wb3BFVJdUn5mQ==, tarball: https://npm.pkg.github.com/download/@c3studium/valecms/0.1.63/ac36e20eb8104b86c265ca948ed79d6743d60b74}
+  '@c3studium/valecms@0.1.64':
+    resolution: {integrity: sha512-ggZjMSDR/Gk497y/mXalag+ISnWf4VPIpwr/+cpsIILzyboFZfuizESBZZ+TuNYrfg5wOaDT21U9bAZt9OzCGg==, tarball: https://npm.pkg.github.com/download/@c3studium/valecms/0.1.64/254a5473cb2ffbbca2c1a9e96171b316e0a98fd8}
     engines: {node: '>=18.18'}
     hasBin: true
     peerDependencies:
@@ -3192,7 +3192,7 @@ snapshots:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
 
-  '@c3studium/valecms@0.1.63(next@16.3.0(@babel/core@7.29.7)(@types/node@20.19.43)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@c3studium/valecms@0.1.64(next@16.3.0(@babel/core@7.29.7)(@types/node@20.19.43)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
       next: 16.3.0(@babel/core@7.29.7)(@types/node@20.19.43)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1)
       react: 19.2.8

@@ -13,10 +13,9 @@
 // sáhnout, proto se tam souhlas nikdy neudělí.
 
 import { useEffect } from "react";
+import { ClarityTag } from "@c3studium/valecms/stats";
 import { useCookies } from "@/providers/CookiesProvider";
 import { inStudio } from "@/lib/editing";
-
-const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID?.trim() || "";
 
 type ConsentState = "granted" | "denied";
 
@@ -59,8 +58,10 @@ export default function Analytics() {
   const analytics = ready && !editing && allows("analytics");
   const marketing = ready && !editing && allows("marketing");
 
+  // Kontejner GTM je v <head> vždycky (ID natvrdo v _document), takže update
+  // souhlasu jde po každém rozhodnutí v liště.
   useEffect(() => {
-    if (!GTM_ID || !ready) return;
+    if (!ready) return;
     consentUpdate({
       analytics_storage: consentOf(analytics),
       ad_storage: consentOf(marketing),
@@ -70,5 +71,7 @@ export default function Analytics() {
     if (!analytics) clearAnalyticsCookies();
   }, [ready, analytics, marketing]);
 
-  return null;
+  // Microsoft Clarity (Statistiky ve Studiu): tag až po souhlasu s analytikou,
+  // ID z CLARITY_PROJECT_ID. Bez ID se nic nenačte.
+  return <ClarityTag enabled={analytics} />;
 }
