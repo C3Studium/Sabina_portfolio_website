@@ -16,20 +16,30 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { editableDoc } from "@c3studium/valecms/edit";
+import type { BriefContact, BriefStep } from "@/lib/site/brief";
 import base from "./styles.module.scss";
 import styles from "./brief.module.scss";
 import { OptionIcon } from "./brief-icons";
 
+type Option = { label: string; icon?: string };
+
 type Question = {
+  /** Id dokumentu `briefStep` — jen v rámu Studia (anotace). */
+  id?: string;
   key: string;
   label: string;
   title: string;
   hint: string;
   multi?: boolean;
-  options: string[];
+  options: Option[];
 };
 
-const questions = (types: string[]): Question[] => [
+// Otázky z kódu — záloha, dokud modul „Poptávka" ve Studiu nemá kroky.
+const fallbackQuestions = (types: string[]): Question[] =>
+  FALLBACK_QUESTIONS(types).map((q) => ({ ...q, options: q.options.map((label) => ({ label })) }));
+
+const FALLBACK_QUESTIONS = (types: string[]) => [
   {
     key: "who",
     label: "Kdo jste",
@@ -69,7 +79,16 @@ const questions = (types: string[]): Question[] => [
   },
 ];
 
-const CHANNELS = ["Zavolejte mi", "Napište e-mail", "Zpráva na WhatsApp"];
+type Channel = { label: string; kind: "call" | "email" | "whatsapp" };
+
+const FALLBACK_CHANNELS: Channel[] = [
+  { label: "Zavolejte mi", kind: "call" },
+  { label: "Napište e-mail", kind: "email" },
+  { label: "Zpráva na WhatsApp", kind: "whatsapp" },
+];
+
+// Jak zní poděkování podle zvoleného způsobu ({jak} v textu).
+const HOW: Record<Channel["kind"], string> = { call: "zavolám", email: "napíšu e-mail", whatsapp: "napíšu na WhatsApp" };
 
 type Answers = Record<string, string[]>;
 
@@ -98,6 +117,9 @@ const STEP = {
 
 export default function Brief({
   types,
+  steps = null,
+  contact = null,
+  editing = false,
   namePlaceholder,
   phonePlaceholder,
   emailPlaceholder,
@@ -105,8 +127,14 @@ export default function Brief({
   consentLabel,
   submitBody,
 }: {
-  /** Druhy práce (typy projektu z CMS). */
+  /** Druhy práce (typy projektu z CMS) — pro otázky z kódu. */
   types: string[];
+  /** Kroky z modulu „Poptávka" (Studio); prázdné = otázky z kódu. */
+  steps?: BriefStep[] | null;
+  /** Poslední krok (otázka, způsoby, poděkování) ze Studia. */
+  contact?: BriefContact | null;
+  /** V rámu Studia: otázky jdou klikem otevřít jako dokument. */
+  editing?: boolean;
   namePlaceholder: string;
   phonePlaceholder: string;
   emailPlaceholder: string;
@@ -115,15 +143,17 @@ export default function Brief({
   /** Obsah tlačítka Odeslat (ikona, popisek, šipka). */
   submitBody: ReactNode;
 }) {
-  const qs = questions(types);
+  const qs: Question[] = steps && steps.length ? steps : fallbackQuestions(types);
+  const channels: Channel[] = contact?.channels?.length ? contact.channels : FALLBACK_CHANNELS;
   const last = qs.length; // index kroku s kontaktem a shrnutím
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
   const [answers, setAnswers] = useState<Answers>({});
-  const [channel, setChannel] = useState(CHANNELS[0]);
+  // Jak se ozvat: bez výchozí volby — návštěvník musí jednu vybrat.
+  const [channel, setChannel] = useState("");
   const [name, setName] = useState("");
-  // Telefon i e-mail zvlášť: zavolat / WhatsApp chce telefon, „Napište e-mail"
-  // chce e-mail (a na něj jde i potvrzení). Druhé pole je dobrovolné.
+  // Telefon i e-mail, obojí povinné (na e-mail jde potvrzení, telefon pro
+  // zavolání / WhatsApp). Pole mají autocomplete, ať je prohlížeč předvyplní.
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [note, setNote] = useState("");
@@ -192,10 +222,17 @@ export default function Brief({
     window.setTimeout(() => go(step + 1), 320);
   };
 
-  const wantsEmail = channel === CHANNELS[1];
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
   const phoneOk = phone.trim().length > 4;
-  const ready = name.trim().length > 1 && agreed && (wantsEmail ? emailOk : phoneOk);
+  const ready = name.trim().length > 1 && phoneOk && emailOk && Boolean(channel) && agreed;
+
+  // Poděkování: texty ze Studia se zástupnými {jméno} a {jak}, jinak z kódu.
+  const first = name.trim().split(/\s+/)[0] || "";
+  const how = HOW[channels.find((c) => c.label === channel)?.kind ?? "call"];
+  const doneTitle = (contact?.doneTitle || "Díky{, jméno}. Poptávka je u mě.")
+    .replace("{, jméno}", first ? `, ${first}` : "")
+    .replace("{jméno}", first);
+  const doneText = (contact?.doneText || "Projdu ji a ozvu se — {jak} obvykle do 24 hodin.").replace("{jak}", how);
 
   if (sent) {
     return (
@@ -203,10 +240,8 @@ export default function Brief({
         <span className={styles.doneIcon} aria-hidden="true">
           <Check />
         </span>
-        <p className={styles.doneTitle}>Díky{name.trim() ? `, ${name.trim().split(" ")[0]}` : ""}. Poptávka je u mě.</p>
-        <p className={styles.doneText}>
-          Projdu ji a ozvu se — {channel === CHANNELS[0] ? "zavolám" : channel === CHANNELS[1] ? "napíšu e-mail" : "napíšu na WhatsApp"} obvykle do 24 hodin.
-        </p>
+        <p className={styles.doneTitle}>{doneTitle}</p>
+        <p className={styles.doneText}>{doneText}</p>
         <Summary qs={qs} answers={answers} />
       </motion.div>
     );
@@ -259,9 +294,9 @@ export default function Brief({
           <motion.div key={step} className={q ? styles.step : `${styles.step} ${styles.contactStep}`} custom={dir} variants={STEP} initial="enter" animate="center" exit="exit">
             {q ? (
               <>
-                <StepHead step={step} total={last + 1} titleId={titleId} title={q.title} hint={q.hint} />
+                <StepHead step={step} total={last + 1} titleId={titleId} title={q.title} hint={q.hint} docId={editing ? q.id : undefined} docType="briefStep" />
                 <div className={styles.cards} role="group" aria-labelledby={titleId}>
-                  {q.options.map((option) => {
+                  {q.options.map(({ label: option, icon }) => {
                     const on = (answers[q.key] ?? []).includes(option);
                     return (
                       <button
@@ -276,7 +311,7 @@ export default function Brief({
                         {/* Ikona jako velká tenká kresba v pozadí karty, od
                             začátku; název velký a na střed pod ní. */}
                         <span className={styles.cardArt} aria-hidden="true">
-                          <OptionIcon label={option} />
+                          <OptionIcon label={option} icon={icon} />
                         </span>
                         <span className={styles.mark} aria-hidden="true">
                           <Check />
@@ -289,7 +324,7 @@ export default function Brief({
               </>
             ) : (
               <>
-                <StepHead step={step} total={last + 1} titleId={titleId} title="Komu se mám ozvat?" />
+                <StepHead step={step} total={last + 1} titleId={titleId} title={contact?.title || "Komu se mám ozvat?"} docId={editing ? contact?.id : undefined} docType="briefContact" />
                 <div className={styles.contactRow}>
                   <input
                     className={base.field}
@@ -305,38 +340,40 @@ export default function Brief({
                     className={base.field}
                     type="tel"
                     name="telefon"
-                    placeholder={wantsEmail ? phonePlaceholder.replace(/\s*\*$/, "") : phonePlaceholder}
+                    placeholder={phonePlaceholder}
                     autoComplete="tel"
+                    inputMode="tel"
                     value={phone}
                     onChange={(event) => setPhone(event.target.value)}
-                    required={!wantsEmail}
+                    required
                   />
                 </div>
                 <input
                   className={base.field}
                   type="email"
                   name="email"
-                  placeholder={wantsEmail ? `${emailPlaceholder} *` : emailPlaceholder}
+                  placeholder={`${emailPlaceholder} *`}
                   autoComplete="email"
+                  inputMode="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  required={wantsEmail}
-                  aria-invalid={wantsEmail && email.trim().length > 0 && !emailOk ? true : undefined}
+                  required
+                  aria-invalid={email.trim().length > 0 && !emailOk ? true : undefined}
                 />
-                <div className={styles.options} role="group" aria-label="Jak se ozvat">
-                  {CHANNELS.map((option) => (
+                <div className={styles.options} role="group" aria-label="Jak se ozvat (vyberte jednu možnost)">
+                  {channels.map((option) => (
                     <button
-                      key={option}
+                      key={option.label}
                       type="button"
                       className={`${styles.option} ${styles.small}`}
-                      data-on={channel === option || undefined}
-                      aria-pressed={channel === option}
-                      onClick={() => setChannel(option)}
+                      data-on={channel === option.label || undefined}
+                      aria-pressed={channel === option.label}
+                      onClick={() => setChannel(option.label)}
                     >
                       <span className={styles.mark} aria-hidden="true">
                         <Check />
                       </span>
-                      {option}
+                      {option.label}
                     </button>
                   ))}
                 </div>
@@ -405,7 +442,24 @@ export default function Brief({
 }
 
 /** Hlavička kroku: velké číslo, vedle otázka a nápověda. */
-function StepHead({ step, total, titleId, title, hint }: { step: number; total: number; titleId: string; title: string; hint?: string }) {
+function StepHead({
+  step,
+  total,
+  titleId,
+  title,
+  hint,
+  docId,
+  docType,
+}: {
+  step: number;
+  total: number;
+  titleId: string;
+  title: string;
+  hint?: string;
+  /** V rámu Studia: klik na otázku otevře její dokument (kroky, možnosti, ikony). */
+  docId?: string;
+  docType?: "briefStep" | "briefContact";
+}) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return (
     <div className={styles.head}>
@@ -414,7 +468,7 @@ function StepHead({ step, total, titleId, title, hint }: { step: number; total: 
         <small>/ {pad(total)}</small>
       </span>
       <div className={styles.headText}>
-        <p className={styles.title} id={titleId}>
+        <p className={styles.title} id={titleId} {...(docId && docType ? editableDoc(docId, docType) : {})}>
           {title}
         </p>
         {hint ? <p className={styles.hint}>{hint}</p> : null}

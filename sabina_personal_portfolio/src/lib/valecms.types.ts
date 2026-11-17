@@ -33,6 +33,7 @@ import review from '@c3studium/valecms/schemas/review.js'
 // SEO a ikony webu (jeden dokument) a pole SEO pro stránky — z knihovny (0.1.56).
 import siteSeo from '@c3studium/valecms/schemas/siteSeo.js'
 import { seoField } from '@c3studium/valecms/seo/field.js'
+import { BRIEF_ICON_CHOICES } from '../components/layout/contact-modal/brief-icon-names.ts'
 
 // Pořadí v řadě — u všech typů stejně: menší číslo = dřív.
 const order = (group?: string) =>
@@ -825,7 +826,143 @@ const socialLink = defineType({
 })
 
 // Pořadí je pořadí v menu Studia.
-export const types = [siteCopy, siteSeo, project, visual3d, heroWord, stackItem, statItem, service, processStep, reference, socialLink, review]
+/* ---------------------------------------------------------------- poptávka -- */
+
+// Kontaktní formulář (contact-modal/brief.tsx) — modul „Poptávka" se dvěma
+// záložkami: Kroky (jeden dokument = jedna otázka s možnostmi a ikonami)
+// a Kontakt (poslední krok: otázka, způsoby, jak se ozvat, poděkování).
+// Bez dokumentů jede formulář na otázkách z kódu; jakmile existuje aspoň
+// jeden krok, platí jen dokumenty.
+const POPTAVKA = { name: 'poptavka', title: 'Poptávka', icon: 'mail' }
+
+const briefStep = defineType({
+    name: 'briefStep',
+    title: 'Kroky',
+    icon: 'list',
+    module: POPTAVKA,
+    description: 'Otázky poptávky v pořadí. Každá má možnosti s ikonou; víc voleb = návštěvník může vybrat několik.',
+    orderings: BY_ORDER,
+    fields: [
+        defineField({
+            name: 'label',
+            title: 'Název kroku',
+            type: 'string',
+            description: 'Krátce — v liště kroků a ve shrnutí, např. „Kdo jste".',
+            validation: (rule) => rule.required().max(30),
+        }),
+        defineField({
+            name: 'title',
+            title: 'Otázka',
+            type: 'string',
+            description: 'Např. „Pro koho budu pracovat?"',
+            validation: (rule) => rule.required().max(80),
+        }),
+        defineField({
+            name: 'hint',
+            title: 'Nápověda',
+            type: 'string',
+            description: 'Řádek pod otázkou, např. „Ať vím, jak velký projekt to bude."',
+            validation: (rule) => rule.max(140),
+        }),
+        defineField({
+            name: 'multi',
+            title: 'Víc voleb najednou',
+            type: 'boolean',
+            initialValue: false,
+            description: 'Zapnuto = návštěvník může vybrat několik možností a potvrdí „Pokračovat". Vypnuto = jedna volba posune dál sama.',
+        }),
+        defineField({
+            name: 'options',
+            title: 'Možnosti',
+            type: 'array',
+            of: [
+                {
+                    type: 'object',
+                    name: 'option',
+                    title: 'Možnost',
+                    fields: [
+                        defineField({ name: 'label', title: 'Text', type: 'string', validation: (rule) => rule.required().max(40) }),
+                        defineField({
+                            name: 'icon',
+                            title: 'Ikona',
+                            type: 'select',
+                            options: { list: [...BRIEF_ICON_CHOICES] },
+                            initialValue: 'auto',
+                            description: '„Podle názvu" vybere ikonu z textu možnosti.',
+                        }),
+                    ],
+                },
+            ],
+            description: 'Karty, ze kterých návštěvník vybírá. 2–6 je ideál.',
+            validation: (rule) => rule.min(2).max(8),
+        }),
+        order(),
+        seedKey(),
+    ],
+    preview: (doc: Record<string, unknown>) => ({
+        title: doc.label,
+        subtitle: doc.title,
+    }),
+})
+
+const CHANNEL_KINDS = [
+    { value: 'call', title: 'Telefon (zavolat)' },
+    { value: 'email', title: 'E-mail' },
+    { value: 'whatsapp', title: 'WhatsApp' },
+]
+
+const briefContact = defineType({
+    name: 'briefContact',
+    title: 'Kontakt',
+    icon: 'mail',
+    module: POPTAVKA,
+    description: 'Poslední krok poptávky: otázka, způsoby, jak se ozvat, a poděkování po odeslání. Jeden dokument; placeholdery polí a tlačítko jsou v bloku Kontakt (Texty).',
+    fields: [
+        defineField({
+            name: 'title',
+            title: 'Otázka',
+            type: 'string',
+            description: 'Např. „Komu se mám ozvat?"',
+            validation: (rule) => rule.required().max(80),
+        }),
+        defineField({
+            name: 'channels',
+            title: 'Jak se ozvat',
+            type: 'array',
+            of: [
+                {
+                    type: 'object',
+                    name: 'channel',
+                    title: 'Způsob',
+                    fields: [
+                        defineField({ name: 'label', title: 'Text', type: 'string', description: 'Např. „Zavolejte mi".', validation: (rule) => rule.required().max(40) }),
+                        defineField({ name: 'kind', title: 'Druh', type: 'select', options: { list: CHANNEL_KINDS }, initialValue: 'call', description: 'Podle druhu zní poděkování („zavolám" / „napíšu e-mail" / „napíšu na WhatsApp").' }),
+                    ],
+                },
+            ],
+            description: 'Návštěvník musí jeden vybrat. 2–4 možnosti.',
+            validation: (rule) => rule.min(1).max(4),
+        }),
+        defineField({
+            name: 'doneTitle',
+            title: 'Poděkování — nadpis',
+            type: 'string',
+            description: '{jméno} = křestní jméno návštěvníka. Např. „Díky, {jméno}. Poptávka je u mě."',
+            validation: (rule) => rule.max(80),
+        }),
+        defineField({
+            name: 'doneText',
+            title: 'Poděkování — text',
+            type: 'string',
+            description: '{jak} = podle zvoleného způsobu („zavolám" …). Např. „Projdu ji a ozvu se — {jak} obvykle do 24 hodin."',
+            validation: (rule) => rule.max(160),
+        }),
+        seedKey(),
+    ],
+    preview: (doc: Record<string, unknown>) => ({ title: doc.title || 'Kontakt', subtitle: Array.isArray(doc.channels) ? `${doc.channels.length} způsoby` : '' }),
+})
+
+export const types = [siteCopy, siteSeo, project, visual3d, heroWord, stackItem, statItem, service, processStep, reference, briefStep, briefContact, socialLink, review]
 
 // Typ, o kterém se píšou recenze (např. 'consultant'), nebo null.
 export const reviewSubjectType = null

@@ -46,10 +46,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     note: typeof body.note === "string" ? body.note.trim().slice(0, LIMIT.note) : "",
     answers: answersOf(body.answers),
   };
-  const emailOk = emailOf(email) !== null;
-  const phoneOk = phone.length >= 5;
-  // „Napište e-mail" chce e-mail; jinak stačí telefon (e-mail je navíc).
-  const contactOk = payload.channel === "Napište e-mail" ? emailOk : phoneOk || emailOk || legacy.length >= 5;
+  // Telefon i e-mail povinné, stejně jako volba, jak se ozvat.
+  const contactOk = emailOf(email) !== null && phone.length >= 5 && payload.channel.length > 0;
   if (payload.name.length < 2 || !contactOk || body.agreed !== true) {
     return res.status(400).json({ ok: false, error: "invalid" });
   }

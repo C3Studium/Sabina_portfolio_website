@@ -193,6 +193,7 @@ function App({ Component, pageProps, router }: AppProps) {
         open={contactOpen}
         onClose={() => setContactOpen(false)}
         copy={globals?.contact}
+        brief={globals?.brief ?? null}
       />
     </div>
     </SeoProvider>

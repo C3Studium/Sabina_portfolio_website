@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useTransform, type MotionValue } from "framer-
 import { editableIn, surfaceRoot, useStudioSurface } from "@c3studium/valecms/edit";
 import { inStudio } from "@/lib/editing";
 import type { CopyItem, GlobalBlock } from "@/lib/site/globals";
+import type { BriefCopy } from "@/lib/site/brief";
 import { decodeMarked } from "@/lib/site/marks";
 import Lines from "@/components/home/lines";
 import SmokeText from "@/components/common/smoke-text";
@@ -249,9 +250,11 @@ type ContactModalProps = {
   onClose: () => void;
   // Blok `global.contact` z `props.globals` stránky; `null` bez CMS i na 404.
   copy?: GlobalBlock | null;
+  /** Kroky poptávky z modulu „Poptávka" (globals.brief); prázdné = otázky z kódu. */
+  brief?: BriefCopy | null;
 };
 
-export default function ContactModal({ open, onClose, copy = null }: ContactModalProps) {
+export default function ContactModal({ open, onClose, copy = null, brief = null }: ContactModalProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -463,6 +466,9 @@ export default function ContactModal({ open, onClose, copy = null }: ContactModa
                 <motion.div className={styles.briefWrap} style={{ opacity: build.part.name }}>
                   <Brief
                     types={types}
+                    steps={brief?.steps ?? null}
+                    contact={brief?.contact ?? null}
+                    editing={editing}
                     namePlaceholder={placeholder.name}
                     phonePlaceholder={placeholder.phone}
                     emailPlaceholder="Váš e-mail"
