@@ -489,6 +489,8 @@ export function createFlexCarousel(
   });
 
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  // „Méně pohybu" (lib/motion-preference): nic se nehýbe samo — autoplay stojí.
+  const ambient = (document.documentElement.getAttribute("data-motion") ?? "full") === "full";
   const anisotropy = renderer.getExtension("EXT_texture_filter_anisotropic") ? 8 : 0;
 
   let slots: Slot[] = [];
@@ -1021,7 +1023,7 @@ export function createFlexCarousel(
       autoplayAt = now;
       step(m, 1);
     }
-    if (s.autoplay && !reducedMotion) animating = true;
+    if (s.autoplay && !reducedMotion && ambient) animating = true;
 
     const travel = Math.abs(pos - lastPos) / dt;
     lastPos = pos;

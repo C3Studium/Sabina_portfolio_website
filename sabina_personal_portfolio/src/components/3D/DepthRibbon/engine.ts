@@ -80,6 +80,8 @@ export interface RibbonSettings {
   paused: boolean;
   dpr: number;
   reduced: boolean;
+  /** Samovolný pohyb (jízda, autoplay, otáčení) — false při „Méně pohybu". */
+  ambient: boolean;
   /** Studio: hlásit boxy karet (onBoxes) pro neviditelné klikací cíle. */
   editing: boolean;
   /**
@@ -1206,7 +1208,7 @@ export const createRibbon = (
     const { vertical, horizontal } = halfFov();
     const yaw = yawFrom
       ? Math.atan2(yawFrom.dir.x, yawFrom.dir.z) + orbitYaw
-      : orbitYaw + (settingsRef.current.reduced ? 0 : time * 0.05);
+      : orbitYaw + (settingsRef.current.reduced || !settingsRef.current.ambient ? 0 : time * 0.05);
     const pitch = clamp(0.62 + orbitPitch, 0.05, 1.45);
     out.target.set(0, 0, 0);
     out.dir.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
@@ -1647,7 +1649,7 @@ export const createRibbon = (
     const hovering = settings.pauseOnHover && hovered >= 0;
 
     const tour = settings.tour;
-    if (tour === "cycle" && !reduced && !settings.paused) {
+    if (tour === "cycle" && !reduced && settings.ambient && !settings.paused) {
       if (!focus && !hovering && !press && time - wheelAt > 1.2) phaseClock += dt;
       if (phase === "ride" && phaseClock >= Math.max(settings.interval, 2)) {
         phase = "overview";
@@ -1669,7 +1671,7 @@ export const createRibbon = (
     const scrolled = time - wheelAt < 1.2;
     const stopped = hovering || !!focus || scrolled;
     [rate, rateV] = springTo(rate, rateV, stopped ? 0 : 1, dt, stopped ? 0.25 : 0.9);
-    const cruise = reduced || settings.paused ? 0 : settings.speed;
+    const cruise = reduced || settings.paused || !settings.ambient ? 0 : settings.speed;
     const dragging = !!press && press.moved && pull < 0.5;
     if (!dragging) {
       const glide = pendingTravel * (1 - Math.exp(-dt / 0.22));
@@ -1731,8 +1733,8 @@ export const createRibbon = (
       // (i karta pod myší) ho na AUTOPLAY_HOLD s pozdrží.
       const interacting =
         !!press || hovered >= 0 || time - userAt < AUTOPLAY_HOLD || !!focus || pull > 0.05 || introRunning() || leaving;
-      if (settings.autoplay > 0 && !settings.editing && !settings.paused && !reduced) busy0 = true;
-      if (settings.autoplay > 0 && !settings.editing && !settings.paused && !reduced && !interacting) {
+      if (settings.autoplay > 0 && !settings.editing && !settings.paused && !reduced && settings.ambient) busy0 = true;
+      if (settings.autoplay > 0 && !settings.editing && !settings.paused && !reduced && settings.ambient && !interacting) {
         if (pendingTravel === 0 && Math.abs(velocity) < 0.35) autoClock += dt;
         if (autoClock >= settings.autoplay) {
           autoClock = 0;

@@ -48,6 +48,8 @@ type IntroBannersProps = {
   delay?: number;
   /** Bez pohybu: rovnou hotové / pryč, bez smyčky. */
   still?: boolean;
+  /** Střídat dvojice dokola (výchozí). `false` = postavit jednou a stát. */
+  loop?: boolean;
   /** Tempo: 1 = jako v heru, 2 = dvakrát pomaleji (stavba, stání i odchod). */
   pace?: number;
   /** Levý okraj pole pro slova a tvary (část šířky okna), viz banners.ts. */
@@ -78,7 +80,7 @@ const pairAt = (order: string[], round: number): BannerSource[] =>
       })
     : [];
 
-export default function IntroBanners({ sources, area, show, delay = 0, still = false, pace = 1, fieldLeft, baseline, scale, across, className }: IntroBannersProps) {
+export default function IntroBanners({ sources, area, show, delay = 0, still = false, loop = true, pace = 1, fieldLeft, baseline, scale, across, className }: IntroBannersProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bannersRef = useRef<ReturnType<typeof createBanners>>(null);
   const firstRef = useRef(true);
@@ -129,6 +131,7 @@ export default function IntroBanners({ sources, area, show, delay = 0, still = f
 
     // Hotovo: chvíli stát, pak odejít a postavit další dvojici.
     const holdThenNext = () => {
+      if (!loop) return; // „Méně pohybu": postavit a stát
       if (list.length < 3) return; // stejné bannery by se jen opakovaly
       // Další dvojici načíst dopředu, ať nová stavba nečeká.
       for (const { src, url } of pairAt(list, round + 1)) {
@@ -191,7 +194,7 @@ export default function IntroBanners({ sources, area, show, delay = 0, still = f
     };
     // `list` se odvozuje z `order` a `key` — stačí kolo a připravenost.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [show, still, ready, delay, clock, round, pace]);
+  }, [show, still, loop, ready, delay, clock, round, pace]);
 
   return <canvas ref={canvasRef} className={className} aria-hidden="true" />;
 }

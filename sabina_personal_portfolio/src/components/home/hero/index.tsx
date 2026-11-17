@@ -217,12 +217,13 @@ export default function Hero({
   // Částice jsou druhý WebGL kontext a 150 000 bodů za snímek. Na slabém
   // stroji nebo při omezeném pohybu zůstane jen fotka — vypadá stejně,
   // jen se nehýbe.
-  const { heavy, reducedMotion } = usePerformance();
+  const { heavy, reducedMotion, motion: motionLevel } = usePerformance();
   // Částice jen na šířku od notebooku (md) výš; telefony, tablety a vše na
   // výšku mají portrét bez nich. Na notebooku jemnější: čtvrtina počtu
   // a 0,25px tečka, k monitoru (2560) roste po přímce na plnou hustotu.
   const fluid = useLandscapeFluid();
-  const particlesOn = heavy && !reducedMotion && fluid.on;
+  // „Méně pohybu" (motionLevel !== "full"): částice stojí, bannery se nestřídají.
+  const particlesOn = heavy && !reducedMotion && fluid.on && motionLevel === "full";
   const particleCount = Math.round(lerp(75000, 300000, fluid.t) / 5000) * 5000;
   const particleSize = lerp(0.25, 1, fluid.t);
 
@@ -546,6 +547,7 @@ export default function Hero({
                 show={bannersStart && !scrolled}
                 delay={introRan ? 0 : PORTRAIT_DELAY - 0.1}
                 still={reducedMotion}
+                loop={motionLevel === "full"}
                 // Na výšku pozadí obrazovky: větší, přes celou šířku, spodky
                 // u spodní hrany — vršek pod textem zprůhlední maska (styles).
                 scale={tablet ? 1.15 : undefined}

@@ -20,6 +20,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { readMotionLevel, subscribeMotion } from "@/lib/motion-preference";
 import {
   createRibbon,
   MAX_ITEMS,
@@ -229,6 +230,8 @@ const DepthRibbon = forwardRef<DepthRibbonHandle, DepthRibbonProps>(function Dep
   const stageRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<RibbonController | null>(null);
   const reduced = useSyncExternalStore(subscribeToMotion, readMotion, () => false);
+  // „Méně pohybu": scéna nejede a neotáčí se sama, odpovídá jen na ruku.
+  const motionLevel = useSyncExternalStore(subscribeMotion, readMotionLevel, () => "full" as const);
   const [focused, setFocused] = useState(-1);
   const [lead, setLead] = useState(0);
   const [failed, setFailed] = useState(false);
@@ -263,6 +266,7 @@ const DepthRibbon = forwardRef<DepthRibbonHandle, DepthRibbonProps>(function Dep
     paused: paused || editing,
     dpr,
     reduced,
+    ambient: motionLevel === "full",
     editing,
     vanishX,
     vanishY,

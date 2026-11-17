@@ -7,7 +7,10 @@
 // zeptá (providers/MotionChoice) a jeho odpověď drží localStorage:
 //
 //   motion-preference = "full"     plný pohyb (výchozí, když nic nezvolil)
-//   motion-preference = "reduced"  klidnější verze
+//   motion-preference = "some"     bez samovolného pohybu: nic se nehýbe,
+//                                  dokud na to návštěvník nesáhne (částice,
+//                                  střídání bannerů, jízda scény, autoplay)
+//   motion-preference = "reduced"  klidnější verze — jen nutný pohyb
 //
 // Pohyb čte ~40 míst: vlastní kód přes matchMedia, framer-motion
 // (useReducedMotion, MotionConfig), engine valecms (prefersReducedMotion)
@@ -27,7 +30,8 @@
 // (FlexCarousel), dostanou novou hodnotu po obnovení stránky — proto
 // `setMotionChoice` stránku obnoví.
 
-export type MotionChoice = "full" | "reduced";
+export type MotionChoice = "full" | "some" | "reduced";
+export const MOTION_LEVELS: MotionChoice[] = ["full", "some", "reduced"];
 
 export const MOTION_KEY = "motion-preference";
 
@@ -48,8 +52,9 @@ declare global {
 export const BOOT = `(function(){try{
 var K="${MOTION_KEY}",Q="(prefers-reduced-motion: reduce)";
 var stored=null;try{stored=localStorage.getItem(K)}catch(e){}
-var reduced=stored==="reduced";
-var root=document.documentElement;root.setAttribute("data-motion",reduced?"reduced":"full");
+var level=stored==="some"||stored==="reduced"?stored:"full";
+var reduced=level==="reduced";
+var root=document.documentElement;root.setAttribute("data-motion",level);
 var orig=window.matchMedia;if(typeof orig!=="function")return;
 var sys=false;try{sys=orig.call(window,Q).matches}catch(e){}
 var ls=[];
@@ -61,11 +66,12 @@ removeListener:function(f){ls=ls.filter(function(x){return x!==f})},
 dispatchEvent:function(){return true}};
 var norm=function(s){return String(s).replace(/\\s+/g,"").toLowerCase()};
 window.matchMedia=function(s){return norm(s)===norm(Q)?mql:orig.call(window,s)};
-window.__motion={system:sys,set:function(next){var m=next==="reduced";mql.matches=m;
-root.setAttribute("data-motion",m?"reduced":"full");
+window.__motion={system:sys,set:function(next){var lv=next==="some"||next==="reduced"?next:"full";var m=lv==="reduced";mql.matches=m;
+root.setAttribute("data-motion",lv);
 var ev={matches:m,media:Q,type:"change"};
 ls.slice().forEach(function(f){try{f(ev)}catch(e){}});
-if(typeof mql.onchange==="function")try{mql.onchange(ev)}catch(e){}}};
+if(typeof mql.onchange==="function")try{mql.onchange(ev)}catch(e){}
+try{window.dispatchEvent(new Event("motionchange"))}catch(e){}}};
 }catch(e){}})();`;
 
 /** Uložená volba, nebo null (návštěvník ještě nevolil). */
@@ -73,10 +79,23 @@ export const readMotionChoice = (): MotionChoice | null => {
   if (typeof window === "undefined") return null;
   try {
     const v = localStorage.getItem(MOTION_KEY);
-    return v === "full" || v === "reduced" ? v : null;
+    return v === "full" || v === "some" || v === "reduced" ? v : null;
   } catch {
     return null;
   }
+};
+
+/** Platná úroveň pohybu (z `<html data-motion>`, které nastavil BOOT). */
+export const readMotionLevel = (): MotionChoice => {
+  if (typeof document === "undefined") return "full";
+  const v = document.documentElement.getAttribute("data-motion");
+  return v === "some" || v === "reduced" ? v : "full";
+};
+
+/** Pro useSyncExternalStore: změna úrovně (BOOT hlásí `motionchange`). */
+export const subscribeMotion = (notify: () => void) => {
+  window.addEventListener("motionchange", notify);
+  return () => window.removeEventListener("motionchange", notify);
 };
 
 /** Co o pohybu říká systém — jen pro text widgetu a diagnostiku. */

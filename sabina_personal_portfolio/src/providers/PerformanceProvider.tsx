@@ -9,16 +9,20 @@
 // Všechno se měří až na klientovi: server o síti ani o zařízení neví nic,
 // a hádat to z hlavičky User-Agent je způsob, jak se splést u každého desátého.
 
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
+import { readMotionLevel, subscribeMotion, type MotionChoice } from '@/lib/motion-preference'
 
 type Perf = {
     slowNetwork: boolean
     lowPower: boolean
     mobile: boolean
     touch: boolean
-    /** prefers-reduced-motion: reduce. Shader a částice se pak nepouští. */
+    /** Klidnější verze (volba návštěvníka „Bez pohybu", lib/motion-preference). */
     reducedMotion: boolean
+    /** Úroveň pohybu: "some" = bez samovolného pohybu (částice, střídání
+     *  bannerů, jízda scény, autoplay stojí; odpověď na uživatele zůstává). */
+    motion: MotionChoice
     heavy: boolean
 }
 
@@ -87,9 +91,13 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
         return () => media.removeEventListener('change', check)
     }, [])
 
+    // Atribut je v HTML dřív než hydratace (BOOT v <head>), server ho nezná —
+    // na serveru „full", což je i výchozí hodnota, takže se nic nerozejde.
+    const motion = useSyncExternalStore(subscribeMotion, readMotionLevel, () => 'full' as const)
+
     const value = useMemo(
-        () => ({ slowNetwork, lowPower, mobile, touch, reducedMotion, heavy: !slowNetwork && !lowPower }),
-        [slowNetwork, lowPower, mobile, touch, reducedMotion],
+        () => ({ slowNetwork, lowPower, mobile, touch, reducedMotion, motion, heavy: !slowNetwork && !lowPower }),
+        [slowNetwork, lowPower, mobile, touch, reducedMotion, motion],
     )
 
     return <PerformanceContext.Provider value={value}>{children}</PerformanceContext.Provider>
@@ -103,6 +111,6 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
  */
 export function usePerformance(): Perf {
     return useContext(PerformanceContext) ?? {
-        slowNetwork: false, lowPower: false, mobile: false, touch: false, reducedMotion: false, heavy: true,
+        slowNetwork: false, lowPower: false, mobile: false, touch: false, reducedMotion: false, motion: 'full', heavy: true,
     }
 }

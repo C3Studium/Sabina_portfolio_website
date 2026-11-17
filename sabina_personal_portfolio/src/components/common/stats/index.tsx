@@ -78,7 +78,7 @@ export default function Stats() {
     >
       {`fps ${row.fps} · worst ${row.worst} ms · display ~${row.hz} Hz\n` +
         `dpr ${info.dpr} · canvases ${info.canvases} · ${info.webgl} Mpx\n` +
-        `cores ${navigator.hardwareConcurrency ?? "?"} · memory ${mem ?? "?"} · heavy ${perf.heavy ? "yes" : "NO"} · motion ${info.reduce ? "REDUCED" : "full"} (system ${window.__motion?.system ? "reduce" : "normal"})\n` +
+        `cores ${navigator.hardwareConcurrency ?? "?"} · memory ${mem ?? "?"} · heavy ${perf.heavy ? "yes" : "NO"} · motion ${document.documentElement.getAttribute("data-motion") ?? "full"} (system ${window.__motion?.system ? "reduce" : "normal"})\n` +
         info.ua}
     </div>
   );
