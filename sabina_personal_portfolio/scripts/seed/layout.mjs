@@ -71,7 +71,7 @@ export const blocks = [
             // stejně jako v kódu — před spuštěním přepsat ve Studiu. Odkaz
             // (tel:, mailto:) si komponenta odvozuje z hodnoty sama.
             { label: 'Zavolejte mi', value: '+420 123 456 789' },
-            { label: 'Napište mi', value: 'ahoj@sabinahudrmentova.cz' },
+            { label: 'Napište mi', value: 'sabina@sgrafika.cz' },
             { label: 'Dostupnost', value: 'Po – Pá   9:00 – 18:00', note: 'Obvykle odpovím do pár hodin' },
             { label: 'Domluvit schůzku', value: 'Vybrat termín online', note: 'Vyberte si čas, který vám vyhovuje' },
             { label: 'Poslat zprávu' }, // 6 eyebrow formuláře

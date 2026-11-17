@@ -99,7 +99,8 @@ const STEP = {
 export default function Brief({
   types,
   namePlaceholder,
-  contactPlaceholder,
+  phonePlaceholder,
+  emailPlaceholder,
   notePlaceholder,
   consentLabel,
   submitBody,
@@ -107,7 +108,8 @@ export default function Brief({
   /** Druhy práce (typy projektu z CMS). */
   types: string[];
   namePlaceholder: string;
-  contactPlaceholder: string;
+  phonePlaceholder: string;
+  emailPlaceholder: string;
   notePlaceholder: string;
   consentLabel: ReactNode;
   /** Obsah tlačítka Odeslat (ikona, popisek, šipka). */
@@ -120,7 +122,10 @@ export default function Brief({
   const [answers, setAnswers] = useState<Answers>({});
   const [channel, setChannel] = useState(CHANNELS[0]);
   const [name, setName] = useState("");
-  const [contact, setContact] = useState("");
+  // Telefon i e-mail zvlášť: zavolat / WhatsApp chce telefon, „Napište e-mail"
+  // chce e-mail (a na něj jde i potvrzení). Druhé pole je dobrovolné.
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [note, setNote] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [sent, setSent] = useState(false);
@@ -139,7 +144,8 @@ export default function Brief({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
-          contact: contact.trim(),
+          phone: phone.trim(),
+          email: email.trim(),
           channel,
           note: note.trim(),
           agreed,
@@ -186,7 +192,10 @@ export default function Brief({
     window.setTimeout(() => go(step + 1), 320);
   };
 
-  const ready = name.trim().length > 1 && contact.trim().length > 4 && agreed;
+  const wantsEmail = channel === CHANNELS[1];
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
+  const phoneOk = phone.trim().length > 4;
+  const ready = name.trim().length > 1 && agreed && (wantsEmail ? emailOk : phoneOk);
 
   if (sent) {
     return (
@@ -294,15 +303,26 @@ export default function Brief({
                   />
                   <input
                     className={base.field}
-                    type="text"
-                    name="kontakt"
-                    placeholder={contactPlaceholder}
+                    type="tel"
+                    name="telefon"
+                    placeholder={wantsEmail ? phonePlaceholder.replace(/\s*\*$/, "") : phonePlaceholder}
                     autoComplete="tel"
-                    value={contact}
-                    onChange={(event) => setContact(event.target.value)}
-                    required
+                    value={phone}
+                    onChange={(event) => setPhone(event.target.value)}
+                    required={!wantsEmail}
                   />
                 </div>
+                <input
+                  className={base.field}
+                  type="email"
+                  name="email"
+                  placeholder={wantsEmail ? `${emailPlaceholder} *` : emailPlaceholder}
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required={wantsEmail}
+                  aria-invalid={wantsEmail && email.trim().length > 0 && !emailOk ? true : undefined}
+                />
                 <div className={styles.options} role="group" aria-label="Jak se ozvat">
                   {CHANNELS.map((option) => (
                     <button

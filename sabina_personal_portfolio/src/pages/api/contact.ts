@@ -7,7 +7,7 @@
 
 import type { NextApiRequest, NextApiResponse } from "next";
 import { sendContactMails } from "@/lib/mail/contact";
-import type { ContactAnswer, ContactPayload } from "@/emails/types";
+import { emailOf, type ContactAnswer, type ContactPayload } from "@/emails/types";
 
 const LIMIT = { short: 160, note: 2000, answers: 8, values: 12 };
 
@@ -34,14 +34,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Past na roboty: skryté pole, které člověk nevyplní.
   if (text(body.website, 10)) return res.status(200).json({ ok: true });
 
+  const phone = text(body.phone, LIMIT.short);
+  const email = text(body.email, LIMIT.short);
+  const legacy = text(body.contact, LIMIT.short);
   const payload: ContactPayload = {
     name: text(body.name, LIMIT.short),
-    contact: text(body.contact, LIMIT.short),
+    phone,
+    email,
+    contact: [phone, email].filter(Boolean).join(" · ") || legacy,
     channel: text(body.channel, 60),
     note: typeof body.note === "string" ? body.note.trim().slice(0, LIMIT.note) : "",
     answers: answersOf(body.answers),
   };
-  if (payload.name.length < 2 || payload.contact.length < 5 || body.agreed !== true) {
+  const emailOk = emailOf(email) !== null;
+  const phoneOk = phone.length >= 5;
+  // „Napište e-mail" chce e-mail; jinak stačí telefon (e-mail je navíc).
+  const contactOk = payload.channel === "Napište e-mail" ? emailOk : phoneOk || emailOk || legacy.length >= 5;
+  if (payload.name.length < 2 || !contactOk || body.agreed !== true) {
     return res.status(400).json({ ok: false, error: "invalid" });
   }
 

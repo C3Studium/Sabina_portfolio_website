@@ -48,7 +48,9 @@ export default function ContactConfirmation({ name, contact, channel, note, answ
 /** Ukázková data pro náhled (`pnpm email`). */
 ContactConfirmation.PreviewProps = {
   name: "Jana Nováková",
-  contact: "jana@priklad.cz",
+  phone: "+420 777 123 456",
+  email: "jana@priklad.cz",
+  contact: "+420 777 123 456 · jana@priklad.cz",
   channel: "Napište e-mail",
   note: "Spouštíme nový e-shop s dětským oblečením, potřebujeme bannery a sociální sítě na start.",
   answers: [

@@ -96,7 +96,7 @@ const FALLBACK = {
     "Máte v hlavě projekt? Pojďme si o něm říct. Vyplňte formulář a ozvu se vám co nejdřív.",
   channels: [
     { icon: "phone", label: "Zavolejte mi", value: "+420 123 456 789", note: "" },
-    { icon: "mail", label: "Napište mi", value: "ahoj@sabinahudrmentova.cz", note: "" },
+    { icon: "mail", label: "Napište mi", value: "sabina@sgrafika.cz", note: "" },
     {
       icon: "clock",
       label: "Dostupnost",
@@ -464,7 +464,8 @@ export default function ContactModal({ open, onClose, copy = null }: ContactModa
                   <Brief
                     types={types}
                     namePlaceholder={placeholder.name}
-                    contactPlaceholder={`${placeholder.phone.replace(/\s*\*$/, "")} nebo e-mail *`}
+                    phonePlaceholder={placeholder.phone}
+                    emailPlaceholder="Váš e-mail"
                     notePlaceholder={placeholder.message}
                     consentLabel={
                       <span {...(consentInCms ? edit(`items.${LINES.consent}.label`) : {})}>{consentText}</span>

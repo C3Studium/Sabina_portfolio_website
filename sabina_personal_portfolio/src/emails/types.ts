@@ -10,7 +10,9 @@ export type ContactAnswer = {
 
 export type ContactPayload = {
   name: string;
-  /** Telefon, nebo e-mail — co návštěvník napsal. */
+  phone: string;
+  email: string;
+  /** Telefon a e-mail pohromadě pro zobrazení („+420 … · jana@…"). */
   contact: string;
   /** „Zavolejte mi" / „Napište e-mail" / „Zpráva na WhatsApp". */
   channel: string;

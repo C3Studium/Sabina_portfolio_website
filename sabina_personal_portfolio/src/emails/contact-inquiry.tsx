@@ -5,8 +5,8 @@ import { Section, Text } from "@react-email/components";
 import { ACCENT, Button, Headline, Kicker, Lead, Note, Rows, SNOW_SOFT, Shell } from "./shell";
 import { emailOf, type ContactPayload } from "./types";
 
-export default function ContactInquiry({ name, contact, channel, note, answers, sentAt }: ContactPayload & { sentAt?: string }) {
-  const email = emailOf(contact);
+export default function ContactInquiry({ name, phone, email: emailField, contact, channel, note, answers, sentAt }: ContactPayload & { sentAt?: string }) {
+  const email = emailOf(emailField) ?? emailOf(contact);
   const what = answers.find((a) => a.key === "what")?.values.join(", ");
   const when = answers.find((a) => a.key === "when")?.values[0];
   return (
@@ -36,11 +36,18 @@ export default function ContactInquiry({ name, contact, channel, note, answers, 
       ) : null}
 
       <Kicker no="02">Odpovědi</Kicker>
-      <Rows rows={[{ label: "Jméno", value: name }, { label: "Kontakt", value: contact }, ...answers.map((a) => ({ label: a.label, value: a.values.join(", ") || "—" }))]} />
+      <Rows
+        rows={[
+          { label: "Jméno", value: name },
+          ...(phone.trim() ? [{ label: "Telefon", value: phone.trim() }] : []),
+          ...(email ? [{ label: "E-mail", value: email }] : []),
+          ...answers.map((a) => ({ label: a.label, value: a.values.join(", ") || "—" })),
+        ]}
+      />
 
       <Section>
         {email ? <Button href={`mailto:${email}?subject=${encodeURIComponent("Re: vaše poptávka")}`}>Odpovědět</Button> : null}
-        {!email && /^[+\d][\d\s()-]{6,}$/.test(contact.trim()) ? <Button href={`tel:${contact.replace(/[\s()-]/g, "")}`}>Zavolat</Button> : null}
+        {/^[+\d][\d\s()-]{6,}$/.test(phone.trim()) ? <Button href={`tel:${phone.replace(/[\s()-]/g, "")}`}>Zavolat</Button> : null}
       </Section>
       <Text style={{ margin: "22px 0 0", fontSize: 13, lineHeight: "21px", color: SNOW_SOFT }}>
         Návštěvník dostal potvrzení{email ? "" : " jen na obrazovce (nechal telefon, ne e-mail)"}. Souhlas se zpracováním údajů{" "}
@@ -53,7 +60,9 @@ export default function ContactInquiry({ name, contact, channel, note, answers, 
 /** Ukázková data pro náhled (`pnpm email`). */
 ContactInquiry.PreviewProps = {
   name: "Jana Nováková",
-  contact: "jana@priklad.cz",
+  phone: "+420 777 123 456",
+  email: "jana@priklad.cz",
+  contact: "+420 777 123 456 · jana@priklad.cz",
   channel: "Napište e-mail",
   note: "Spouštíme nový e-shop s dětským oblečením, potřebujeme bannery a sociální sítě na start.",
   sentAt: "17. 11. 2026 18:42",

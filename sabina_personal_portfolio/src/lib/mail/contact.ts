@@ -34,7 +34,7 @@ export async function sendContactMails(payload: ContactPayload): Promise<SendRes
   const resend = new Resend(env("RESEND_API_KEY"));
   const from = env("CMS_MAIL_FROM") || env("RESEND_FROM_EMAIL");
   const to = env("CONTACT_TO") || env("CMS_ADMIN_EMAIL");
-  const customer = emailOf(payload.contact);
+  const customer = emailOf(payload.email) ?? emailOf(payload.contact);
   const sentAt = stamp();
 
   const inquiry = createElement(ContactInquiry, { ...payload, sentAt });

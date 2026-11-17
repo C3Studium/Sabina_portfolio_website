@@ -12,7 +12,7 @@
 export type LegalSection = { id: string; title: string; content?: string };
 
 /** Kontaktní e-mail pro uplatnění práv (zatím e-mail z kontaktu webu). */
-export const LEGAL_EMAIL = "ahoj@sabinahudrmentova.cz";
+export const LEGAL_EMAIL = "sabina@sgrafika.cz";
 
 export const CookiesSections: LegalSection[] = [
   {
