@@ -23,7 +23,7 @@ import {
 
 import { GLOBAL } from '../cms/layout.ts'
 import type { SiteSeo } from '@c3studium/valecms/server/site'
-import { SEO_FALLBACK } from '../seo.ts'
+import { SEO_FALLBACK, SHARE_IMAGE_PATH } from '../seo.ts'
 import { getBrief, type BriefCopy } from './brief.ts'
 
 /** Obrázek tak, jak ho tvaruje `imageValue` v knihovně — `src` i `url` je totéž. */
@@ -124,7 +124,9 @@ export const getGlobalCopy = async (view: GlobalsView = {}): Promise<GlobalCopy>
     const [copy, socials, seo, brief] = await Promise.all([
         getSiteCopy({ page: 'global', read }),
         getSocialLinks(read),
-        getSiteSeo({ read, fallback: SEO_FALLBACK }),
+        // Náhled pro sdílení z vlastní domény (pages/share-image.jpg.tsx):
+        // obrázek v úložišti má hlavičky, které WhatsApp a Messenger odmítají.
+        getSiteSeo({ read, fallback: SEO_FALLBACK, shareImagePath: SHARE_IMAGE_PATH }),
         getBrief(read as Reader, draft),
     ])
 

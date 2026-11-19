@@ -4,6 +4,9 @@
 // (scripts/brand-assets.mjs).
 import type { SiteSeo } from '@c3studium/valecms/server/site'
 
+/** Náhled pro sdílení z vlastní domény — routa pages/share-image.jpg.tsx. */
+export const SHARE_IMAGE_PATH = '/share-image.jpg'
+
 export const SEO_FALLBACK: SiteSeo = {
     siteName: 'Sabina Hudrmentová',
     tagline: 'Grafická designérka',
