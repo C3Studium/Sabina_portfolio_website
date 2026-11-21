@@ -569,7 +569,7 @@ export default function Info({
           <motion.div className={styles.cards} style={still ? undefined : { opacity: exitCards }}>
             {popup || typing.cards ? (
               <CardSwap
-                theme="light"
+                theme="grey"
                 width={880}
                 height={1120}
                 tilt={-13}

@@ -1050,10 +1050,10 @@ $col-portrait: 24%;
     inset: 0;
     background: linear-gradient(
       180deg,
-      rgba(226, 230, 237, 0.92) 0%,
-      rgba(226, 230, 237, 0.55) 40%,
-      rgba(226, 230, 237, 0.55) 70%,
-      rgba(226, 230, 237, 0.9) 100%
+      rgba(54, 56, 57, 0.94) 0%,
+      rgba(54, 56, 57, 0.62) 40%,
+      rgba(54, 56, 57, 0.62) 70%,
+      rgba(54, 56, 57, 0.94) 100%
     );
   }
 }
@@ -2004,4 +2004,91 @@ $stats-grid-h: calc(#{$stat-tile-h} * 2 + #{$stat-gap});
   .toolPanels {
     top: calc(var(--frame-y) + #{fluid(5.75rem)} + 1vh + #{fluid(8px, 0)});
   }
+}
+
+/* ---------- Jedna šedá pro všechny karty služeb (2026-11-21) ----------
+   Na šířku, na tabletu i v kartě ve Studiu stejně jako karty na telefonu na
+   výšku (home/stacked .service): plná šedá rgb(54, 56, 57) s jemným okrajem,
+   světlý text, zelené číslo a výzva verzálkami, pilulky jen obrysem.
+   Plocha balíčku jde z CardSwap theme="grey"; tady text a karty bez balíčku
+   (stavba a Studio). Na konci souboru — přebije i bloky zařízení výš. */
+$card-grey: rgb(54, 56, 57);
+$card-line: rgba(var(--snow-rgb), 0.14);
+
+.card,
+.cardStacked {
+  border-color: $card-line;
+  background: $card-grey;
+  color: var(--snow);
+  box-shadow: 0 3vh 5vh rgba(0, 0, 0, 0.35);
+}
+
+.swapCard,
+.card,
+.cardStacked {
+  color: var(--snow);
+
+  .cardLabel {
+    color: rgba(var(--snow-rgb), 0.62);
+    letter-spacing: 0.14em;
+  }
+
+  .cardTitle {
+    color: var(--snow);
+    font-weight: 500;
+  }
+
+  .accent {
+    color: var(--green);
+  }
+
+  .cardLead {
+    color: rgba(var(--snow-rgb), 0.82);
+  }
+
+  .cardTag {
+    border-color: rgba(var(--snow-rgb), 0.2);
+    background: transparent;
+    color: var(--snow);
+  }
+
+  .cardTagDot {
+    display: none;
+  }
+
+  .cardCta {
+    color: var(--green);
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .swapNumber,
+  .cardNumber {
+    color: var(--green);
+  }
+
+  .cardStackedTitle {
+    color: var(--snow);
+  }
+
+  .cardNavButton {
+    border-color: $card-line;
+    color: var(--snow);
+  }
+}
+
+// Pilulky v balíčku jako na telefonu: řada, která se zalomí, obrys s vnitřním
+// odsazením (v em — škálují s kartou).
+.swapCard .cardTags {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.45em;
+}
+
+.swapCard .cardTag {
+  height: auto;
+  padding: 0.5em 1.05em;
+  font-size: 0.85em;
+  line-height: 1.2;
 }

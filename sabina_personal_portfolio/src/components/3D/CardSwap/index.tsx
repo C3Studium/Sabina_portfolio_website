@@ -34,7 +34,17 @@ import { INK, SNOW, SNOW_RGB } from "@/lib/palette";
 
 const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
-const THEMES: Record<"dark" | "light", Record<string, string>> = {
+const THEMES: Record<"dark" | "light" | "grey", Record<string, string>> = {
+  // Šedá karet služeb — tatáž jako karty na telefonu na výšku (home/stacked
+  // .service, změřeno rgb(54, 56, 57)), plná, aby zadní karta neprosvítala.
+  grey: {
+    "--swap-tile": "rgb(54, 56, 57)",
+    "--swap-tile-edge": `rgba(${SNOW_RGB}, 0.14)`,
+    "--swap-tile-highlight": `rgba(${SNOW_RGB}, 0.06)`,
+    "--swap-shadow": "0 30px 60px -24px rgba(0, 0, 0, 0.55), 0 10px 24px -12px rgba(0, 0, 0, 0.35)",
+    "--swap-ink": SNOW,
+    "--swap-shade": "#1f2022",
+  },
   dark: {
     "--swap-tile": "linear-gradient(180deg, #3a3644 0%, #27242f 100%)",
     "--swap-tile-edge": `rgba(${SNOW_RGB}, 0.07)`,
@@ -157,7 +167,7 @@ type CardSwapProps = {
   fitBy?: "both" | "height";
   /** Kotva balíčku v kontejneru: střed, nebo levá hrana. */
   align?: "center" | "start" | "end";
-  theme?: "dark" | "light";
+  theme?: "dark" | "light" | "grey";
   onCardClick?: (index: number) => void;
   onChange?: (index: number) => void;
   className?: string;
