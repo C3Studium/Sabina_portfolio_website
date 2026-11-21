@@ -39,13 +39,13 @@
   overflow: hidden;
 }
 
-// Sklo (theme="grey"): rozmazaný a zvlněný podklad, vidět po průsvitných
-// okrajích karty. Druhá deklarace s url() platí jen v prohlížečích, které
-// SVG filtr v backdrop-filter umí (Chrome); ostatní si nechají první.
+// Mléčné sklo (theme="grey"): podklad silně rozmazaný, lehce zesvětlený a po
+// okrajích zvlněný. Druhá deklarace s url() platí jen tam, kde prohlížeč umí
+// SVG filtr v backdrop-filter (Chrome); ostatní si nechají první.
 .root[data-theme="grey"] .card {
-  -webkit-backdrop-filter: blur(10px) saturate(160%);
-  backdrop-filter: blur(10px) saturate(160%);
-  backdrop-filter: blur(6px) saturate(160%) url(#swap-glass-warp);
+  -webkit-backdrop-filter: blur(18px) saturate(150%) brightness(1.04);
+  backdrop-filter: blur(18px) saturate(150%) brightness(1.04);
+  backdrop-filter: blur(16px) saturate(150%) brightness(1.04) url(#swap-glass-warp);
 }
 
 // Daleko od výhledu (index.tsx, `data-away`): bez 3D vrstev karet v paměti.
@@ -129,8 +129,10 @@
 
 // Dotyk: sklo bez rozmazání a zvlnění (výkon, viz výš) — jen průsvitné okraje.
 @media (hover: none) and (pointer: coarse) {
+  // Bez rozmazání by průsvitná karta ukázala zadní karty ostře — plná varianta.
   .root[data-theme="grey"] .card {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+    background: var(--swap-tile-solid, var(--swap-tile));
   }
 }

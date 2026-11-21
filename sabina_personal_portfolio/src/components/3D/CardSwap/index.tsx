@@ -34,16 +34,21 @@ import { INK, SNOW, SNOW_RGB } from "@/lib/palette";
 
 const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
+// Zrnitost mléčného skla: jemný bílý šum (SVG feTurbulence) jako dlaždice.
+const FROST_GRAIN = `url("data:image/svg+xml,${encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.11 0'/></filter><rect width='100%' height='100%' filter='url(#n)'/></svg>",
+)}") 0 0 / 180px 180px`;
+
 const THEMES: Record<"dark" | "light" | "grey", Record<string, string>> = {
-  // Šedá karet služeb — tatáž jako karty na telefonu na výšku (home/stacked
-  // .service, změřeno rgb(54, 56, 57)) — jako sklo notifikací Apple:
-  // střed skoro plný (texty karet za ní neprosvítají), okraje průsvitné —
-  // podklad je tam rozmazaný a zvlněný (styles .root[data-theme="grey"] .card,
-  // filtr #swap-glass-warp), světlý
-  // odlesk shora a jemná vnitřní záře.
+  // Šedá karet služeb (jako karty na telefonu, rgb(54, 56, 57)) jako MLÉČNÉ
+  // SKLO: průsvitná s jemným tónem a zrnem, podklad silně rozmazaný a po
+  // okrajích zvlněný (styles .root[data-theme="grey"] .card, filtr
+  // #swap-glass-warp) — karty za ní jsou jen měkké tvary, texty nečitelné.
+  // Světlý odlesk shora a jemná vnitřní záře. Na dotyku (bez rozmazání) plná
+  // varianta --swap-tile-solid, ať zadní karty neprosvítají ostře.
   grey: {
-    "--swap-tile":
-      "linear-gradient(160deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 38%, rgba(255, 255, 255, 0) 60%), radial-gradient(125% 118% at 50% 44%, rgba(54, 56, 57, 0.97) 56%, rgba(54, 56, 57, 0.8) 80%, rgba(54, 56, 57, 0.4) 100%)",
+    "--swap-tile": `${FROST_GRAIN}, linear-gradient(160deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 38%, rgba(255, 255, 255, 0) 60%), radial-gradient(125% 118% at 50% 44%, rgba(54, 56, 57, 0.66) 50%, rgba(54, 56, 57, 0.5) 80%, rgba(54, 56, 57, 0.3) 100%)`,
+    "--swap-tile-solid": `${FROST_GRAIN}, linear-gradient(160deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 38%, rgba(255, 255, 255, 0) 60%), rgb(54, 56, 57)`,
     "--swap-tile-edge": `rgba(${SNOW_RGB}, 0.22)`,
     "--swap-tile-highlight": `rgba(${SNOW_RGB}, 0.32)`,
     "--swap-rim-extra": "inset 0 0 28px rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(255, 255, 255, 0.08)",
