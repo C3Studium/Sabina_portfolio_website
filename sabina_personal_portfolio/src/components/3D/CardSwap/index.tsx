@@ -37,16 +37,16 @@ const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : us
 const THEMES: Record<"dark" | "light" | "grey", Record<string, string>> = {
   // Šedá karet služeb — tatáž jako karty na telefonu na výšku (home/stacked
   // .service, změřeno rgb(54, 56, 57)) — jako sklo notifikací Apple:
-  // plná šedá se skleněným odleskem (backdrop-filter ve 3D balíčku nerozmaže
-  // karty za ní — i 94% krytí je ukázalo), světlý
+  // střed skoro plný (texty karet za ní neprosvítají), okraje průsvitné —
+  // podklad je tam rozmazaný a zvlněný (styles .root[data-theme="grey"] .card,
+  // filtr #swap-glass-warp), světlý
   // odlesk shora a jemná vnitřní záře.
   grey: {
     "--swap-tile":
-      "linear-gradient(160deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 38%, rgba(255, 255, 255, 0) 60%), rgb(54, 56, 57)",
+      "linear-gradient(160deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 38%, rgba(255, 255, 255, 0) 60%), radial-gradient(125% 118% at 50% 44%, rgba(54, 56, 57, 0.97) 56%, rgba(54, 56, 57, 0.8) 80%, rgba(54, 56, 57, 0.4) 100%)",
     "--swap-tile-edge": `rgba(${SNOW_RGB}, 0.22)`,
     "--swap-tile-highlight": `rgba(${SNOW_RGB}, 0.32)`,
     "--swap-rim-extra": "inset 0 0 28px rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(255, 255, 255, 0.08)",
-    "--swap-blur": "blur(24px) saturate(165%)",
     "--swap-shadow": "0 30px 60px -24px rgba(0, 0, 0, 0.5), 0 10px 24px -12px rgba(0, 0, 0, 0.3)",
     "--swap-ink": SNOW,
     "--swap-shade": "#1f2022",
@@ -917,7 +917,20 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
         aria-roledescription="carousel"
         aria-label="Karty"
         onKeyDown={onKeyDown}
+        data-theme={theme}
       >
+        {/* Sklo (theme="grey"): zvlnění podkladu u průsvitných okrajů karty —
+            backdrop-filter na .card odkazuje na tenhle filtr (styles). Šum
+            s nízkou frekvencí posune podklad o pár px; střed karty je skoro
+            plný, takže zvlnění je vidět hlavně po stranách. */}
+        {theme === "grey" ? (
+          <svg className={styles.glassDefs} aria-hidden="true" focusable="false">
+            <filter id="swap-glass-warp" x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
+              <feTurbulence type="fractalNoise" baseFrequency="0.006 0.011" numOctaves="2" seed="7" result="noise" />
+              <feDisplacementMap in="SourceGraphic" in2="noise" scale="38" xChannelSelector="R" yChannelSelector="G" />
+            </filter>
+          </svg>
+        ) : null}
         <div ref={stageRef} className={styles.stage} data-align={align}>
           {cards.map((card, index) => (
             <div

@@ -25,7 +25,27 @@
   perspective: 900px;
   transform: translate(-50%, -50%);
   pointer-events: none;
-  transform-style: preserve-3d;
+  // Bez `transform-style: preserve-3d` (2026-11-21): uvnitř zachovaného 3D
+  // prohlížeč nekreslí backdrop-filter (sklo karet nic nerozmazalo). Perspektivu
+  // dostane každá karta i tak (`perspective` na rodiči) a pořadí karet řídí
+  // z-index slotů (index.tsx layerOf), ne hloubka.
+}
+
+// Definice SVG filtru skla — bez rozměru, jen aby šel odkázat.
+.glassDefs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+// Sklo (theme="grey"): rozmazaný a zvlněný podklad, vidět po průsvitných
+// okrajích karty. Druhá deklarace s url() platí jen v prohlížečích, které
+// SVG filtr v backdrop-filter umí (Chrome); ostatní si nechají první.
+.root[data-theme="grey"] .card {
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  backdrop-filter: blur(10px) saturate(160%);
+  backdrop-filter: blur(6px) saturate(160%) url(#swap-glass-warp);
 }
 
 // Daleko od výhledu (index.tsx, `data-away`): bez 3D vrstev karet v paměti.
@@ -103,6 +123,14 @@
 // znovu rozmazával karty za nimi v každém snímku.
 @media (hover: none) and (pointer: coarse) {
   .card {
+    backdrop-filter: none;
+  }
+}
+
+// Dotyk: sklo bez rozmazání a zvlnění (výkon, viz výš) — jen průsvitné okraje.
+@media (hover: none) and (pointer: coarse) {
+  .root[data-theme="grey"] .card {
+    -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
 }

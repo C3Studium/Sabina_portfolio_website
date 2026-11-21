@@ -483,7 +483,7 @@ $col-portrait: 24%;
   position: relative;
   z-index: 2;
   align-self: center;
-  height: 71.7vh;
+  height: 78vh;
   perspective: 70vw;
   // Bod pohledu vpravo — při 20 % byl divák nalevo od karty, což samo
   // o sobě naklánělo scénu opačným směrem, než rotace zamýšlela.
@@ -1737,7 +1737,8 @@ $col-portrait: 24%;
   // Balíček se zmenšuje na výšku tohohle boxu (CardSwap fitBy="height"):
   // na notebooku 0,85×.
   .cards {
-    height: fluid-scale(fit-vh(71.7vh), 0.85, 935.7px);
+    // Karty o ~9 % větší (2026-11-21; dřív 71,7vh).
+    height: fluid-scale(fit-vh(78vh), 0.85, 1018px);
   }
 
   // Panel vrstev: šířka 15vw nechávala na notebooku 14px písmo v úzkém
@@ -1986,9 +1987,10 @@ $stats-grid-h: calc(#{$stat-tile-h} * 2 + #{$stat-gap});
     border-left: 0;
   }
 
-  // Bez lišty dole: portrét i karty o kus výš.
+  // Bez lišty dole: portrét výš — spodek 2,5vh pod spodkem okna (základ
+  // bottom −10vh, posun −5,6vh, změřeno; 2026-11-21), karty o kus výš.
   .portrait {
-    translate: 0 -4vh;
+    translate: 0 -5.6vh;
   }
 
   .cardsBuild {
