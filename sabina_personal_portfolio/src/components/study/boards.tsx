@@ -594,14 +594,14 @@ export function CoverBoard({ c, act, rect, go, reduce, seen, progress, range, na
         </MeasureText>
         <p className={styles.cvKind}>{c.kind}</p>
         {!portrait ? <Typed text={ch.text} on={go && seen} reduce={reduce} /> : null}
-        <dl className={styles.cvMeta}>
+        {/* <dl className={styles.cvMeta}>
           {c.meta.map((item) => (
             <div key={item.label}>
               <dt>{item.label}</dt>
               <dd>{item.value}</dd>
             </div>
           ))}
-        </dl>
+        </dl> */}
       </div>
       {works.map((work, k) => {
         const p = placed[k];
