@@ -44,6 +44,12 @@ export type MorphSettings = {
   quality: number;
   /** Stejná písmena obou slov se jen přesunou (true), nebo se slijí všechna (false). */
   pairLetters: boolean;
+  /**
+   * Násobek rozlišení plátna (výchozí 1). Pro slovo, které rodič zvětšuje
+   * transformací (jmenovka kurzoru „Táhnout" 1,9×) — jinak by plátno při
+   * přechodu bylo roztažené a rozmazané.
+   */
+  renderScale?: number;
 };
 
 export type Morph = {
@@ -686,7 +692,7 @@ export function createMorph(root: HTMLElement, settings: MorphSettings): Morph |
     // Snížené rozlišení šetří jen u velkého písma; malé (tlačítko) by se
     // v polovičním rozlišení rozmazalo, a jeho pole jsou levná i v plném.
     const q = fontPx < 48 ? 1 : clamp(settings.quality, 0.5, 1);
-    const nextRatio = Math.min(window.devicePixelRatio || 1, 2) * q;
+    const nextRatio = Math.min(Math.min(window.devicePixelRatio || 1, 2) * q * Math.max(1, settings.renderScale ?? 1), 4);
     padX = Math.ceil(fontPx * 0.25);
     padY = Math.ceil(fontPx * 0.3);
     // Šířka a výška z layoutu, ne z getBoundingClientRect — řádek nadpisu

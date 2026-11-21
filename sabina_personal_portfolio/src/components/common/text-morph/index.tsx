@@ -99,6 +99,8 @@ type TextMorphProps = {
    * Předávka pak jde cestou „samostatně" (SETTLE_TIMEOUT).
    */
   measure?: boolean;
+  /** Násobek rozlišení plátna — slovo zvětšované rodičem (jmenovka kurzoru). */
+  renderScale?: number;
   className?: string;
 };
 
@@ -108,12 +110,14 @@ export default function TextMorph({
   wordClassNames,
   pairLetters = settings.pairLetters,
   measure = true,
+  renderScale = 1,
   className,
 }: TextMorphProps) {
   const rootRef = useRef<HTMLSpanElement>(null);
   const morphRef = useRef<Morph | null>(null);
   const runningRef = useRef(false);
   const fallbackRef = useRef(0);
+  const clearRef = useRef(0);
   // Slovo, které je v DOMu platné. Mění se až na KONCI přechodu. -1 = nic
   // (slovo je schované a čeká na vstup — viz `index`).
   const [settled, setSettled] = useState(() => index);
@@ -135,7 +139,7 @@ export default function TextMorph({
     import("./engine")
       .then(({ createMorph }) => {
         if (cancelled) return;
-        morph = createMorph(root, { ...settings, pairLetters });
+        morph = createMorph(root, { ...settings, pairLetters, renderScale });
         morphRef.current = morph;
       })
       .finally(() => {
@@ -143,7 +147,15 @@ export default function TextMorph({
       });
     // Krok 3 předávky: MeasureText smazal `data-morphing` → zhasnout plátno.
     const watcher = new MutationObserver(() => {
-      if (!root.dataset.morphing) morphRef.current?.clear();
+      if (root.dataset.morphing) {
+        window.clearTimeout(clearRef.current);
+        return;
+      }
+      // Samostatně (bez MeasureText): plátno se 0,16 s prolíná se skutečným
+      // textem (styles [data-standalone]) — smazat až potom, jinak by slovo
+      // na konci přechodu poskočilo z plátna na text.
+      if (!measure) clearRef.current = window.setTimeout(() => morphRef.current?.clear(), 200);
+      else morphRef.current?.clear();
     });
     watcher.observe(root, { attributes: true, attributeFilter: ["data-morphing"] });
     return () => {
@@ -153,7 +165,7 @@ export default function TextMorph({
       morphRef.current = null;
       delete root.dataset.morphing;
     };
-  }, [pairLetters]);
+  }, [pairLetters, renderScale, measure]);
 
   // Jiná slova = jiná pole vzdáleností.
   const key = words.join("\u0001");
@@ -200,14 +212,20 @@ export default function TextMorph({
       window.clearTimeout(fallbackRef.current);
       fallbackRef.current = window.setTimeout(() => {
         if (root.dataset.morphing === "settled") delete root.dataset.morphing;
-      }, SETTLE_TIMEOUT);
+      }, measure ? SETTLE_TIMEOUT : 0);
     });
-  }, [index, settled, reduced, ready, words.length]);
+  }, [index, settled, reduced, ready, words.length, measure]);
 
-  useEffect(() => () => window.clearTimeout(fallbackRef.current), []);
+  useEffect(
+    () => () => {
+      window.clearTimeout(fallbackRef.current);
+      window.clearTimeout(clearRef.current);
+    },
+    [],
+  );
 
   return (
-    <span ref={rootRef} className={[styles.root, className].filter(Boolean).join(" ")}>
+    <span ref={rootRef} className={[styles.root, className].filter(Boolean).join(" ")} data-standalone={measure ? undefined : ""}>
       {words.map((word, i) =>
         i !== domIndex && !mounted ? null : (
         <span

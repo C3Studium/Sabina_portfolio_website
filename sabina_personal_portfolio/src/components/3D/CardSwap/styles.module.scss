@@ -141,8 +141,8 @@
 
 /* ---------- Odlesky světla scény (theme="grey") ----------
    Jako by na skleněné karty svítilo světlo ve scéně: světlá hrana tam, kam
-   světlo dopadá, měkká skvrna světla (jde za kurzorem — --glint-x/y z
-   index.tsx, bez kurzoru vlevo nahoře), občas přejede pruh odlesku a na
+   světlo dopadá, šikmé zvlněné pruhy odlesku (na kurzor nereagují, světlo
+   se pomalu posouvá — --glint-x/y), občas přejede pruh odlesku a na
    hranách se třpytí pár drobných jisker. */
 @property --glint-x {
   syntax: "<percentage>";
@@ -160,6 +160,8 @@
   display: none;
 }
 
+// Kontejner odlesků: sám nic nekreslí, jen pomalu posouvá světlo (--glint-x/y
+// dědí obě pseudovrstvy). Na kurzor nereaguje.
 .root[data-theme="grey"] .glint {
   display: block;
   position: absolute;
@@ -168,19 +170,23 @@
   border-radius: inherit;
   pointer-events: none;
   mix-blend-mode: screen;
-  transition:
-    --glint-x 0.8s cubic-bezier(0.2, 0.7, 0.2, 1),
-    --glint-y 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
-  background: radial-gradient(
-    42% 30% at var(--glint-x) var(--glint-y),
-    rgba(255, 255, 255, 0.14),
-    rgba(255, 255, 255, 0.04) 45%,
-    transparent 72%
-  );
+  animation: glint-drift 16s ease-in-out infinite alternate;
+}
+
+@keyframes glint-drift {
+  from {
+    --glint-x: 14%;
+    --glint-y: 6%;
+  }
+
+  to {
+    --glint-x: 30%;
+    --glint-y: 12%;
+  }
 }
 
 // Světlá hrana: nejjasnější u světla, slabě po celém obvodu (jen proužek
-// u okraje — maska vyřízne vnitřek).
+// u okraje — maska vyřízne vnitřek). Bez zvlnění — hrana musí zůstat čistá.
 .root[data-theme="grey"] .glint::before {
   content: "";
   position: absolute;
@@ -188,7 +194,7 @@
   padding: 1.5px;
   border-radius: inherit;
   background:
-    radial-gradient(55% 45% at var(--glint-x) var(--glint-y), rgba(255, 255, 255, 0.9), transparent 70%),
+    radial-gradient(55% 45% at var(--glint-x) var(--glint-y), rgba(255, 255, 255, 0.85), transparent 70%),
     linear-gradient(
       140deg,
       rgba(255, 255, 255, 0.5) 0%,
@@ -203,25 +209,51 @@
   mask-composite: exclude;
 }
 
-// Pruh odlesku, který občas přejede kartou, a drobné jiskry na hranách.
+// Odlesky jako pruhy, ne kruh: šikmé proužky světla (široký, tenký, vzdálený),
+// občas přejíždějící pruh a drobné jiskry na hranách — zvlněné filtrem skla
+// (#swap-glass-warp), jako světlo lámané v nerovném skle.
 .root[data-theme="grey"] .glint::after {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
+  filter: url(#swap-glass-warp);
   background:
     radial-gradient(circle at 13% 1.2%, rgba(255, 255, 255, 0.95) 0 1.4px, transparent 4.5px),
     radial-gradient(circle at 98.6% 24%, rgba(255, 255, 255, 0.8) 0 1.1px, transparent 3.8px),
     radial-gradient(circle at 1.4% 66%, rgba(255, 255, 255, 0.7) 0 1px, transparent 3.2px),
     linear-gradient(
+      116deg,
+      transparent calc(var(--glint-x) - 7%),
+      rgba(255, 255, 255, 0.02) calc(var(--glint-x) - 4%),
+      rgba(255, 255, 255, 0.11) calc(var(--glint-x) - 1%),
+      rgba(255, 255, 255, 0.03) calc(var(--glint-x) + 2%),
+      transparent calc(var(--glint-x) + 5%)
+    ),
+    linear-gradient(
+      109deg,
+      transparent calc(var(--glint-x) + 9%),
+      rgba(255, 255, 255, 0.08) calc(var(--glint-x) + 10.5%),
+      transparent calc(var(--glint-x) + 12%)
+    ),
+    linear-gradient(
+      122deg,
+      transparent calc(var(--glint-x) + 38%),
+      rgba(255, 255, 255, 0.05) calc(var(--glint-x) + 40%),
+      transparent calc(var(--glint-x) + 43%)
+    ),
+    linear-gradient(
       115deg,
       transparent 42%,
-      rgba(255, 255, 255, 0.08) 48%,
-      rgba(255, 255, 255, 0.03) 52%,
+      rgba(255, 255, 255, 0.07) 48%,
+      rgba(255, 255, 255, 0.02) 52%,
       transparent 58%
     );
   background-repeat: no-repeat;
   background-size:
+    100% 100%,
+    100% 100%,
+    100% 100%,
     100% 100%,
     100% 100%,
     100% 100%,
@@ -238,12 +270,18 @@
       0 0,
       0 0,
       0 0,
+      0 0,
+      0 0,
+      0 0,
       120% 0;
   }
 
   88%,
   100% {
     background-position:
+      0 0,
+      0 0,
+      0 0,
       0 0,
       0 0,
       0 0,
@@ -258,7 +296,7 @@
   }
 
   50% {
-    opacity: 0.7;
+    opacity: 0.75;
   }
 }
 

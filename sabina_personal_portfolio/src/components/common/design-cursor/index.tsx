@@ -82,7 +82,8 @@ function MorphLabel({ words, index }: { words: string[]; index: number }) {
       animate={width === undefined ? {} : { width }}
       transition={CHANGE}
     >
-      <TextMorph words={words} index={index} measure={false} />
+      {/* Jmenovka se zvětšuje až 1,9× — plátno přechodu ve 2× rozlišení. */}
+      <TextMorph words={words} index={index} measure={false} renderScale={2} />
       <span ref={measureRef} className={styles.morphMeasure} aria-hidden="true">
         {words.map((word, i) => (
           <span key={i}>{word}</span>

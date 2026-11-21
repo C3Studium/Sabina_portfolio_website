@@ -26,3 +26,23 @@
 .root[data-morphing] > .current {
   opacity: 0;
 }
+
+// Samostatně (bez MeasureText — jmenovka kurzoru): konec přechodu se plynule
+// prolne. Skutečný text najede za 0,16 s a plátno s posledním snímkem zároveň
+// zhasne (smaže se až potom, index.tsx). Bez toho slovo na konci poskočilo
+// z rozmazaného plátna na ostrý text.
+.root[data-standalone] > .current {
+  transition: opacity 0.16s ease;
+}
+
+.root[data-standalone][data-morphing] > .current {
+  transition: none;
+}
+
+.root[data-standalone] > canvas {
+  transition: opacity 0.16s ease;
+}
+
+.root[data-standalone]:not([data-morphing]) > canvas {
+  opacity: 0;
+}
