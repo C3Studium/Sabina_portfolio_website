@@ -300,6 +300,14 @@ $line: rgba(var(--snow-rgb), 0.14);
   }
 }
 
+// Ilustrace služby pod pilulkami (components/home/info/service-visual.tsx).
+.serviceVisual {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 1rem;
+}
+
 .serviceTop {
   margin: 0;
   color: $dim;

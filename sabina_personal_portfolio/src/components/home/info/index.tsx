@@ -9,7 +9,6 @@ import { ContextMenu, DesignSelection, FlightImage, ToolPanels } from "./designe
 import { useDesigner } from "./choreography";
 import { markTyped } from "@/components/home/typing";
 import Image from "next/image";
-import Link from "next/link";
 import { editableDoc, editableIn } from "@c3studium/valecms/edit";
 import { inStudio } from "@/lib/editing";
 import type { Service, StackItem, StatItem } from "@/lib/site/home";
@@ -22,6 +21,14 @@ import Lines, {
 } from "../lines";
 import styles from "./styles.module.scss";
 import { cvh, cvw, PORTRAIT_TABLET, useMedia } from "@/lib/fluid";
+import ServiceVisual, { visualFor } from "./service-visual";
+
+/**
+ * Obrázek služby ze Studia jako pozadí karty jen tehdy, když je dost velký
+ * (nahraná fotka/vizuál). Malá ikona (dnes 35 px) by přes kartu byla
+ * rozmazaná — místo ní karta ukáže ilustraci (service-visual.tsx).
+ */
+const hasCardImage = (service: Service) => Boolean(service.icon?.src && (service.icon.width ?? 0) >= 600);
 
 // Co sekce říká, když CMS mlčí — tytéž texty, jaké tu stály natvrdo. Prázdná
 // hodnota ze Studia spadne sem, ne na prázdné místo.
@@ -498,7 +505,7 @@ export default function Info({
             </h3>
 
             <div className={styles.cardBody}>
-              {primary.icon ? (
+              {primary.icon && hasCardImage(primary) ? (
                 <div className={styles.cardMedia} {...editPrimary.image("icon")}>
                   <Image
                     src={primary.icon.src}
@@ -530,13 +537,10 @@ export default function Info({
               </div>
             </div>
 
-            {/* „Zobrazit příklady" vede vždy na portfolio — cíl není obsah. */}
-            <Link className={styles.cardCta} href="/projects">
-              <span {...editPrimary("cta")}>{cardCtaOf(primary)}</span>
-              <span className={styles.cardCtaArrow} aria-hidden="true">
-                <ArrowIcon />
-              </span>
-            </Link>
+            {/* Ilustrace služby místo „Zobrazit příklady" (2026-11-21). */}
+            {hasCardImage(primary) ? null : (
+              <ServiceVisual kind={visualFor(primary.title, 0)} className={styles.swapVisual} />
+            )}
           </article>
 
           {/* Karty stojící za tou první */}
@@ -598,10 +602,11 @@ export default function Info({
                   return (
                     // Nad kartou kurzor „Táhnout" jako nad 3D scénou v heru — karty se dají táhnout.
                     <Card key={service.id ?? index} className={styles.swapCard} data-cursor="drag">
-                      {/* Obrázek služby (pole „icon") přes celou kartu jako pozadí. */}
-                      {service.icon?.src ? (
+                      {/* Velký obrázek služby ze Studia (pole „icon") přes celou kartu
+                          jako pozadí; malá ikona by byla rozmazaná — tehdy jen ilustrace. */}
+                      {hasCardImage(service) ? (
                         <span className={styles.swapMedia} aria-hidden="true">
-                          <Image src={service.icon.src} alt="" fill sizes="(max-width: 1100px) 60vw, 30vw" draggable={false} />
+                          <Image src={service.icon!.src} alt="" fill sizes="(max-width: 1100px) 60vw, 30vw" draggable={false} />
                         </span>
                       ) : null}
                       <span className={styles.swapNumber}>{cardNumber(service, index)}</span>
@@ -621,12 +626,10 @@ export default function Info({
                           ))}
                         </ul>
                       ) : null}
-                      <Link className={styles.cardCta} href="/projects">
-                        <span>{cardCtaOf(service)}</span>
-                        <span className={styles.cardCtaArrow} aria-hidden="true">
-                          <ArrowIcon />
-                        </span>
-                      </Link>
+                      {/* Ilustrace služby místo „Zobrazit příklady" (2026-11-21). */}
+                      {hasCardImage(service) ? null : (
+                        <ServiceVisual kind={visualFor(service.title, index)} className={styles.swapVisual} />
+                      )}
                     </Card>
                   );
                 })}

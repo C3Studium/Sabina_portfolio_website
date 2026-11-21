@@ -1869,7 +1869,7 @@ $col-portrait: 24%;
    živý obdélník — choreography.ts), jen se jinak umístí: absolutně v .info
    (sticky = obsahující blok) u levého sloupce. Levý sloupec si pod textem
    nechá místo (padding-bottom = výška mřížky). Na výšku platí blok xs-v. */
-$stat-tile-h: 7.4vh;
+$stat-tile-h: 10vh;
 $stat-gap: 1vh;
 $stats-grid-h: calc(#{$stat-tile-h} * 2 + #{$stat-gap});
 
@@ -1886,7 +1886,7 @@ $stats-grid-h: calc(#{$stat-tile-h} * 2 + #{$stat-gap});
 
   .intro {
     justify-content: flex-start;
-    gap: 3vh;
+    gap: 4.5vh;
     padding-top: #{"max(0px, calc(var(--panel-bottom, #{$panel-bottom-fallback}) + 2.5vh - var(--frame-y) - 11vh))"};
     // Mřížka statistik stojí 5vh nad spodkem rámu (.statsBar bottom), sloupec
     // končí 2vh nad ním (.info padding) — 3vh dorovnává, dalších 3vh je mezera
@@ -1895,7 +1895,7 @@ $stats-grid-h: calc(#{$stat-tile-h} * 2 + #{$stat-gap});
   }
 
   .headingBlock {
-    margin-top: auto;
+    margin-top: 0;
   }
 
   .lead {
@@ -1939,7 +1939,7 @@ $stats-grid-h: calc(#{$stat-tile-h} * 2 + #{$stat-gap});
     row-gap: 0.7vh;
     height: $stat-tile-h;
     min-width: 0;
-    padding: 1vh 0.6vw;
+    padding: 1.4vh 0.8vw;
     border: 1px solid rgba(var(--snow-rgb), 0.14);
     border-radius: 0.9vh;
     background: rgba(24, 24, 26, 0.72);
@@ -1947,7 +1947,7 @@ $stats-grid-h: calc(#{$stat-tile-h} * 2 + #{$stat-gap});
 
     &:first-child,
     &:last-child {
-      padding: 1vh 0.6vw;
+      padding: 1.4vh 0.8vw;
     }
 
     .statBadge {
@@ -1967,7 +1967,7 @@ $stats-grid-h: calc(#{$stat-tile-h} * 2 + #{$stat-gap});
     }
 
     .statValue {
-      font-size: clamp(0.66rem, min(#{fit-vh(2vh)}, 1.15vw), 2.6rem);
+      font-size: clamp(0.8rem, min(#{fit-vh(2.8vh)}, 1.6vw), 3.4rem);
       line-height: 1;
       white-space: nowrap;
     }
@@ -1975,7 +1975,7 @@ $stats-grid-h: calc(#{$stat-tile-h} * 2 + #{$stat-gap});
     .statLabel {
       grid-column: 1 / -1;
       align-self: start;
-      font-size: clamp(0.5rem, fit-vh(1.2vh), 1.6rem);
+      font-size: clamp(0.6rem, min(#{fit-vh(1.6vh)}, 0.95vw), 2.1rem);
       line-height: 1.2;
       white-space: normal;
     }
@@ -2091,4 +2091,61 @@ $card-line: rgba(var(--snow-rgb), 0.14);
   padding: 0.5em 1.05em;
   font-size: 0.85em;
   line-height: 1.2;
+}
+
+/* ---------- Karty: ilustrace, větší nadpis, sklo (2026-11-21) ---------- */
+
+// Ilustrace služby (service-visual.tsx) místo „Zobrazit příklady" — vyplní
+// zbytek karty pod pilulkami, ukotvená dole.
+.swapVisual {
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  margin-top: 1.2em;
+}
+
+.card .swapVisual {
+  margin-top: 2vh;
+}
+
+// Nadpis karty o kus větší.
+.swapCard .cardTitle {
+  font-size: 2.7em;
+}
+
+.card .cardTitle {
+  font-size: clamp(1.35rem, 5.4vh, 7.2rem);
+}
+
+// Sklo jako u notifikací Apple: plná šedá se skleněným odleskem (rozmazání ve 3D
+// balíčku prohlížeč nedělá — průsvitná karta ukázala texty karet za ní), odlesk shora,
+// světlá hrana. Balíček to má z CardSwap theme="grey"; tady karty při
+// stavbě a ve Studiu.
+.card,
+.cardStacked {
+  border-color: rgba(var(--snow-rgb), 0.22);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 38%, rgba(255, 255, 255, 0) 60%),
+    rgb(54, 56, 57);
+  backdrop-filter: blur(24px) saturate(165%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 0 24px rgba(255, 255, 255, 0.05),
+    0 3vh 5vh rgba(0, 0, 0, 0.3);
+}
+
+// Nástroje bez linky před štítkem.
+.toolsLabelLine {
+  display: none;
+}
+
+// Větší nadpis se vejde na jeden řádek: užší boční odsazení karty, větší
+// štítek „Co nabízím".
+.swapCard {
+  padding-inline: 1.8em;
+}
+
+.swapCard .cardLabel {
+  font-size: 0.9em;
 }

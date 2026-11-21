@@ -68,15 +68,16 @@
   border-radius: inherit;
   background: var(--swap-tile);
   color: var(--swap-ink);
-  backdrop-filter: blur(6px);
+  // Téma smí rozmazat víc (sklo, theme="grey").
+  backdrop-filter: var(--swap-blur, blur(6px));
 }
 
-// Jemná světlá hrana nahoře.
+// Jemná světlá hrana nahoře (a co téma přidá — záře skla).
 .rim {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: inset 0 1px 0 var(--swap-tile-highlight);
+  box-shadow: inset 0 1px 0 var(--swap-tile-highlight), var(--swap-rim-extra, 0 0 #0000);
   pointer-events: none;
 }
 

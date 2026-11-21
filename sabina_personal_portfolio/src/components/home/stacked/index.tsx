@@ -22,7 +22,8 @@ import type { FlexControls } from "@/components/3D/FlexCarousel";
 import { FlexCaption } from "@/components/3D/FlexCarousel/caption";
 import Lines, { hasLines, picture, text, type MarkedLine } from "../lines";
 import { FALLBACK_CARDS, FALLBACK_PORTRAIT, FALLBACK_ROWS, type HeroCopy } from "../hero";
-import { FALLBACK_SERVICES, FALLBACK_STACK, INFO_FALLBACK, cardCtaOf, cardLabelOf, cardNumber, statsOf, type InfoCopy } from "../info";
+import { FALLBACK_SERVICES, FALLBACK_STACK, INFO_FALLBACK, cardLabelOf, cardNumber, statsOf, type InfoCopy } from "../info";
+import ServiceVisual, { visualFor } from "../info/service-visual";
 import { PROCESS_FALLBACK, type ProcessCopy } from "../process";
 import Cta, { type CtaCopy } from "../cta";
 import type { Project } from "@/lib/site/projects";
@@ -233,10 +234,8 @@ export function InfoStacked({ copy, stack, stats, services }: { copy?: InfoCopy 
                 ))}
               </ul>
             ) : null}
-            <Link href="/projects" className={styles.more}>
-              {cardCtaOf(service)}
-              <Arrow />
-            </Link>
+            {/* Ilustrace služby místo „Zobrazit příklady" — jako na šířku. */}
+            <ServiceVisual kind={visualFor(service.title, i)} className={styles.serviceVisual} />
           </li>
         ))}
       </ol>

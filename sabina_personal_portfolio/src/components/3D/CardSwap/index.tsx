@@ -36,12 +36,18 @@ const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : us
 
 const THEMES: Record<"dark" | "light" | "grey", Record<string, string>> = {
   // Šedá karet služeb — tatáž jako karty na telefonu na výšku (home/stacked
-  // .service, změřeno rgb(54, 56, 57)), plná, aby zadní karta neprosvítala.
+  // .service, změřeno rgb(54, 56, 57)) — jako sklo notifikací Apple:
+  // plná šedá se skleněným odleskem (backdrop-filter ve 3D balíčku nerozmaže
+  // karty za ní — i 94% krytí je ukázalo), světlý
+  // odlesk shora a jemná vnitřní záře.
   grey: {
-    "--swap-tile": "rgb(54, 56, 57)",
-    "--swap-tile-edge": `rgba(${SNOW_RGB}, 0.14)`,
-    "--swap-tile-highlight": `rgba(${SNOW_RGB}, 0.06)`,
-    "--swap-shadow": "0 30px 60px -24px rgba(0, 0, 0, 0.55), 0 10px 24px -12px rgba(0, 0, 0, 0.35)",
+    "--swap-tile":
+      "linear-gradient(160deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 38%, rgba(255, 255, 255, 0) 60%), rgb(54, 56, 57)",
+    "--swap-tile-edge": `rgba(${SNOW_RGB}, 0.22)`,
+    "--swap-tile-highlight": `rgba(${SNOW_RGB}, 0.32)`,
+    "--swap-rim-extra": "inset 0 0 28px rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(255, 255, 255, 0.08)",
+    "--swap-blur": "blur(24px) saturate(165%)",
+    "--swap-shadow": "0 30px 60px -24px rgba(0, 0, 0, 0.5), 0 10px 24px -12px rgba(0, 0, 0, 0.3)",
     "--swap-ink": SNOW,
     "--swap-shade": "#1f2022",
   },
