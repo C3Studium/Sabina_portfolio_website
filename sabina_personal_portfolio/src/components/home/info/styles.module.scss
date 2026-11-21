@@ -138,10 +138,13 @@ $col-portrait: 24%;
 }
 
 .inner {
+  // Kotva pro portrét: ten je pozadí sekce (absolutně, pod obsahem), ne
+  // sloupec mřížky — od 21. 11. 2026 má mřížka jen úvod a karty.
+  position: relative;
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: $col-intro $col-portrait 1fr;
+  grid-template-columns: $col-intro 1fr;
   gap: 1vw;
 }
 
@@ -368,6 +371,13 @@ $col-portrait: 24%;
   position: relative;
   z-index: 2;
   align-self: center;
+  // Uprostřed prostoru vpravo od úvodu: balíček leží přes pravou část
+  // portrétu (obličej zůstává volný), portrét je pod ním jako pozadí.
+  // Šířka = bývalý sloupec karet (100 % − úvod 20 % − portrét 24 % − dvě
+  // mezery z 90vw obsahu); karta uvnitř má šířku v procentech, box ji
+  // potřebuje — bez ní by se „uprostřed" srazil na nulu.
+  justify-self: center;
+  width: calc(0.56 * 90vw - 2vw);
 }
 
 /* Pilulka: kontura i plná vrstva leží přes celou pilulku a mají její
@@ -436,17 +446,21 @@ $col-portrait: 24%;
 }
 
 /* ---------- Portrét ----------
-   V návrhu 79.5vh vysoký, zarovnaný doleva a ležící ZA kartami. */
+   V návrhu 79.5vh vysoký, zarovnaný doleva a ležící ZA kartami. Je to
+   pozadí sekce: absolutně v .inner, vlevo dole za úvodním sloupcem, pod
+   úvodem (z 3) i kartami (z 2) — ty přes něj můžou přejet. */
 
 .portrait {
-  position: relative;
-  z-index: 1;
-  align-self: end;
+  position: absolute;
+  z-index: 0;
+  // Stejné místo jako dřív ve sloupci: za úvodem (+ mezera mřížky), o 3vw
+  // doleva. Spodek 10vh pod oknem — řez v pase není vidět.
+  left: calc(#{$col-intro} + 1vw - 3vw);
+  bottom: -10vh;
   display: flex;
   align-items: flex-end;
   justify-content: flex-start;
   height: 79.5vh;
-  margin-left: -3vw;
   pointer-events: none;
 }
 
@@ -812,10 +826,8 @@ $col-portrait: 24%;
 
 /* ---------- Portrét níž ----------
    Fotka končí rovným řezem v pase — stojí 10vh pod spodkem okna, takže
-   řez není vidět (sekce ho ořízne). Přelet z hera míří sem. */
-.portrait {
-  margin-bottom: -10vh;
-}
+   řez není vidět (sekce ho ořízne): `bottom: -10vh` v základním pravidle
+   výš. Přelet z hera míří sem. */
 
 /* ---------- Pilulka jako odkaz hlavičky (NavPill) ---------- */
 
@@ -1265,6 +1277,11 @@ $col-portrait: 24%;
   // Stojí tam, kde ho nechá hero po posunu tracku, a skoro stejně velký —
   // přelet do Info je jen krátký posun.
   .portrait {
+    // Na výšku zpátky v mřížce (na šířku je absolutní pozadí sekce).
+    position: relative;
+    left: auto;
+    bottom: auto;
+    z-index: 1;
     grid-area: 2 / 1;
     display: flex;
     justify-self: start;
