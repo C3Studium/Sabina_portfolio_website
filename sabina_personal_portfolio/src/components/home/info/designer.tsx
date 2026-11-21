@@ -6,7 +6,7 @@
 // portrét leží ve `position: fixed` v portálu do <body> — přecházejí přes
 // hranice sekcí (hero → Info → Proces).
 
-import { useSyncExternalStore, type ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode, type Ref } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useTransform, type MotionValue } from "framer-motion";
 import type { Shortcut } from "./choreography";
@@ -82,6 +82,7 @@ export function ToolPanels({
   x,
   y,
   className,
+  panelRef,
 }: {
   rows: LayerRow[];
   active: string | null;
@@ -93,10 +94,13 @@ export function ToolPanels({
   y?: MotionValue<number>;
   /** Vlastní poloha pro sekci (Proces má na tabletu panel jinde než Info). */
   className?: string;
+  /** Kořen panelů — Info podle něj měří, kde panel končí (nástroje pod ním). */
+  panelRef?: Ref<HTMLDivElement>;
 }) {
   return (
     <Portal>
       <motion.div
+        ref={panelRef}
         className={className ? `${styles.toolPanels} ${className}` : styles.toolPanels}
         style={{ opacity, scale, x, y }}
         aria-hidden="true"

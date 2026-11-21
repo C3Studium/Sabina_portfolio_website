@@ -22,7 +22,7 @@ import type { FlexControls } from "@/components/3D/FlexCarousel";
 import { FlexCaption } from "@/components/3D/FlexCarousel/caption";
 import Lines, { hasLines, picture, text, type MarkedLine } from "../lines";
 import { FALLBACK_CARDS, FALLBACK_PORTRAIT, FALLBACK_ROWS, type HeroCopy } from "../hero";
-import { FALLBACK_SERVICES, FALLBACK_STACK, FALLBACK_STATS, INFO_FALLBACK, cardCtaOf, cardLabelOf, cardNumber, type InfoCopy } from "../info";
+import { FALLBACK_SERVICES, FALLBACK_STACK, INFO_FALLBACK, cardCtaOf, cardLabelOf, cardNumber, statsOf, type InfoCopy } from "../info";
 import { PROCESS_FALLBACK, type ProcessCopy } from "../process";
 import Cta, { type CtaCopy } from "../cta";
 import type { Project } from "@/lib/site/projects";
@@ -107,13 +107,12 @@ export function HeroStacked({ copy, projects }: { copy?: HeroCopy | null; projec
     title: card.title,
     subtitle: card.tagline,
     href: card.href,
-    // Na telefonu krátce — delší výzva přetékala kartu.
-    cta: "Prohlédnout",
+    // Bez výzvy: odkazem je celá karta a klepnutí vede na projekt (bez
+    // `cta` FlexCarousel tlačítko nekreslí; bez `onSelect` jde komponenta
+    // sama na `href`). Dřív se tu otvíral detail s vrstvami (inspector).
   }));
   const [active, setActive] = useState(0);
   const controls = useRef<FlexControls | null>(null);
-  // Klepnutí na banner otevře detail s vrstvami ve 3D (study/inspector).
-  const inspect = useInspect();
   // Bannery z úvodu za portrétem (IntroBanners) — tatáž tlumená vrstva se
   // slovy a tvary jako v plné verzi, ve smyčce. S úvodem opony podle jeho
   // času (BANNERS_IN), bez úvodu s bránou `go`. Ve Studiu nic.
@@ -163,10 +162,6 @@ export function HeroStacked({ copy, projects }: { copy?: HeroCopy | null; projec
             captions={false}
             onChange={setActive}
             controlsRef={controls}
-            onSelect={(index, anchor) => {
-              const card = cards[index];
-              if (card) inspect?.(card.image, anchor);
-            }}
             fit="natural"
             radius={0}
             autoplay={false}
@@ -212,7 +207,8 @@ export function InfoStacked({ copy, stack, stats, services }: { copy?: InfoCopy 
   const lead = text(copy?.lead, INFO_FALLBACK.lead);
   const toolsLabel = text(copy?.toolsLabel, INFO_FALLBACK.toolsLabel);
   const tools = or(stack, FALLBACK_STACK);
-  const statList = or(stats, FALLBACK_STATS);
+  // Čtyři dlaždice 2 × 2 jako v plné verzi (statsOf, info/index.tsx).
+  const statList = statsOf(stats);
   const cards = or(services, FALLBACK_SERVICES);
   return (
     <section id="sluzby" className={styles.section} aria-label="Služby" data-scroll-label="Služby">

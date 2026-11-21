@@ -1,4 +1,4 @@
-import { useCallback, useRef, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRefRegistry } from "@/providers/RefContext";
 import TypeText from "@/components/common/type-text";
@@ -80,13 +80,17 @@ const cardNumber = (service: Service, index: number) => service.number?.trim() |
 const cardLabelOf = (service: Service) => service.label?.trim() || FALLBACK.cardLabel;
 const cardCtaOf = (service: Service) => service.cta?.trim() || FALLBACK.cardCta;
 
+// Statistiky: vždy ČTYŘI dlaždice v mřížce 2 × 2 (přání klientky, na každém
+// zařízení) — bere se první čtveřice dokumentů podle pořadí ve Studiu.
+const STAT_COUNT = 4;
 const FALLBACK_STATS: StatItem[] = [
   { value: "500+", label: "vytvořených bannerů", icon: null },
   { value: "5 let", label: "zkušeností", icon: null },
   { value: "100%", label: "individuální přístup", icon: null },
   { value: "2000+", label: "hodin tvorby", icon: null },
-  { value: "∞", label: "nápadů :D", icon: null },
 ];
+/** Prvních STAT_COUNT statistik, nebo záloha — stejně pro plnou i telefonní verzi. */
+const statsOf = (stats: StatItem[] | null | undefined) => (stats && stats.length ? stats : FALLBACK_STATS).slice(0, STAT_COUNT);
 
 // Za první kartou stojí nejvýš tři další — víc rozvržení neunese.
 const STACKED_MAX = 3;
@@ -169,7 +173,7 @@ export default function Info({
   const portrait = picture(copy?.portrait, FALLBACK.portrait);
 
   const tools = or(stack, FALLBACK_STACK);
-  const statList = or(stats, FALLBACK_STATS);
+  const statList = statsOf(stats);
   const [primary, ...rest] = or(services, FALLBACK_SERVICES);
   const stacked = rest.slice(0, STACKED_MAX);
   const editPrimary = editableIn(primary.id ?? null);
@@ -244,6 +248,38 @@ export default function Info({
     enabled: !still,
   });
   const { flow, typing } = designer;
+
+  // Na šířku začíná levý sloupec (nástroje) 2,5vh POD panelem Vrstvy
+  // (styles, blok landscape ≥ 520px). Panel je ve fixed portálu a roste,
+  // jak vrstvy přibývají — proto se neměří, co zrovna ukazuje, ale jeho
+  // KONEČNÁ výška: panel se seznamem natáhlým na max-height (tři řádky).
+  // offsetTop/offsetHeight transformace choreografie (scale, y) ignorují.
+  // Výsledek jde do `--panel-bottom` (px od horního okraje okna) na sekci;
+  // v okně Služby (still) panel není a platí záloha v CSS.
+  // Panel bydlí v portálu, který se připojí až po hydrataci — proto callback
+  // ref do stavu, ne useRef (ten by byl při prvním efektu ještě prázdný).
+  const [panel, setPanel] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!panel || !section) return;
+    const layers = panel.querySelector<HTMLElement>(`.${styles.layersPanel}`);
+    const list = panel.querySelector<HTMLElement>(`.${styles.layersList}`);
+    if (!layers || !list) return;
+    const measure = () => {
+      const max = parseFloat(getComputedStyle(list).maxHeight);
+      const full = layers.offsetHeight - list.offsetHeight + (Number.isFinite(max) ? max : list.offsetHeight);
+      section.style.setProperty("--panel-bottom", `${Math.round(panel.offsetTop + full)}px`);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(layers);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+      section.style.removeProperty("--panel-bottom");
+    };
+  }, [panel]);
   // Karty: rámeček kreslí myš, po nakreslení ořezové značky a mřížka, pak
   // nastoupí balíček (CardSwap) a rámeček zhasne.
   const cardsDraw = useTransform(stage, (p) => {
@@ -645,6 +681,7 @@ export default function Info({
       <>
         <FlightImage src={portrait.src} {...designer.flight} />
         <ToolPanels
+          panelRef={setPanel}
           rows={designer.layers.rows}
           active={designer.layers.active}
           shortcut={designer.shortcut}
@@ -665,4 +702,4 @@ export default function Info({
 }
 
 // Pro zjednodušenou verzi na telefonu (home/stacked) — stejné zálohy.
-export { FALLBACK as INFO_FALLBACK, FALLBACK_STACK, FALLBACK_SERVICES, FALLBACK_STATS, cardNumber, cardLabelOf, cardCtaOf };
+export { FALLBACK as INFO_FALLBACK, FALLBACK_STACK, FALLBACK_SERVICES, FALLBACK_STATS, statsOf, cardNumber, cardLabelOf, cardCtaOf };

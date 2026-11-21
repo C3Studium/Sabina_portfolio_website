@@ -1301,8 +1301,8 @@ $col-portrait: 24%;
     justify-self: end;
     align-self: center;
     width: 60vw;
-    // Lišta statistik dole zabírá 6,5vh — balíček nad ní.
-    margin-bottom: 7vh;
+    // Mřížka statistik dole zabírá 13vh (+ 2vh od spodku) — balíček nad ní.
+    margin-bottom: 16vh;
   }
 
   .cards {
@@ -1310,44 +1310,89 @@ $col-portrait: 24%;
     height: 46vh;
   }
 
-  // Lišta: hodnota nad popiskem a položky podle obsahu, ať se pět položek
-  // vejde na šířku.
+  // Statistiky: místo lišty přes celou šířku čtyři dlaždice v mřížce 2 × 2
+  // (jako na šířku, blok níž), vpravo dole pod balíčkem karet — v šířce
+  // balíčku (60vw), zarovnané na pravý okraj obsahu (5vw). Portrét vlevo
+  // zůstává volný.
+  $xs-stat-tile-h: 6vh;
+  $xs-stat-gap: 1vh;
+  $xs-stats-grid-h: calc(#{$xs-stat-tile-h} * 2 + #{$xs-stat-gap});
+
   .statsBar {
-    height: 6.5vh;
+    left: auto;
+    right: 5vw;
+    bottom: 2vh;
+    width: 60vw;
+    height: $xs-stats-grid-h;
+  }
+
+  .statsBarFill {
+    display: none;
   }
 
   .stats {
-    width: 92vw;
-    margin-inline: auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: $xs-stat-gap;
+    width: 100%;
+    height: 100%;
+    margin: 0;
   }
 
   .stat {
-    flex: 1 1 auto;
-    gap: 0.6vw;
+    flex: 0 0 calc((100% - #{$xs-stat-gap}) / 2);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 1vw;
+    row-gap: 0.5vh;
+    height: $xs-stat-tile-h;
+    min-width: 0;
+    padding: 0.9vh 1.4vw;
+    border: 1px solid rgba(var(--snow-rgb), 0.14);
+    border-radius: 0.9vh;
+    background: rgba(24, 24, 26, 0.72);
+    backdrop-filter: blur(10px);
+
+    &:first-child,
+    &:last-child {
+      padding: 0.9vh 1.4vw;
+    }
 
     .statBadge {
-      width: 2.2vh;
-      height: 2.2vh;
+      width: 2vh;
+      height: 2vh;
+      border-radius: 0.45vh;
+
+      &:empty {
+        display: none;
+      }
     }
 
     .statText {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.2vh;
+      display: contents;
     }
 
     .statValue {
-      font-size: 1.6vh;
+      font-size: 1.8vh;
+      line-height: 1;
+      white-space: nowrap;
     }
 
     .statLabel {
-      font-size: 1vh;
+      grid-column: 1 / -1;
+      align-self: start;
+      font-size: 1.1vh;
+      line-height: 1.2;
+      white-space: normal;
     }
   }
 
-  .stat > .sketchFill,
-  .stat > .sketchOutline {
-    padding-inline: 0.8vw;
+  .stat + .stat > .sketchFill,
+  .stat + .stat > .sketchOutline {
+    border-left: 0;
   }
 
   .statBadge {
@@ -1756,7 +1801,8 @@ $col-portrait: 24%;
 
 /* ---------- Na šířku: statistiky jako dlaždice pod textem (2026-11-12) ----------
    Přání klientky: lišta přes celou šířku dole rušila — statistiky jsou
-   malé dlaždice v mřížce 3 + 2 pod textem „Tvořím reklamní grafiku…",
+   malé dlaždice v mřížce 2 × 2 (vždy čtyři, od 2026-11-21; dřív 3 + 2)
+   pod textem „Tvořím reklamní grafiku…",
    v levém sloupci (končí před fotkou). Portrét a karty tím získaly spodek
    — stojí o kus výš, panel Vrstvy těsněji pod hlavičkou.
    Lišta zůstává v DOM, kde byla (výběr, tah a mazání umělou myší měří její
@@ -1770,14 +1816,30 @@ $stats-grid-h: calc(#{$stat-tile-h} * 2 + #{$stat-gap});
 // Telefon na šířku (do 520px výšky) si nechává lištu dole — dlaždice by se
 // do levého sloupce nevešly.
 @media (orientation: landscape) and (min-height: 520.02px) {
+  // Levý sloupec (2026-11-21): nástroje začínají 2,5vh POD panelem Vrstvy
+  // (`--panel-bottom` měří Info podle konečné výšky panelu, index.tsx; bez
+  // panelu — okno Služby — záloha: horní okraj panelu + jeho výška se třemi
+  // řádky), nadpis s textem sedí dole nad mřížkou statistik, mezi nástroji
+  // a nadpisem je nejmíň 3vh. Sloupec začíná 11vh pod rámem (.info padding).
+  // Sass by `calc(a) + calc(b)` slepil bez plusu — záloha je jeden řetězec.
+  $panel-bottom-fallback: "calc(var(--frame-y) + #{fluid(5.75rem)} + 1vh + #{fluid(8px, 0)} + #{fluid-ui(0.65rem)} + #{fluid-ui(11px, 9px)} * 1.2 + #{fluid-ui(0.55rem)} + #{fluid-ui(6.2rem)} + #{fluid-ui(0.5rem)} + 2px)";
+
   .intro {
+    justify-content: flex-start;
     gap: 3vh;
-    // 3vh původní odsazení + mřížka statistik.
-    padding-bottom: calc(3vh + #{$stats-grid-h});
+    padding-top: #{"max(0px, calc(var(--panel-bottom, #{$panel-bottom-fallback}) + 2.5vh - var(--frame-y) - 11vh))"};
+    // Mřížka statistik stojí 5vh nad spodkem rámu (.statsBar bottom), sloupec
+    // končí 2vh nad ním (.info padding) — 3vh dorovnává, dalších 3vh je mezera
+    // mezi textem a mřížkou.
+    padding-bottom: calc(3vh + 3vh + #{$stats-grid-h});
+  }
+
+  .headingBlock {
+    margin-top: auto;
   }
 
   .lead {
-    margin-bottom: 2.6vh;
+    margin-bottom: 0;
   }
 
   // Lišta → mřížka: levý okraj = okraj obsahu (5vw) + odsazení sloupce
@@ -1805,9 +1867,10 @@ $stats-grid-h: calc(#{$stat-tile-h} * 2 + #{$stat-gap});
 
   // Dlaždice: tmavá plocha jako panely nástroje. Nahoře ikona a hodnota
   // v řádku, pod nimi popisek (statText je `contents` — jeho dvě části
-  // jdou přímo do mřížky dlaždice). Tři na řádek (3 + 2).
+  // jdou přímo do mřížky dlaždice). Dvě na řádek — vždy čtyři v mřížce
+  // 2 × 2 (info/index.tsx STAT_COUNT).
   .stat {
-    flex: 0 0 calc((100% - 2 * #{$stat-gap}) / 3);
+    flex: 0 0 calc((100% - #{$stat-gap}) / 2);
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);

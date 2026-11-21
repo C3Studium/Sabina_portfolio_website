@@ -117,10 +117,11 @@ const PHONE_LIFT_VH = 14;
 const TRAILING = /[.,;:!?…]+$/;
 
 // Karty galerie jsou PROJEKTY (dokumenty typu `project`) se zaškrtnutým „Na
-// úvodní stránce", podle pořadí. Rozvržení (--card-index) má místo pro čtyři.
-// Když žádný projekt zaškrtnutý není, berou se první čtyři; bez databáze
-// záloha níž — tytéž čtyři ukázky, jaké tu stály natvrdo.
-const CARD_COUNT = 4;
+// úvodní stránce", podle pořadí — všechny zaškrtnuté (klientka chce na
+// úvodní stránce víc než čtyři). Když žádný zaškrtnutý není, berou se
+// všechny publikované; CARD_COUNT je jen pojistka proti stovce karet.
+// Bez databáze záloha níž — tytéž čtyři ukázky, jaké tu stály natvrdo.
+const CARD_COUNT = 12;
 const DEFAULT_CTA = "Zjistit víc";
 
 // width/height jsou skutečné rozměry souboru — next/image je potřebuje kvůli
@@ -339,9 +340,9 @@ export default function Hero({
       title,
       subtitle,
       href: card.href,
-      // Hover v galerii má vlastní výzvu — banner sám často nese tlačítko
-      // („Zjistit víc", „To potřebuji") a stejný text by se tloukl.
-      cta: "Prohlédnout projekt",
+      // Bez výzvy („Prohlédnout projekt" s rámečkem): odkazem je celá
+      // karta — klik kamkoli na ni vede na projekt (FlexCarousel/hover.ts
+      // bez `cta` tlačítko nekreslí).
     };
   });
   // Jména projektů pro závoj přechodu (lib/project-names).

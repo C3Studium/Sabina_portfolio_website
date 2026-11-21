@@ -115,9 +115,10 @@ export function drawCardLayer(canvas: HTMLCanvasElement, d: CardLayerDraw) {
   ctx.textBaseline = "alphabetic";
   ctx.globalAlpha = 1;
 
-  // Výzva (odspodu nahoru: výzva, obor, název).
-  if (d.item.href) {
-    const label = (d.item.cta ?? "Zjistit víc").toUpperCase();
+  // Výzva (odspodu nahoru: výzva, obor, název). Jen když ji položka má —
+  // bez `cta` je odkazem celá karta a tlačítko by bylo navíc.
+  if (d.item.href && d.item.cta) {
+    const label = d.item.cta.toUpperCase();
     const hover = d.focus;
     const ink = mix([255, 255, 255], [190, 201, 72], hover);
     ctx.font = `600 ${ctaSize}px ${d.font}`;
