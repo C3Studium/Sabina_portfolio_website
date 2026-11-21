@@ -509,10 +509,11 @@ $line: rgba(var(--charcoal-rgb), 0.16);
   position: absolute;
   left: 21.85vw;
   top: 8vh;
-  // Formát 1080 x 1350 — šířku dopočítá poměr z výšky.
+  // Šířka z návrhu (46vh × 4/5), výšku dá poměr obrázku ze Studia (inline
+  // aspect-ratio, index.tsx aspectOf) — fotka od klienta může být i 16 : 9.
   aspect-ratio: 4 / 5;
-  width: auto;
-  height: 46vh;
+  width: 36.8vh;
+  height: auto;
   transform: rotate(1.5deg);
 }
 
@@ -689,10 +690,11 @@ $line: rgba(var(--charcoal-rgb), 0.16);
 .shotMain {
   left: 0;
   top: 8vh;
-  // 1080 x 1350
+  // Šířka z návrhu (50vh × 4/5 = SHOT_GEO.main.width), výška z poměru
+  // obrázku ze Studia (inline aspect-ratio).
   aspect-ratio: 4 / 5;
-  width: auto;
-  height: 50vh;
+  width: 40vh;
+  height: auto;
   transform: rotate(-2deg);
   z-index: 2;
 }
@@ -780,10 +782,10 @@ $line: rgba(var(--charcoal-rgb), 0.16);
   // Víc vpravo — změna velikosti nadpisu musí být dobře vidět.
   left: 30vw;
   top: 8vh;
-  // 1080 x 1350
+  // Šířka z návrhu (49vh × 4/5), výška z poměru obrázku ze Studia.
   aspect-ratio: 4 / 5;
-  width: auto;
-  height: 49vh;
+  width: 39.2vh;
+  height: auto;
   transform: rotate(-2.5deg);
   z-index: 1;
 }
@@ -1201,12 +1203,16 @@ $line: rgba(var(--charcoal-rgb), 0.16);
 
 // Sloupcový graf vpravo dole — sloupce se postaví zdola.
 // Fotka kampaně vpravo na snímku.
+// Fotka na snímku: šířka 34 % snímku, výška z poměru obrázku ze Studia
+// (inline aspect-ratio; dřív natažená od horního k dolnímu okraji snímku).
+// Vyšší než snímek být nesmí — strop a ořez (object-fit: cover v .slideImage).
 .slideImageSlot {
   position: absolute;
   top: 2.2vh;
   right: 1.4vw;
-  bottom: 2.2vh;
   width: 34%;
+  max-height: calc(100% - 4.4vh);
+  aspect-ratio: 4 / 5;
 }
 
 .slideImage {
@@ -1723,16 +1729,17 @@ $line: rgba(var(--charcoal-rgb), 0.16);
 
   // Fotky v krocích na notebooku 0,85× — kolem nich je pak vidět, co s nimi
   // myš dělá. Polohy zůstávají, popisky u formátů jedou s obrázky.
+  // Šířky (výšku dává poměr obrázku, viz základní pravidla).
   .briefPhotoSlot {
-    height: fluid-scale(46vh, 0.85);
+    width: fluid-scale(36.8vh, 0.85);
   }
 
   .shotMain {
-    height: fluid-scale(50vh, 0.85);
+    width: fluid-scale(40vh, 0.85);
   }
 
   .shotTune {
-    height: fluid-scale(49vh, 0.85);
+    width: fluid-scale(39.2vh, 0.85);
   }
 
   .deliverStory,

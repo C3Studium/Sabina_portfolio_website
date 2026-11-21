@@ -12,7 +12,7 @@ import { useIntroAt } from "@/motion/intro/useIntroAt";
 import { LOGO } from "@/motion/intro/timeline";
 import { PORTRAIT_PHONE, useMedia } from "@/lib/fluid";
 import { useRouter } from "next/router";
-import { NAV_ITEMS, currentNavIndex } from "../nav-items";
+import { NAV_ITEMS, currentNavIndex, visibleNavItems } from "../nav-items";
 import { MENU_OPEN_EVENT, openSection, type SectionKey } from "../section-popup/open";
 import Menu from "../menu";
 import { frameThrottle } from "@/lib/frame-throttle";
@@ -173,9 +173,11 @@ type HeaderProps = {
   onContactClose?: () => void;
   // Blok `global.header` z `props.globals` stránky; `null` bez CMS i na 404.
   copy?: GlobalBlock | null;
+  // Přepínač ze Studia („Nastavení webu"): bez referencí chybí odkaz Reference.
+  showReviews?: boolean;
 };
 
-export default function Header({ onContactClick, contactOpen = false, onContactClose, copy = null }: HeaderProps) {
+export default function Header({ onContactClick, contactOpen = false, onContactClose, copy = null, showReviews = true }: HeaderProps) {
   // Dokument zadaný jednou, ne u každé anotace. Mimo Studio je `docId`
   // undefined a `edit(...)` vrací prázdno, takže na web se nerozprostře nic.
   const edit = editableIn(copy?.docId ?? null);
@@ -291,8 +293,8 @@ export default function Header({ onContactClick, contactOpen = false, onContactC
           dostane rámeček s rozměrem a drobky a celý název zezelená. */}
       <MeasureText variant="nav" className={styles.navSlot}>
         <nav className={styles.nav} aria-label="Hlavní navigace">
-          {NAV_ITEMS.map((item, i) => (
-            <NavLink key={item.href} href={item.href} label={item.label} popup={item.popup} active={i === activeNav} />
+          {visibleNavItems(showReviews).map((item) => (
+            <NavLink key={item.href} href={item.href} label={item.label} popup={item.popup} active={item === NAV_ITEMS[activeNav]} />
           ))}
         </nav>
       </MeasureText>
@@ -349,6 +351,7 @@ export default function Header({ onContactClick, contactOpen = false, onContactC
         onClose={closeMenu}
         onContact={onContactClick}
         ctaLabel={ctaLabel}
+        showReviews={showReviews}
       />
     </header>
 

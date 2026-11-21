@@ -70,6 +70,14 @@ export type SocialLink = {
     icon: CopyImage | null
 }
 
+/** Přepínače webu — dokument „Nastavení webu" (typ `siteSettings`). */
+export type SiteSettings = {
+    /** Sekce s recenzemi a odkaz Reference v navigaci. Bez dokumentu true. */
+    showReviews: boolean
+}
+
+export const SETTINGS_DEFAULT: SiteSettings = { showReviews: true }
+
 export type GlobalCopy = {
     header: GlobalBlock | null
     footer: GlobalBlock | null
@@ -80,6 +88,8 @@ export type GlobalCopy = {
     socials: SocialLink[]
     /** SEO a ikony webu (Studio „SEO a ikony", jinak SEO_FALLBACK). */
     seo: SiteSeo
+    /** Přepínače ze Studia („Nastavení webu"); bez dokumentu výchozí. */
+    settings: SiteSettings
 }
 
 /** Co stránka předává dál z `viewOf(context)`. */
@@ -121,13 +131,14 @@ const shapeBlock = (raw: RawBlock | undefined, draft: boolean): GlobalBlock | nu
 export const getGlobalCopy = async (view: GlobalsView = {}): Promise<GlobalCopy> => {
     const { draft = false, at = null } = view
     const read = readerFor({ draft, at })
-    const [copy, socials, seo, brief] = await Promise.all([
+    const [copy, socials, seo, brief, settings] = await Promise.all([
         getSiteCopy({ page: 'global', read }),
         getSocialLinks(read),
         // Náhled pro sdílení z vlastní domény (pages/share-image.jpg.tsx):
         // obrázek v úložišti má hlavičky, které WhatsApp a Messenger odmítají.
         getSiteSeo({ read, fallback: SEO_FALLBACK, shareImagePath: SHARE_IMAGE_PATH }),
         getBrief(read as Reader, draft),
+        getSiteSettings(read),
     ])
 
     return {
@@ -137,10 +148,27 @@ export const getGlobalCopy = async (view: GlobalsView = {}): Promise<GlobalCopy>
         brief,
         socials,
         seo,
+        settings,
     }
 }
 
 type Reader = (args: Record<string, unknown>) => Promise<Record<string, unknown>[]>
+
+/**
+ * „Nastavení webu": první dokument typu `siteSettings`. Nikdy nespadne —
+ * bez dokumentu i při chybě čtení platí výchozí hodnoty (reference vidět).
+ */
+const getSiteSettings = async (read: unknown): Promise<SiteSettings> => {
+    let rows: Record<string, unknown>[] = []
+    try {
+        rows = await (read as Reader)({ type: 'siteSettings', perPage: 1 })
+    } catch {
+        return SETTINGS_DEFAULT
+    }
+    const data = rows[0]
+    if (!data) return SETTINGS_DEFAULT
+    return { showReviews: data.showReviews !== false }
+}
 
 /**
  * Sociální sítě v pořadí `order`. Nikdy nespadne — chyba čtení dá prázdný

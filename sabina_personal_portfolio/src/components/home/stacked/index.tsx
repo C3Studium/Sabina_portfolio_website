@@ -352,12 +352,12 @@ export function ProcessStacked({ copy, steps: docs }: { copy?: ProcessCopy | nul
 // Telefon: plné CTA z dolly (rozvržení pro telefon, recenze ve 3D pásu
 // FlexCarousel). Bez nástupu — stojí rovnou postavené: průběh skočí na 1
 // hned po připojení (skokem, ne animací; CTA reaguje na změnu hodnoty).
-export function CtaPhone({ copy, references, words }: { copy?: CtaCopy | null; references?: Reference[] | null; words?: HeroWord[] | null }) {
+export function CtaPhone({ copy, references, words, showReviews = true }: { copy?: CtaCopy | null; references?: Reference[] | null; words?: HeroWord[] | null; showReviews?: boolean }) {
   const progress = useMotionValue(0);
   useEffect(() => progress.set(1), [progress]);
   return (
     <section id="spoluprace" className={styles.ctaFull} aria-label="Spolupráce" data-scroll-label="Spolupráce">
-      <Cta copy={copy} references={references} words={words} progress={progress} instant />
+      <Cta copy={copy} references={references} words={words} progress={progress} instant showReviews={showReviews} />
     </section>
   );
 }
@@ -386,7 +386,7 @@ export type HomeStackedContent = {
   heroWords?: HeroWord[];
 };
 
-export default function HomeStacked({ content }: { content?: HomeStackedContent | null }) {
+export default function HomeStacked({ content, showReviews = true }: { content?: HomeStackedContent | null; showReviews?: boolean }) {
   return (
     <InspectRoot>
       <HeroStacked copy={content?.hero} projects={content?.projects ?? null} />
@@ -396,6 +396,7 @@ export default function HomeStacked({ content }: { content?: HomeStackedContent 
         copy={content?.cta}
         references={content?.references ?? null}
         words={content?.heroWords?.filter((word) => word.place === "cta") ?? null}
+        showReviews={showReviews}
       />
     </InspectRoot>
   );

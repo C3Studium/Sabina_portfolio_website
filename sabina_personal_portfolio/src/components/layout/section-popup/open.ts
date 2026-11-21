@@ -29,6 +29,28 @@ const ANCHORS: Record<SectionKey, string> = {
 // Okno sekce v DOMu (layout/section-popup: role="dialog" s data-section).
 const POPUP = "[role='dialog'][data-section]";
 
+/**
+ * Kam v přišpendlené sekci doscrollovat: podíl její choreografie (0 = začátek
+ * tracku, 1 = konec). Služby mají stavbu řízenou scrollem — skok na začátek
+ * ukazoval prázdný rám s „Nadpis / Text", proto 0,9: sekce je skoro hotová.
+ * Počítá se v PIXELECH z výšky tracku a okna (ne ve vh ani %, ty se na
+ * telefonu a monitoru liší): průběh `p` sekce (useScroll „start start" →
+ * „end end") je scrollY = top + p × (výška − výška okna).
+ */
+const SECTION_AT: Partial<Record<SectionKey, number>> = {
+  services: 0.9,
+};
+
+/** Cílový scrollY (px) pro sekci — její horní okraj, u přišpendlených podíl choreografie. */
+function scrollTargetOf(target: HTMLElement, key: SectionKey): number {
+  const rect = target.getBoundingClientRect();
+  const top = rect.top + window.scrollY;
+  const fraction = SECTION_AT[key] ?? 0;
+  // Krátká sekce (telefon, zjednodušená verze) nemá co „přehrát" — jen okraj.
+  const pinned = Math.max(0, rect.height - window.innerHeight);
+  return Math.round(top + pinned * fraction);
+}
+
 /** Doscrolluje na sekci, je-li na stránce. Vrací, jestli tam byla. */
 function scrollToSection(key: SectionKey) {
   const target = document.getElementById(ANCHORS[key]);
@@ -36,9 +58,10 @@ function scrollToSection(key: SectionKey) {
   // O snímek později: menu / modal, ze kterého se kliklo, se mezitím zavře
   // a pustí scroll stránky (force — Lenis by jinak zastavený příkaz zahodil).
   requestAnimationFrame(() => {
+    const y = scrollTargetOf(target, key);
     const lenis = window.lenisInstance;
-    if (lenis) lenis.scrollTo(target, { duration: 1.6, force: true });
-    else target.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (lenis) lenis.scrollTo(y, { duration: 1.6, force: true });
+    else window.scrollTo({ top: y, behavior: "smooth" });
   });
   return true;
 }

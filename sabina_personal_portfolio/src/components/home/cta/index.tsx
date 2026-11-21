@@ -367,9 +367,15 @@ export default function Cta({
   progress,
   still: forcedStill = false,
   instant = false,
+  showReviews = true,
 }: {
   copy?: CtaCopy | null;
   references?: Reference[] | null;
+  /**
+   * Přepínač ze Studia („Nastavení webu" → Zobrazit reference). Vypnuto:
+   * bez 3D pásu recenzí i karty recenze — dokud klientka nemá aspoň jednu.
+   */
+  showReviews?: boolean;
   /** Přelévané zelené slovo nadpisu (dokument `heroWord`, místo „cta"). */
   words?: HeroWord[] | null;
   /** Průběh úseku CTA v dolly (0–1). */
@@ -709,14 +715,15 @@ export default function Cta({
             Před spuštěním je nutné nahradit skutečnou referencí — ve Studiu. */}
         {/* Recenze je dokument (Recenze ve Studiu): jméno, logo, text,
             hvězdičky. Čísla pod ní jsou ručně psané texty bloku sekce. */}
-        {still ? null : (
+        {still || !showReviews ? null : (
           <div className={styles.reviewFrame} aria-hidden="true">
             <BuildFrame progress={p} from={ENTRY.review[0]} to={ENTRY.review[1]} tag="Recenze" size marks />
           </div>
         )}
         {/* Pás recenzí ve 3D (ScrollBend): karty se při pohybu prohnou, dají
-            se táhnout (kurzor „Táhnout"). Ve Studiu a na úzkém okně DOM karta. */}
-        {still ? null : (
+            se táhnout (kurzor „Táhnout"). Ve Studiu a na úzkém okně DOM karta.
+            S vypnutými referencemi (showReviews) nic z toho. */}
+        {still || !showReviews ? null : (
           <motion.div
             className={styles.reviewStrip}
             data-cursor="drag"
@@ -759,7 +766,7 @@ export default function Cta({
             ) : null}
           </motion.div>
         )}
-        {still ? (
+        {still && showReviews ? (
         <figure
           className={styles.review}
           {...editableDoc(review.id ?? null, "reference")}

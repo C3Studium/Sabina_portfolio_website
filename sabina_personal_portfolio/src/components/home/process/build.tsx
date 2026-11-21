@@ -10,7 +10,7 @@
 // maska jde jen na obsah, rámeček stojí vedle něj. `still` = hotový stav bez
 // stavby (Studio, úzké okno).
 
-import type { ReactNode, Ref } from "react";
+import type { CSSProperties, ReactNode, Ref } from "react";
 import { motion, useTransform, type MotionValue } from "framer-motion";
 import { BuildFrame, BuildGrid, DrawFrame, softMask, useBlockBuild } from "@/components/home/info/reveal";
 import { ease, mix, within, type Window } from "@/components/home/info/choreography";
@@ -45,8 +45,13 @@ export function Block({
 }: Common & { at: Window; tag?: string }) {
   const { mask, grid } = useBlockBuild(progress, from, to);
   if (still) {
+    // Jen statické hodnoty (aspectRatio apod.) — motion hodnoty by tu
+    // nic nepřepočítalo; obal je obyčejný div.
+    const staticStyle = style
+      ? Object.fromEntries(Object.entries(style).filter(([, v]) => typeof v === "string" || typeof v === "number"))
+      : undefined;
     return (
-      <div ref={ref} className={className} {...rest}>
+      <div ref={ref} className={className} style={staticStyle as CSSProperties | undefined} {...rest}>
         <div className={bodyClassName}>{children}</div>
         {extra}
       </div>
@@ -126,6 +131,8 @@ export function DupImage({
   className,
   bodyClassName,
   ref,
+  fromRatio,
+  toRatio,
 }: {
   progress: MotionValue<number>;
   w: DupWindows;
@@ -137,23 +144,32 @@ export function DupImage({
   className?: string;
   bodyClassName?: string;
   ref?: Ref<HTMLDivElement>;
+  /**
+   * Poměr stran (šířka / výška) zdroje a vlastního obrázku. S nimi se drží
+   * ŠÍŘKA z `from`/`to` a výška se dopočítá — obrázek ze Studia určuje
+   * poměr, ne rozvržení. Bez nich platí `height` z geometrie.
+   */
+  fromRatio?: number;
+  toRatio?: number;
 }) {
   // Fotky v krocích jsou na notebooku 0,85× (fluid-scale v CSS) — rozměry
   // kopie jsou čísla ve vh, tak je zmenšuje stejný poměr.
   const fluid = useLandscapeFluid();
   const k = fluidScaleRatio(fluid, 0.85);
+  const fromH = fromRatio ? from.width / fromRatio : from.height;
+  const toH = toRatio ? to.width / toRatio : to.height;
   const t = useTransform(progress, (s) => ease(within(w.drag)(s)));
   const u = useTransform(progress, (s) => ease(within(w.resize)(s)));
   const left = useTransform(t, (v) => cvw(mix(from.left, to.left, v)));
   const top = useTransform(t, (v) => cvh(mix(from.top, to.top, v)));
   const rotate = useTransform(t, (v) => mix(from.rotate, to.rotate, v));
   const width = useTransform(u, (v) => cvh(mix(from.width, to.width, v) * k));
-  const height = useTransform(u, (v) => cvh(mix(from.height, to.height, v) * k));
+  const height = useTransform(u, (v) => cvh(mix(fromH, toH, v) * k));
   const shown = useTransform(progress, (s) => (s >= w.drag[0] ? 1 : 0));
   const ownIn = useTransform(progress, within([w.resize[1], w.resize[1] + 0.02]));
   if (still) {
     return (
-      <div ref={ref} className={className} style={{ left: cvw(to.left), top: cvh(to.top), width: cvh(to.width * k), height: cvh(to.height * k), rotate: `${to.rotate}deg` }}>
+      <div ref={ref} className={className} style={{ left: cvw(to.left), top: cvh(to.top), width: cvh(to.width * k), height: cvh(toH * k), rotate: `${to.rotate}deg` }}>
         <div className={bodyClassName}>{own}</div>
       </div>
     );

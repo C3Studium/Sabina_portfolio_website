@@ -208,7 +208,7 @@ const project = defineType({
             type: 'boolean',
             group: 'karta',
             initialValue: false,
-            description: 'Karta v galerii úvodní stránky. Vejdou se čtyři, berou se podle pořadí.',
+            description: 'Karta v galerii úvodní stránky — všechny zaškrtnuté, podle pořadí. Bez zaškrtnutí se ukážou všechny publikované.',
         }),
         defineField({
             name: 'cardCta',
@@ -716,12 +716,17 @@ const processStep = defineType({
 
 /* -------------------------------------------------------------- reference -- */
 
+// Modul „Recenze" v bočním menu Studia: záložka Recenze (dokumenty) a
+// záložka Nastavení (přepínač, jestli se reference na webu ukazují).
+const RECENZE = { name: 'recenze', title: 'Recenze', icon: 'star' }
+
 // Recenze klientů do výzvy na konci úvodní stránky. Viz poznámka nahoře, proč
 // ne knihovní `review`.
 const reference = defineType({
     name: 'reference',
     title: 'Recenze',
     icon: 'star',
+    module: RECENZE,
     orderings: BY_ORDER,
     fields: [
         defineField({
@@ -962,7 +967,30 @@ const briefContact = defineType({
     preview: (doc: Record<string, unknown>) => ({ title: doc.title || 'Kontakt', subtitle: Array.isArray(doc.channels) ? `${doc.channels.length} způsoby` : '' }),
 })
 
-export const types = [siteCopy, siteSeo, project, visual3d, heroWord, stackItem, statItem, service, processStep, reference, briefStep, briefContact, socialLink, review]
+// Přepínače webu — jeden dokument, záložka „Nastavení" v modulu Recenze.
+// Web čte PRVNÍ publikovaný (src/lib/site/globals.ts); bez dokumentu platí
+// výchozí hodnoty (reference se ukazují). Sem patří, co klientka chce
+// vypínat bez nasazení.
+const siteSettings = defineType({
+    name: 'siteSettings',
+    title: 'Nastavení',
+    icon: 'settings',
+    module: RECENZE,
+    fields: [
+        defineField({
+            name: 'showReviews',
+            title: 'Zobrazit reference',
+            type: 'boolean',
+            initialValue: true,
+            description:
+                'Sekce s recenzemi (3D pás a karta recenze ve „Spolupráci") a odkaz Reference v hlavičce a menu. Vypnout, dokud není aspoň jedna recenze.',
+        }),
+        seedKey(),
+    ],
+    preview: (doc: Record<string, unknown>) => ({ title: 'Nastavení webu', subtitle: doc.showReviews === false ? 'Reference skryté' : 'Reference zobrazené' }),
+})
+
+export const types = [siteCopy, siteSeo, project, visual3d, heroWord, stackItem, statItem, service, processStep, reference, siteSettings, briefStep, briefContact, socialLink, review]
 
 // Typ, o kterém se píšou recenze (např. 'consultant'), nebo null.
 export const reviewSubjectType = null

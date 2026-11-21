@@ -169,6 +169,7 @@ function App({ Component, pageProps, router }: AppProps) {
         onContactClose={() => setContactOpen(false)}
         contactOpen={contactOpen}
         copy={globals?.header}
+        showReviews={globals?.settings?.showReviews ?? true}
       />
       <Component {...pageProps} />
       {/* Stránka se scénou (/projects) je jedna obrazovka — bez posuvníku

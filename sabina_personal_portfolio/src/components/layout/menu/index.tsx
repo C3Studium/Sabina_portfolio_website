@@ -2,14 +2,16 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/router";
 import { AnimatePresence, motion } from "framer-motion";
-import { NAV_ITEMS, currentNavIndex } from "../nav-items";
+import { NAV_ITEMS, currentNavIndex, visibleNavItems } from "../nav-items";
 import { openSection } from "../section-popup/open";
 import styles from "./styles.module.scss";
 
 // V menu navíc úvodní stránka jako první položka — logo v hlavičce samo
 // nestačí (na telefonu ho nikdo za odkaz nepovažuje). Hlavička na šířku ji
 // nemá, proto není v NAV_ITEMS.
-const ITEMS: (typeof NAV_ITEMS)[number][] = [{ label: "Úvod", href: "/" }, ...NAV_ITEMS];
+const HOME_ITEM: (typeof NAV_ITEMS)[number] = { label: "Úvod", href: "/" };
+// Bez referencí (přepínač ze Studia) položka Reference chybí — viz nav-items.
+const itemsFor = (showReviews: boolean): (typeof NAV_ITEMS)[number][] => [HOME_ITEM, ...visibleNavItems(showReviews)];
 
 // Menu pro okna, kde se navigace do hlavičky nevejde (na výšku do 1180px,
 // na šířku pod 900px — header/styles). Tmavý list přes celé okno v jazyce
@@ -81,14 +83,19 @@ type MenuProps = {
   /** Výzva dole v menu — zavře menu a otevře kontaktní modal. */
   onContact: () => void;
   ctaLabel: string;
+  /** Přepínač ze Studia („Nastavení webu"): bez referencí chybí položka Reference. */
+  showReviews?: boolean;
 };
 
-function Sheet({ id, onClose, onContact, ctaLabel }: Omit<MenuProps, "open">) {
+function Sheet({ id, onClose, onContact, ctaLabel, showReviews = true }: Omit<MenuProps, "open">) {
   const { pathname } = useRouter();
-  // Kde návštěvník je — změří se jednou při otevření.
+  const ITEMS = itemsFor(showReviews);
+  // Kde návštěvník je — změří se jednou při otevření. Index z nav-items
+  // ukazuje do NAV_ITEMS; tady se hledá tatáž položka v (možná zkráceném) seznamu.
   const [active] = useState(() => {
     const nav = currentNavIndex(pathname);
-    return nav >= 0 ? nav + 1 : pathname === "/" ? 0 : -1;
+    if (nav >= 0) return ITEMS.indexOf(NAV_ITEMS[nav]);
+    return pathname === "/" ? 0 : -1;
   });
   const [hover, setHover] = useState<number | null>(null);
   const framed = hover ?? (active >= 0 ? active : null);
@@ -213,7 +220,7 @@ function Sheet({ id, onClose, onContact, ctaLabel }: Omit<MenuProps, "open">) {
   );
 }
 
-export default function Menu({ id, open, onClose, onContact, ctaLabel }: MenuProps) {
+export default function Menu({ id, open, onClose, onContact, ctaLabel, showReviews = true }: MenuProps) {
   // Portál do <body>: hlavička se při přechodu mezi stránkami posouvá
   // (transform), a fixed prvek uvnitř transformovaného rodiče by jel s ní.
   // Až na klientovi (na serveru žádné <body> není) — bez setState v efektu.
@@ -241,7 +248,7 @@ export default function Menu({ id, open, onClose, onContact, ctaLabel }: MenuPro
 
   return createPortal(
     <AnimatePresence>
-      {open ? <Sheet key="menu" id={id} onClose={onClose} onContact={onContact} ctaLabel={ctaLabel} /> : null}
+      {open ? <Sheet key="menu" id={id} onClose={onClose} onContact={onContact} ctaLabel={ctaLabel} showReviews={showReviews} /> : null}
     </AnimatePresence>,
     document.body,
   );

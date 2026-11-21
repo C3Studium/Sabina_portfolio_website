@@ -654,6 +654,8 @@ function DeliverFormat({
   storyRatio,
   formatRef,
   hint,
+  ratio,
+  copyRatio,
 }: {
   index: number;
   variant: string;
@@ -669,6 +671,10 @@ function DeliverFormat({
   formatRef: (node: HTMLElement | null) => void;
   /** Proklik do inspektoru (InspectHint) — leží přes celý formát. */
   hint?: ReactNode;
+  /** Poměr stran vlastního obrázku (šířka / výška) — rám drží šířku, výšku dá obrázek. */
+  ratio: number;
+  /** Poměr zdroje kopie (čtverec vzniká z formátu na výšku). */
+  copyRatio?: number;
 }) {
   const kind = (["story", "portrait", "square"] as const)[index];
   const mark = S5.marks[index];
@@ -704,7 +710,9 @@ function DeliverFormat({
   const shown = useTransform(progress, (s) =>
     kind === "portrait" ? (s >= S5.portraitDrag[0] ? 1 : 0) : kind === "square" ? (s >= S5.square.drag[0] ? 1 : 0) : 1,
   );
-  const squareRatio = useTransform(progress, (s) => `1080 / ${mix(1350, 1080, ease(within(S5.square.resize)(s)))}`);
+  // Z poměru zdroje (formát na výšku) na vlastní poměr čtverce — oba ze Studia.
+  const squareRatio = useTransform(progress, (s) => `${mix(copyRatio ?? 4 / 5, ratio, ease(within(S5.square.resize)(s)))}`);
+  const ownAspect = { aspectRatio: `${ratio}` };
   const ownIn = useTransform(progress, within([S5.square.resize[1], S5.square.resize[1] + 0.02]));
   const formatClass = [styles.formatStory, styles.formatPortrait, styles.formatSquare][index];
   const captionAt = S5.captions[index];
@@ -712,7 +720,7 @@ function DeliverFormat({
   let format: ReactNode;
   if (kind === "story") {
     format = (
-      <motion.div ref={formatRef} className={formatClass} style={still ? undefined : { aspectRatio: storyRatio }}>
+      <motion.div ref={formatRef} className={formatClass} style={still ? ownAspect : { aspectRatio: storyRatio }}>
         <LayeredReveal src={src} progress={progress} at={S5.story} still={still}>
           {image}
         </LayeredReveal>
@@ -729,7 +737,7 @@ function DeliverFormat({
     );
   } else {
     format = (
-      <div ref={formatRef} className={formatClass}>
+      <div ref={formatRef} className={formatClass} style={ownAspect}>
         {image}
       </div>
     );
@@ -849,6 +857,13 @@ const shotOf = (
   index: number,
   fallback: { src: string; alt: string; width: number; height: number },
 ) => picture(docs?.images?.[index], fallback);
+
+// Poměr stran obrázku (šířka / výška) — rámy v kompozicích drží ŠÍŘKU
+// z návrhu a výšku dopočítají z obrázku ze Studia (dřív měly poměr natvrdo,
+// 4 : 5 apod., a fotku na výšku i snímek 16 : 9 ořezávaly). Bez rozměrů 4 : 5.
+const ratioOf = (image: { width?: number; height?: number }) =>
+  image.width && image.height ? image.width / image.height : 4 / 5;
+const aspectOf = (image: { width?: number; height?: number }) => ({ aspectRatio: `${ratioOf(image)}` });
 
 // Prvky Procesu jsou v registru jen pro umělou myš (najde je a „napíše") —
 // kurzor návštěvníka se na ně nerozkládá.
@@ -1189,10 +1204,12 @@ export default function Process({
   // Krok 04: nadpis ve vizuálu se po přepsání velikosti zvětší.
   const titleScale = useTransform(sp4, (s) => TITLE_FROM + (1 - TITLE_FROM) * ease(within(S4.grow)(s)));
   const split = titleSplitFor(shots[3].src);
-  // Krok 05: story se natáhne z 1080 × 1350 na 1080 × 1920.
+  // Krok 05: story se natáhne z 1080 × 1350 na poměr vlastního obrázku
+  // (ze Studia; návrh počítal s 1080 × 1920).
+  const storyTo = STORY.width / ratioOf(shots[4]);
   const storyRatio = useTransform(
     sp5,
-    (s) => `${STORY.width} / ${STORY.from + (STORY.to - STORY.from) * ease(within(S5.stretch)(s))}`,
+    (s) => `${STORY.width} / ${STORY.from + (storyTo - STORY.from) * ease(within(S5.stretch)(s))}`,
   );
 
   // Co už myš napsala (podle scrollu, stejné časy jako její pohyb).
@@ -1429,7 +1446,7 @@ export default function Process({
                 </Drawn>
 
                 {/* Fotka (podklad od klienta) se postaví jako bannery v heru. */}
-                <div className={styles.briefPhotoSlot} {...editOne.set("images")}>
+                <div className={styles.briefPhotoSlot} style={aspectOf(briefPhoto)} {...editOne.set("images")}>
                   <div className={styles.revealBody}>
                     <LayeredReveal src={briefPhoto.src} progress={sp1} at={S1.photo} still={still}>
                       <Image
@@ -1553,7 +1570,7 @@ export default function Process({
                   duplikáty: kopie se dotáhne na místo, myš jí za roh změní
                   rozměr na poměr varianty a kopie se přepíše na variantu. */}
               <div className={styles.makeComposition} {...editableIn(three.id ?? null).set("images")}>
-                <div ref={stepRef("s3-main")} className={`${styles.shot} ${styles.shotMain}`}>
+                <div ref={stepRef("s3-main")} className={`${styles.shot} ${styles.shotMain}`} style={aspectOf(shots[0])}>
                   <div className={styles.revealBody}>
                     <LayeredReveal src={shots[0].src} progress={sp3} at={S3.main} still={still}>
                       <Image src={shots[0].src} alt={shots[0].alt} width={shots[0].width} height={shots[0].height} sizes="18vw" />
@@ -1570,6 +1587,8 @@ export default function Process({
                     w={S3[where]}
                     from={SHOT_GEO.main}
                     to={SHOT_GEO[where]}
+                    fromRatio={ratioOf(shots[0])}
+                    toRatio={ratioOf(shots[n + 1])}
                     still={still}
                     className={`${styles.shot} ${styles.shotDup}`}
                     bodyClassName={styles.shotBody}
@@ -1651,6 +1670,7 @@ export default function Process({
                   still={still}
                   className={`${styles.shot} ${styles.shotTune}`}
                   bodyClassName={styles.shotBody}
+                  style={aspectOf(shots[3])}
                   {...editFour.set("images")}
                 >
                   {split && !still ? (
@@ -1741,6 +1761,8 @@ export default function Process({
                       progress={sp5}
                       still={still}
                       storyRatio={storyRatio}
+                      ratio={ratioOf(shot)}
+                      copyRatio={index === 2 ? ratioOf(shots[5]) : undefined}
                       formatRef={stepRef(["s5-story", "s5-portrait", "s5-square"][index])}
                       hint={
                         <InspectHint
@@ -1794,7 +1816,7 @@ export default function Process({
                   nakreslí rámečkem a napíše jeho nadpis, karta identity se
                   postaví sama a myš klikne na logo. Fialové popisky na konec. */}
               <div className={styles.moreComposition}>
-                <div ref={stepRef("s6-banner")} className={styles.moreBanner} {...editSix.set("images")}>
+                <div ref={stepRef("s6-banner")} className={styles.moreBanner} style={aspectOf(moreBanner)} {...editSix.set("images")}>
                   <div className={styles.revealBody}>
                     <LayeredReveal src={moreBanner.src} progress={sp6} at={S6.banner} still={still}>
                       <Image
@@ -1843,6 +1865,7 @@ export default function Process({
                     still={still}
                     className={styles.slideImageSlot}
                     bodyClassName={styles.slideImage}
+                    style={aspectOf(slideImage)}
                     {...editSix.set("images")}
                   >
                     <Image

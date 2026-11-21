@@ -15,6 +15,16 @@ export const NAV_ITEMS: { label: string; href: string; popup?: SectionKey }[] = 
   { label: "Spolupráce", href: "/#proces", popup: "process" },
 ];
 
+/**
+ * Položky k vykreslení: „Reference" jen se zapnutým přepínačem ze Studia
+ * („Nastavení webu" → Zobrazit reference, globals.settings). Indexy
+ * z `currentNavIndex` ukazují do NAV_ITEMS — aktivní položka se porovnává
+ * podle identity (`item === NAV_ITEMS[index]`), ne podle indexu.
+ */
+export function visibleNavItems(showReviews: boolean) {
+  return showReviews ? NAV_ITEMS : NAV_ITEMS.filter((item) => item.popup !== "references");
+}
+
 // Sekce úvodní stránky v pořadí, jak jdou pod sebou: kotva → položka menu.
 const HOME_SECTIONS: [string, SectionKey][] = [
   ["sluzby", "services"],

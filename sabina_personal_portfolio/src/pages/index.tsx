@@ -86,7 +86,7 @@ export default function HomePage({ content, globals }: HomeProps) {
             scrollem — sekce pod sebou (home/stacked). Server kreslí plnou
             verzi (úvod opony ji čte), telefon ji po hydrataci vymění. */}
         {stacked ? (
-          <HomeStacked content={content} />
+          <HomeStacked content={content} showReviews={globals?.settings?.showReviews ?? true} />
         ) : (
           <>
         {/* `content.<at>` je blok podle src/lib/cms/home.ts. `docId` v něm je
@@ -113,6 +113,7 @@ export default function HomePage({ content, globals }: HomeProps) {
               words={content?.heroWords?.filter((word) => word.place === "cta") ?? null}
               progress={progress}
               still={still}
+              showReviews={globals?.settings?.showReviews ?? true}
             />
           )}
         />
