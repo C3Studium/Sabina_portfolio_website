@@ -3389,8 +3389,10 @@ $px: var(--cam-s);
 .lead {
   margin-top: max(2cqw, calc(18px / #{$px}));
   color: rgba(var(--snow-rgb), 0.78);
-  font-size: max(0.88cqw, calc(12px / #{$px}));
-  line-height: 1.72;
+  // O stupeň větší na přání klientky (21. 11. 2026): plátno jede jen na šířku
+  // (tablet, notebook, monitor), na výšku má sloupec vlastní velikost.
+  font-size: max(1cqw, calc(13.5px / #{$px}));
+  line-height: 1.68;
 
   p {
     margin: 0 0 0.9em;
