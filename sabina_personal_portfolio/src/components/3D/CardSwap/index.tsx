@@ -141,6 +141,8 @@ export const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement> & 
     <div ref={ref} {...rest} className={[styles.card, className].filter(Boolean).join(" ")}>
       {children}
       <span className={styles.rim} aria-hidden="true" />
+      {/* Odlesky světla scény (jen theme="grey", styles .glint). */}
+      <span className={styles.glint} aria-hidden="true" />
     </div>
   ),
 );
@@ -611,9 +613,37 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
         return { x: event.clientX - box.left, y: event.clientY - box.top, w: box.width, h: box.height };
       };
 
+      // Odlesky (theme="grey"): světlo scény jde za kurzorem — každé kartě se
+      // nastaví poloha světla vůči ní (--glint-x/y v %), nejvýš jednou za snímek.
+      // Bez kurzoru (odchod, dotyk) se vrátí do výchozí polohy vlevo nahoře.
+      let glintFrame = 0;
+      let glintPoint: { x: number; y: number } | null = null;
+      const glintCards = () => (root.dataset.theme === "grey" ? root.querySelectorAll<HTMLElement>(`.${styles.card}`) : []);
+      const paintGlint = () => {
+        glintFrame = 0;
+        const point = glintPoint;
+        glintCards().forEach((card) => {
+          if (!point) {
+            card.style.removeProperty("--glint-x");
+            card.style.removeProperty("--glint-y");
+            return;
+          }
+          const box = card.getBoundingClientRect();
+          if (!box.width || !box.height) return;
+          card.style.setProperty("--glint-x", `${clamp(((point.x - box.left) / box.width) * 100, -30, 130).toFixed(1)}%`);
+          card.style.setProperty("--glint-y", `${clamp(((point.y - box.top) / box.height) * 100, -30, 130).toFixed(1)}%`);
+        });
+      };
+      const moveGlint = (point: { x: number; y: number } | null) => {
+        if (root.dataset.theme !== "grey") return;
+        glintPoint = point;
+        if (!glintFrame) glintFrame = requestAnimationFrame(paintGlint);
+      };
+
       const onMove = (event: PointerEvent) => {
         const s = settingsRef.current;
         if (event.pointerType !== "touch") {
+          moveGlint({ x: event.clientX, y: event.clientY });
           const point = local(event);
           const nx = clamp((point.x / Math.max(1, point.w)) * 2 - 1, -1, 1);
           const ny = clamp((point.y / Math.max(1, point.h)) * 2 - 1, -1, 1);
@@ -662,6 +692,7 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
 
       const onLeave = (event: PointerEvent) => {
         if (event.pointerType === "touch") return;
+        moveGlint(null);
         if (state.drag?.active) return;
         state.hovered = false;
         state.overCard = false;
@@ -872,6 +903,7 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
         awayObserver.disconnect();
         root.removeEventListener("pointermove", onMove);
         root.removeEventListener("pointerleave", onLeave);
+        cancelAnimationFrame(glintFrame);
         root.removeEventListener("pointerdown", onDown);
         root.removeEventListener("pointerup", onUp);
         root.removeEventListener("pointercancel", onUp);
