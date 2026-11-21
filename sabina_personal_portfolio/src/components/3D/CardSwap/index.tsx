@@ -204,6 +204,8 @@ type DeckCard = {
   top: number;
   under: boolean;
   v: Vec;
+  /** Poslední zapsané hodnoty odlesků (write) — zapisuje se jen při změně. */
+  glint?: string;
 } & Vec;
 
 const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
@@ -242,6 +244,9 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
     const stageRef = useRef<HTMLDivElement>(null);
     const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
     const shadeRefs = useRef<(HTMLSpanElement | null)[]>([]);
+    // Lom podkladu u skla (theme="grey"): posun obrazu za kartou podle její
+    // polohy — feOffset ve filtru každé karty (#swap-glass-warp-<index>).
+    const refractRefs = useRef<(SVGFEOffsetElement | null)[]>([]);
     const apiRef = useRef<{ next: () => void; prev: () => void; refresh: () => void } | null>(null);
 
     const cards = useMemo(() => Children.toArray(children).filter(isValidElement), [children]);
@@ -405,6 +410,33 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
         el.style.cursor = card.phase === "drag" ? "grabbing" : card.pos > 0 ? "pointer" : s.draggable ? "grab" : "";
         if (card.pos === 0) el.setAttribute("data-front", "");
         else el.removeAttribute("data-front");
+
+        // Odlesky (theme="grey") podle polohy karty: světlo stojí v prostoru,
+        // karta se pod ním hýbe — posun od klidové polohy posune odlesky
+        // opačně, natočení karty změní jejich úhel a v pohybu jsou jasnější.
+        // Zapisuje se jen při změně (styl karty se jinak nepřepočítává).
+        const rest = slot(Math.max(0, card.pos), s);
+        const mx = (card.x - rest.x) / Math.max(1, s.width);
+        const my = (card.y - rest.y) / Math.max(1, s.height);
+        const shift = clamp(-mx * 70, -45, 45);
+        const lift = clamp(-my * 40, -25, 25);
+        const tilt = clamp(card.r * 2.4, -24, 24);
+        const gain = clamp(Math.hypot(mx, my) * 1.6 + Math.abs(card.r) / 18, 0, 1);
+        const glint = `${shift.toFixed(1)}|${lift.toFixed(1)}|${tilt.toFixed(1)}|${gain.toFixed(2)}`;
+        if (glint !== card.glint) {
+          card.glint = glint;
+          el.style.setProperty("--glint-shift", `${shift.toFixed(1)}%`);
+          el.style.setProperty("--glint-lift", `${lift.toFixed(1)}%`);
+          el.style.setProperty("--glint-tilt", `${tilt.toFixed(1)}deg`);
+          el.style.setProperty("--glint-gain", gain.toFixed(2));
+          // Světlo zezadu prochází sklem pod jiným úhlem: obraz za kartou se
+          // posune (lom) proti pohybu karty.
+          const refract = refractRefs.current[card.index];
+          if (refract) {
+            refract.setAttribute("dx", (-mx * 46).toFixed(1));
+            refract.setAttribute("dy", (-my * 30 + card.r * 0.6).toFixed(1));
+          }
+        }
       };
 
       const writeStage = (s: S) => {
@@ -939,6 +971,22 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
               <feTurbulence type="fractalNoise" baseFrequency="0.006 0.011" numOctaves="2" seed="7" result="noise" />
               <feDisplacementMap in="SourceGraphic" in2="noise" scale="38" xChannelSelector="R" yChannelSelector="G" />
             </filter>
+            {/* Filtr podkladu každé karty: zvlnění + posun (lom) podle toho, kam
+                je karta vytažená — feOffset píše write() v efektu. */}
+            {cards.map((_, i) => (
+              <filter key={i} id={`swap-glass-warp-${i}`} x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
+                <feTurbulence type="fractalNoise" baseFrequency="0.006 0.011" numOctaves="2" seed={7 + i} result="noise" />
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="38" xChannelSelector="R" yChannelSelector="G" result="warped" />
+                <feOffset
+                  ref={(node) => {
+                    refractRefs.current[i] = node;
+                  }}
+                  in="warped"
+                  dx="0"
+                  dy="0"
+                />
+              </filter>
+            ))}
           </svg>
         ) : null}
         <div ref={stageRef} className={styles.stage} data-align={align}>

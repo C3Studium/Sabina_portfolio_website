@@ -48,6 +48,15 @@
   backdrop-filter: blur(16px) saturate(150%) brightness(1.04) url(#swap-glass-warp);
 }
 
+// Každá karta svým filtrem (index.tsx: #swap-glass-warp-<index>) — obraz za ní
+// se při tahu a natočení posune (lom světla zezadu). Prohlížeč, který url()
+// v backdrop-filter neumí, deklaraci zahodí a zůstane mu rozmazání výš.
+@for $i from 0 through 7 {
+  .root[data-theme="grey"] .slot[data-swap-index="#{$i}"] .card {
+    backdrop-filter: blur(16px) saturate(150%) brightness(1.04) url(#swap-glass-warp-#{$i});
+  }
+}
+
 // Daleko od výhledu (index.tsx, `data-away`): bez 3D vrstev karet v paměti.
 .root[data-away] .stage {
   display: none;
@@ -132,7 +141,8 @@
 // Dotyk: sklo bez rozmazání a zvlnění (výkon, viz výš) — jen průsvitné okraje.
 @media (hover: none) and (pointer: coarse) {
   // Bez rozmazání by průsvitná karta ukázala zadní karty ostře — plná varianta.
-  .root[data-theme="grey"] .card {
+  .root[data-theme="grey"] .card,
+  .root[data-theme="grey"] .slot[data-swap-index] .card {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background: var(--swap-tile-solid, var(--swap-tile));
@@ -170,14 +180,27 @@
   border-radius: inherit;
   pointer-events: none;
   mix-blend-mode: screen;
+  // Světlo v prostoru: pomalý posun (glint-drift) plus posun a natočení podle
+  // toho, kam je karta vytažená (index.tsx write: --glint-shift/lift/tilt/gain).
+  --gx: calc(var(--glint-x) + var(--glint-shift, 0%));
+  --gy: calc(var(--glint-y) + var(--glint-lift, 0%));
   // Světlo dopadá zleva shora: měkký jas, který ke středu karty slábne
-  // (lineární, žádná skvrna).
-  background: linear-gradient(
-    152deg,
-    rgba(255, 255, 255, 0.1) 0%,
-    rgba(255, 255, 255, 0.035) 26%,
-    rgba(255, 255, 255, 0) 48%
-  );
+  // (lineární, žádná skvrna). K tomu světlo zezadu, které prochází sklem
+  // z opačné strany (vpravo dole) — úhel i síla jdou s natočením a tahem
+  // karty (--glint-tilt, --glint-gain): při tahu prosvítá víc.
+  background:
+    linear-gradient(
+      calc(152deg + var(--glint-tilt, 0deg)),
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.035) 26%,
+      rgba(255, 255, 255, 0) 48%
+    ),
+    linear-gradient(
+      calc(318deg - var(--glint-tilt, 0deg) * 1.5),
+      rgba(255, 255, 255, calc(0.05 + var(--glint-gain, 0) * 0.07)) 0%,
+      rgba(255, 255, 255, calc(0.015 + var(--glint-gain, 0) * 0.02)) 20%,
+      rgba(255, 255, 255, 0) 38%
+    );
   animation: glint-drift 16s ease-in-out infinite alternate;
 }
 
@@ -204,7 +227,7 @@
   // Nad bílou hranou nepatrný duhový lom (jako hrana skla, která rozkládá
   // světlo) — jen tón, ne barva.
   background:
-    radial-gradient(55% 45% at var(--glint-x) var(--glint-y), rgba(255, 255, 255, 0.9), transparent 70%),
+    radial-gradient(55% 45% at var(--gx) var(--gy), rgba(255, 255, 255, 0.9), transparent 70%),
     linear-gradient(
       140deg,
       rgba(255, 255, 255, 0.5) 0%,
@@ -213,7 +236,7 @@
       rgba(255, 255, 255, 0.14) 100%
     ),
     conic-gradient(
-      from 210deg,
+      from calc(210deg + var(--glint-tilt, 0deg)),
       rgba(150, 215, 255, 0.32),
       rgba(255, 255, 255, 0.04) 16%,
       rgba(255, 175, 225, 0.24) 30%,
@@ -237,33 +260,33 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  filter: url(#swap-glass-warp);
+  filter: url(#swap-glass-warp) brightness(calc(1 + var(--glint-gain, 0) * 0.9));
   background:
     radial-gradient(circle at 13% 1.2%, rgba(255, 255, 255, 0.95) 0 1.4px, transparent 4.5px),
     radial-gradient(circle at 98.6% 24%, rgba(255, 255, 255, 0.8) 0 1.1px, transparent 3.8px),
     radial-gradient(circle at 1.4% 66%, rgba(255, 255, 255, 0.7) 0 1px, transparent 3.2px),
     // Hlavní pruh: měkké okraje a ostré jasné jádro (světlo lámané hranou).
     linear-gradient(
-      116deg,
-      transparent calc(var(--glint-x) - 8%),
-      rgba(255, 255, 255, 0.03) calc(var(--glint-x) - 4%),
-      rgba(255, 255, 255, 0.1) calc(var(--glint-x) - 1.4%),
-      rgba(255, 255, 255, 0.26) calc(var(--glint-x) - 0.8%),
-      rgba(255, 255, 255, 0.1) calc(var(--glint-x) - 0.2%),
-      rgba(255, 255, 255, 0.03) calc(var(--glint-x) + 3%),
-      transparent calc(var(--glint-x) + 6%)
+      calc(116deg + var(--glint-tilt, 0deg)),
+      transparent calc(var(--gx) - 8%),
+      rgba(255, 255, 255, 0.03) calc(var(--gx) - 4%),
+      rgba(255, 255, 255, 0.1) calc(var(--gx) - 1.4%),
+      rgba(255, 255, 255, 0.26) calc(var(--gx) - 0.8%),
+      rgba(255, 255, 255, 0.1) calc(var(--gx) - 0.2%),
+      rgba(255, 255, 255, 0.03) calc(var(--gx) + 3%),
+      transparent calc(var(--gx) + 6%)
     ),
     linear-gradient(
-      109deg,
-      transparent calc(var(--glint-x) + 9%),
-      rgba(255, 255, 255, 0.08) calc(var(--glint-x) + 10.5%),
-      transparent calc(var(--glint-x) + 12%)
+      calc(109deg + var(--glint-tilt, 0deg)),
+      transparent calc(var(--gx) + 9%),
+      rgba(255, 255, 255, 0.08) calc(var(--gx) + 10.5%),
+      transparent calc(var(--gx) + 12%)
     ),
     linear-gradient(
-      122deg,
-      transparent calc(var(--glint-x) + 38%),
-      rgba(255, 255, 255, 0.05) calc(var(--glint-x) + 40%),
-      transparent calc(var(--glint-x) + 43%)
+      calc(122deg + var(--glint-tilt, 0deg)),
+      transparent calc(var(--gx) + 38%),
+      rgba(255, 255, 255, 0.05) calc(var(--gx) + 40%),
+      transparent calc(var(--gx) + 43%)
     ),
     linear-gradient(
       115deg,
