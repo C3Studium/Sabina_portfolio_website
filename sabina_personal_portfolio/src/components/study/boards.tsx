@@ -23,6 +23,7 @@
 // Vrstvy artboardu (`data-z`) se při přejezdu kamery zvednou nad sebe.
 // NDA: žádné názvy písem ani kódy barev klienta.
 
+import { caseEditable } from "@c3studium/valecms/edit";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Image from "next/image";
 import { motion, useMotionValueEvent, useTransform, type MotionStyle, type MotionValue } from "framer-motion";
@@ -55,7 +56,15 @@ export type BoardProps = {
   range: [number, number];
   /** Safari na dotyku: pohyby děl jedou na nativní ose scrollu (viz useBoardMotion). */
   native: boolean;
+  /** Id dokumentu projektu (jen koncept / Studio) — pole studie jsou v náhledu Study Cases klikací. */
+  docId?: string | null;
 };
+
+// Anotace pole projektu pro Study Cases (Studio); mimo Studio prázdný objekt.
+// Kapitoly: cover → studyCover, play → studyStack, campaigns → studyStrip,
+// trust → studyRing (src/lib/site/study.ts).
+const caseOf = (docId: string | null | undefined, field: string, kind?: string) => caseEditable(docId ?? null, field, kind);
+const workEdit = (docId: string | null | undefined, chapter: string, k: number) => caseOf(docId, `${chapter}.works.${k}.image`, "image");
 
 /**
  * Plynulý pohyb ze scrollu stání artboardu jako `transform` řetězec.
@@ -120,7 +129,7 @@ const aspectOf = (w: StudyWork) => w.image.width / w.image.height;
  * Text, který se vypisuje (jako psaní), když `on`. Nevypsaná část drží místo
  * (visibility), takže se rozvržení nehýbe; čtečky dostanou celý text.
  */
-function Typed({ text, on, reduce, className, style }: { text: StudyPart[][]; on: boolean; reduce: boolean; className?: string; style?: CSSProperties }) {
+function Typed({ text, on, reduce, className, style, edit }: { text: StudyPart[][]; on: boolean; reduce: boolean; className?: string; style?: CSSProperties; edit?: Record<string, string> }) {
   const parts = text.map((paragraph) => paragraph.map(([t, mark], i) => [i > 0 && !/^[.,;:!?]/.test(t) ? ` ${t}` : t, mark] as const));
   const total = parts.flat().reduce((n, [t]) => n + t.length, 0);
   const [count, setCount] = useState(0);
@@ -142,7 +151,7 @@ function Typed({ text, on, reduce, className, style }: { text: StudyPart[][]; on
   // Začátek každého úseku v celém textu (kolik znaků je před ním).
   const starts = parts.map((_, pi) => parts.slice(0, pi).flat().reduce((n, [t]) => n + t.length, 0));
   return (
-    <div className={className ? `${styles.lead} ${className}` : styles.lead} style={style}>
+    <div className={className ? `${styles.lead} ${className}` : styles.lead} style={style} {...edit}>
       <div className={styles.srOnly}>
         {text.map((paragraph, i) => (
           <p key={i}>
@@ -174,16 +183,18 @@ function Typed({ text, on, reduce, className, style }: { text: StudyPart[][]; on
 }
 
 /** Nadpis kapitoly: číslo a název nahoře, pod ním zelená a světlá část (a text). */
-function Heading({ no, label, parts, style, sweep, children }: { no: string; label: string; parts: StudyPart[]; style: CSSProperties; sweep: boolean; children?: ReactNode }) {
+function Heading({ no, label, parts, style, sweep, children, docId, chapter }: { no: string; label: string; parts: StudyPart[]; style: CSSProperties; sweep: boolean; children?: ReactNode; docId?: string | null; chapter?: string }) {
+  // Study Cases: štítek a nadpis kapitoly jsou pole `<kapitola>.label/.heading`.
+  const edit = (field: string) => (chapter ? caseOf(docId, `${chapter}.${field}`) : {});
   return (
     <div className={styles.chHead} data-z="1" style={style}>
       <p className={styles.chKicker}>
         <span className={styles.chBar} aria-hidden="true" />
-        {no} <span>{label}</span>
+        {no} <span {...edit("label")}>{label}</span>
       </p>
       {/* Rámeček s rozměrem kolem písmen zelené části (MeasureText z hera). */}
       <MeasureText sweep={sweep}>
-        <h2 className={styles.chTitle}>
+        <h2 className={styles.chTitle} {...edit("heading")}>
           {parts.map(([text, green], i) => (
             <span key={i} className={styles.chLine}>
               <span data-green={green === true || undefined} style={{ transitionDelay: `${0.15 + i * 0.1}s` }}>
@@ -243,10 +254,13 @@ function Work({
   picked = false,
   front = false,
   onPick,
+  edit,
 }: {
   work: StudyWork;
   w: number;
   h: number;
+  /** Study Cases: anotace obrázku díla (`<kapitola>.works.<k>.image`). */
+  edit?: Record<string, string>;
   /** Může nést motion hodnoty (posun, rozměr) — mění se bez překreslení Reactu. */
   style?: MotionStyle;
   priority?: boolean;
@@ -268,7 +282,7 @@ function Work({
       onClick={(e) => (pick ? onPick() : inspect?.(work.image, e.currentTarget))}
       aria-label={pick ? `Dopředu: ${work.name}` : `Detail: ${work.name}`}
     >
-      <span className={styles.workImage}>
+      <span className={styles.workImage} {...edit}>
         <Image src={work.image.src} alt={work.image.alt} fill sizes={`${Math.ceil(w / 18)}vw`} priority={priority} draggable={false} />
       </span>
       {picked ? (
@@ -527,7 +541,7 @@ function Construct({ style }: { style: CSSProperties }) {
 
 const DRIFT = [30, 70, 130];
 
-export function CoverBoard({ c, act, rect, go, reduce, seen, progress, range, native }: BoardProps) {
+export function CoverBoard({ c, act, rect, go, reduce, seen, progress, range, native, docId }: BoardProps) {
   const ch = c.chapters.cover;
   const { w: W, h: H } = rect;
   const portrait = H > W;
@@ -584,7 +598,7 @@ export function CoverBoard({ c, act, rect, go, reduce, seen, progress, range, na
       {!portrait ? <Construct style={{ left: M, top: H * 0.15, width: W * 0.22 }} /> : null}
       <div className={styles.cvTitle} data-z="1" style={portrait ? { left: M, top: M * 1.9, right: M } : { left: M, bottom: M, width: W * 0.36 }}>
         <MeasureText sweep={go && seen}>
-          <h1 className={styles.cvName}>
+          <h1 className={styles.cvName} {...caseOf(docId, "title")}>
             <span className={styles.chLine}>
               <span data-green="">
                 <span data-measure="">{c.title}</span>
@@ -592,8 +606,8 @@ export function CoverBoard({ c, act, rect, go, reduce, seen, progress, range, na
             </span>
           </h1>
         </MeasureText>
-        <p className={styles.cvKind}>{c.kind}</p>
-        {!portrait ? <Typed text={ch.text} on={go && seen} reduce={reduce} /> : null}
+        <p className={styles.cvKind} {...caseOf(docId, "studyKind")}>{c.kind}</p>
+        {!portrait ? <Typed text={ch.text} on={go && seen} reduce={reduce} edit={caseOf(docId, "studyCover.text")} /> : null}
         {/* <dl className={styles.cvMeta}>
           {c.meta.map((item) => (
             <div key={item.label}>
@@ -617,6 +631,7 @@ export function CoverBoard({ c, act, rect, go, reduce, seen, progress, range, na
             picked={picked === k}
             front={k === current}
             onPick={() => choose(k)}
+            edit={workEdit(docId, "studyCover", k)}
             style={{ left: p.x, top: p.y, transform: drift(s), "--dim": (1 - DEPTH[s]) * 1.4, zIndex: s } as MotionStyle}
           />
         );
@@ -641,7 +656,7 @@ export function CoverBoard({ c, act, rect, go, reduce, seen, progress, range, na
 
 const STACK = { dx: 0.03, dy: -0.036, scale: 0.05 };
 
-export function PlayBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
+export function PlayBoard({ c, act, rect, go, reduce, seen, docId }: BoardProps) {
   const ch = c.chapters.play;
   const { w: W, h: H } = rect;
   const portrait = H > W;
@@ -658,8 +673,8 @@ export function PlayBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
   return (
     <div className={styles.chBoard}>
       <BgDiamond W={W} H={H} cx={base.x + cw * 0.62} cy={base.y + ch0 * 0.45} r={portrait ? W * 0.62 : H * 0.72} />
-      <Heading no="02" label={ch.label} sweep={go && seen} parts={ch.heading} style={portrait ? { left: M, top: M, right: M } : { left: W * 0.57, top: M, width: W * 0.36 }}>
-        {!portrait ? <Typed text={ch.text} on={go && seen} reduce={reduce} /> : null}
+      <Heading no="02" label={ch.label} sweep={go && seen} parts={ch.heading} docId={docId} chapter="studyStack" style={portrait ? { left: M, top: M, right: M } : { left: W * 0.57, top: M, width: W * 0.36 }}>
+        {!portrait ? <Typed text={ch.text} on={go && seen} reduce={reduce} edit={caseOf(docId, "studyStack.text")} /> : null}
       </Heading>
       <div className={styles.stack} data-z="2">
         {works.map((work, k) => {
@@ -674,6 +689,7 @@ export function PlayBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
               picked={picked === k}
               front={k === front}
               onPick={() => choose(k)}
+              edit={workEdit(docId, "studyStack", k)}
               style={
                 {
                   left: base.x + rank * W * STACK.dx,
@@ -716,7 +732,7 @@ export function PlayBoard({ c, act, rect, go, reduce, seen }: BoardProps) {
  *  na menší obrazovce je větší díl artboardu, mapa mu uhne. */
 const MAP_CONTROLS = 360;
 
-export function CampaignsBoard({ c, act, rect, go, reduce, seen, progress, range, native }: BoardProps) {
+export function CampaignsBoard({ c, act, rect, go, reduce, seen, progress, range, native, docId }: BoardProps) {
   const ch = c.chapters.campaigns;
   const { w: W, h: H } = rect;
   const portrait = H > W;
@@ -760,13 +776,13 @@ export function CampaignsBoard({ c, act, rect, go, reduce, seen, progress, range
   return (
     <div className={styles.chBoard}>
       <BgCurve W={W} H={H} reduce={reduce} />
-      <Heading no="03" label={ch.label} sweep={go && seen} parts={ch.heading} style={portrait ? { left: M, top: M, right: M } : { left: M, top: M, width: W * 0.5 }} />
-      {!portrait ? <Typed text={ch.text} on={go && seen} reduce={reduce} style={{ position: "absolute", left: W * 0.58, top: M * 1.55, width: W * 0.34, marginTop: 0 }} /> : null}
+      <Heading no="03" label={ch.label} sweep={go && seen} parts={ch.heading} docId={docId} chapter="studyStrip" style={portrait ? { left: M, top: M, right: M } : { left: M, top: M, width: W * 0.5 }} />
+      {!portrait ? <Typed text={ch.text} on={go && seen} reduce={reduce} edit={caseOf(docId, "studyStrip.text")} style={{ position: "absolute", left: W * 0.58, top: M * 1.55, width: W * 0.34, marginTop: 0 }} /> : null}
       <div className={styles.strip} data-z="2" style={{ left: win.x, top: win.y, width: win.w, height: win.h + H * 0.07 }}>
         <motion.div className={styles.stripTrack} data-glide={picked !== null || undefined} style={stripStyle}>
           {items.map((it, i) => (
             <figure key={it.work.name + i} className={styles.stripItem} data-picked={picked === i || undefined} style={{ left: xs[i], width: it.w }}>
-              <Work work={it.work} w={it.w} h={win.h} picked={picked === i} front={i === current} onPick={() => choose(i)} />
+              <Work work={it.work} w={it.w} h={win.h} picked={picked === i} front={i === current} onPick={() => choose(i)} edit={workEdit(docId, "studyStrip", i)} />
               <figcaption>
                 <span>{it.work.tag}</span> {it.work.name}
               </figcaption>
@@ -826,10 +842,12 @@ function RingCard({
   picked,
   front,
   onPick,
+  edit,
 }: {
   work: StudyWork;
   k: number;
   n: number;
+  edit?: Record<string, string>;
   turn: MotionValue<number>;
   /** Otočení z průběhu stání (scroll). */
   turnAt: (v: number) => number;
@@ -872,6 +890,7 @@ function RingCard({
         picked={picked}
         front={front}
         onPick={onPick}
+        edit={edit}
         style={
           {
             left: centre.x - maxW / 2,
@@ -895,12 +914,13 @@ function RingCard({
       picked={picked}
       front={front}
       onPick={onPick}
+      edit={edit}
       style={{ left, top, width, height, zIndex, "--dim": dim } as MotionStyle}
     />
   );
 }
 
-export function TrustBoard({ c, act, rect, go, reduce, seen, progress, range, native }: BoardProps) {
+export function TrustBoard({ c, act, rect, go, reduce, seen, progress, range, native, docId }: BoardProps) {
   const ch = c.chapters.trust;
   const { w: W, h: H } = rect;
   const portrait = H > W;
@@ -927,8 +947,8 @@ export function TrustBoard({ c, act, rect, go, reduce, seen, progress, range, na
         orbit={{ cy: centre.y + cardH * 0.5 + H * 0.04, rx: R * 1.7, ry: H * 0.05 }}
         reduce={reduce}
       />
-      <Heading no="04" label={ch.label} sweep={go && seen} parts={ch.heading} style={portrait ? { left: M, top: M, right: M } : { left: W * 0.6, top: M, width: W * 0.33 }}>
-        {!portrait ? <Typed text={ch.text} on={go && seen} reduce={reduce} /> : null}
+      <Heading no="04" label={ch.label} sweep={go && seen} parts={ch.heading} docId={docId} chapter="studyRing" style={portrait ? { left: M, top: M, right: M } : { left: W * 0.6, top: M, width: W * 0.33 }}>
+        {!portrait ? <Typed text={ch.text} on={go && seen} reduce={reduce} edit={caseOf(docId, "studyRing.text")} /> : null}
       </Heading>
       <div className={styles.ring} data-z="2" data-glide={picked !== null || undefined}>
         {works.map((work, k) => (
@@ -948,6 +968,7 @@ export function TrustBoard({ c, act, rect, go, reduce, seen, progress, range, na
             picked={picked === k}
             front={k === front}
             onPick={() => choose(k)}
+            edit={workEdit(docId, "studyRing", k)}
           />
         ))}
       </div>

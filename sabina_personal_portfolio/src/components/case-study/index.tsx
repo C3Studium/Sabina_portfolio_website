@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { editableDoc, editableIn } from "@c3studium/valecms/edit";
+import { caseEditable, caseText, editableDoc, editableIn } from "@c3studium/valecms/edit";
 import { FALLBACK_LABELS, labelText, type LabelsCopy } from "@/components/projects/hero-list";
 import type { Project } from "@/lib/site/projects";
 import styles from "./styles.module.scss";
@@ -53,13 +53,15 @@ export default function CaseStudy({ project, next, labels = null }: Props) {
           <p className={styles.eyebrow} {...editLabels("items.2.label")}>
             {labelText(labels?.eyebrow, FALLBACK_LABELS.eyebrow)}
           </p>
-          <h1 className={styles.title}>{project.title}</h1>
-          {project.tagline ? (
-            <p className={styles.tagline}>{project.tagline}</p>
+          {/* Study Cases (Studio): pole projektu jsou klikací přímo v náhledu
+              stránky; caseText dá prázdnému poli zástupný text jen ve Studiu. */}
+          <h1 className={styles.title} {...caseEditable(project, "title")}>{caseText(project.title, "Název projektu")}</h1>
+          {project.tagline || caseText("", "x") ? (
+            <p className={styles.tagline} {...caseEditable(project, "tagline")}>{caseText(project.tagline, "Podtitul")}</p>
           ) : null}
         </div>
         {cover ? (
-          <div className={styles.heroMedia}>
+          <div className={styles.heroMedia} {...caseEditable(project, "cover", "image")}>
             <Image
               src={cover.url}
               alt={cover.alt}
@@ -74,12 +76,13 @@ export default function CaseStudy({ project, next, labels = null }: Props) {
 
       {project.perex || project.body ? (
         <section id="case-study-overview" className={styles.overview}>
-          {project.perex ? <p className={styles.perex}>{project.perex}</p> : null}
+          {project.perex ? <p className={styles.perex} {...caseEditable(project, "perex")}>{project.perex}</p> : null}
           {project.body ? (
             // richText je HTML z editoru Studia — jediné místo, odkud sem může
             // přijít; návštěvník ho nepíše.
             <div
               className={styles.body}
+              {...caseEditable(project, "body")}
               dangerouslySetInnerHTML={{ __html: project.body }}
             />
           ) : null}
@@ -93,7 +96,7 @@ export default function CaseStudy({ project, next, labels = null }: Props) {
           </h2>
           <ol className={styles.goalsList}>
             {project.goals.map((goal, index) => (
-              <li key={index} className={styles.goal}>
+              <li key={index} className={styles.goal} {...caseEditable(project, `goals.${index}`)}>
                 <span className={styles.goalNumber} aria-hidden="true">
                   {String(index + 1).padStart(2, "0")}
                 </span>
@@ -107,7 +110,7 @@ export default function CaseStudy({ project, next, labels = null }: Props) {
       {project.gallery.length ? (
         <section id="case-study-process" className={styles.gallery}>
           {project.gallery.map((picture, index) => (
-            <figure key={`${picture.url}-${index}`} className={styles.galleryItem}>
+            <figure key={`${picture.url}-${index}`} className={styles.galleryItem} {...caseEditable(project, `gallery.${index}`, "image")}>
               <Image
                 src={picture.url}
                 alt={picture.alt}

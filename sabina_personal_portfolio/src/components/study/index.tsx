@@ -646,6 +646,8 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
                 // Obsah se staví až po příletu kamery (FLY_IN).
                 const props: BoardProps = {
                   c,
+                  // Study Cases ve Studiu: pole projektu na artboardech jsou klikací (caseEditable).
+                  docId,
                   act: acts[board],
                   rect: r,
                   go: go && arrived,
