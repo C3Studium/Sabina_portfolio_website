@@ -758,7 +758,7 @@ export default function Study({
   const canvas = useMedia(CANVAS_SCREEN);
   return (
     <InspectContext.Provider value={inspect}>
-      {canvas ? <Canvas c={content} docId={docId} /> : <StudyColumn c={content} />}
+      {canvas ? <Canvas c={content} docId={docId} /> : <StudyColumn c={content} docId={docId} />}
       <InspectorDock image={inspected?.image ?? null} anchor={inspected?.anchor} onClose={close} />
     </InspectContext.Provider>
   );

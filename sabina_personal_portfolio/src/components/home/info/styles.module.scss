@@ -371,13 +371,15 @@ $col-portrait: 24%;
   position: relative;
   z-index: 2;
   align-self: center;
-  // Uprostřed prostoru vpravo od úvodu: balíček leží přes pravou část
-  // portrétu (obličej zůstává volný), portrét je pod ním jako pozadí.
+  // Vpravo: poslední karta končí ~2,5vw od pravého okraje okna (obsah končí na 95vw,
+  // −3,8vw box vysune; zbytek je okraj balíčku a natočení), balíček je ukotvený vpravo (CardSwap
+  // align="end") — poslední karta tak končí ~2,5 % od okraje (2026-11-21).
   // Šířka = bývalý sloupec karet (100 % − úvod 20 % − portrét 24 % − dvě
   // mezery z 90vw obsahu); karta uvnitř má šířku v procentech, box ji
-  // potřebuje — bez ní by se „uprostřed" srazil na nulu.
-  justify-self: center;
+  // potřebuje.
+  justify-self: end;
   width: calc(0.56 * 90vw - 2vw);
+  margin-right: -3.8vw;
 }
 
 /* Pilulka: kontura i plná vrstva leží přes celou pilulku a mají její
@@ -1023,11 +1025,68 @@ $col-portrait: 24%;
   text-overflow: ellipsis;
 }
 
+/* ---------- Obrázek služby jako pozadí karty ----------
+   Pole „icon" dokumentu služby přes celou kartu (balíček i karta ve Studiu).
+   Světlý závoj v barvě karty drží text čitelný: nahoře pod nadpisem a dole
+   pod výzvou víc, uprostřed obrázek víc vidět. */
+.swapMedia,
+.cardPrimary .cardMedia {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  border-radius: inherit;
+  background: none;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(226, 230, 237, 0.92) 0%,
+      rgba(226, 230, 237, 0.55) 40%,
+      rgba(226, 230, 237, 0.55) 70%,
+      rgba(226, 230, 237, 0.9) 100%
+    );
+  }
+}
+
+// V balíčku je obrázek jen pozadí; ve Studiu na něj jde kliknout (výměna).
+.swapMedia {
+  pointer-events: none;
+}
+
+// Karta ve Studiu: obrázek už není sloupec vedle textu — text přes celou šířku.
+.cardPrimary {
+  isolation: isolate;
+  overflow: hidden;
+
+  .cardBody {
+    grid-template-columns: 1fr;
+  }
+
+  .cardMediaSlot {
+    display: none;
+  }
+}
+
 /* ---------- Karty v balíčku (CardSwap) ---------- */
 
 // Karta je v balíčku 880 × 1120 a balíček se zmenšuje na výšku sekce —
 // rozměry v em od základu 2rem, aby obsah škáloval s kartou.
 .swapCard {
+  // Obrázek služby je pozadí celé karty (.swapMedia) — vlastní vrstvení, ať
+  // z-index −1 zůstane uvnitř karty, nad její plochou a pod textem.
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   padding: 3.2em 2.2em 2.2em;
@@ -1301,6 +1360,7 @@ $col-portrait: 24%;
     justify-self: end;
     align-self: center;
     width: 60vw;
+    margin-right: 0;
     // Mřížka statistik dole zabírá 13vh (+ 2vh od spodku) — balíček nad ní.
     margin-bottom: 16vh;
   }

@@ -9,6 +9,7 @@
 
 import Image from "next/image";
 import type { CSSProperties } from "react";
+import { caseEditable } from "@c3studium/valecms/edit";
 import { Parts } from "./boards";
 import type { StudyChapter, StudyContent, StudyImage, StudyOutput, StudyWork } from "./content";
 import { useInspect } from "./inspector";
@@ -35,13 +36,13 @@ function Shot({ image, label, className }: { image: StudyImage; label: string; c
   );
 }
 
-/** Pás děl do strany (scroll-snap). */
-function Strip({ works }: { works: StudyWork[] }) {
+/** Pás děl do strany (scroll-snap). `field` = cesta kapitoly pro Study Cases (`studyCover` …). */
+function Strip({ works, docId = null, field }: { works: StudyWork[]; docId?: string | null; field?: string }) {
   if (!works.length) return null;
   return (
     <div className={styles.strip} role="list">
       {works.map((work, i) => (
-        <figure key={work.name + i} className={styles.stripItem} role="listitem">
+        <figure key={work.name + i} className={styles.stripItem} role="listitem" {...(field ? caseEditable(docId, `${field}.works.${i}.image`, "image") : {})}>
           <Shot image={work.image} label={work.name} />
           <figcaption>
             <span>{work.tag}</span> {work.name}
@@ -61,15 +62,33 @@ function Note({ parts, tilt }: { parts: StudyChapter["asides"][number]; tilt: nu
   );
 }
 
-function Heading({ no, label, parts, level = 2 }: { no: string; label: string; parts: StudyChapter["heading"]; level?: 1 | 2 }) {
+/**
+ * Nadpis kapitoly. Study Cases: `labelEdit` / `titleEdit` = anotace štítku
+ * a nadpisu (caseEditable); mimo Studio prázdné objekty.
+ */
+function Heading({
+  no,
+  label,
+  parts,
+  level = 2,
+  labelEdit,
+  titleEdit,
+}: {
+  no: string;
+  label: string;
+  parts: StudyChapter["heading"];
+  level?: 1 | 2;
+  labelEdit?: Record<string, string>;
+  titleEdit?: Record<string, string>;
+}) {
   const Tag = level === 1 ? "h1" : "h2";
   return (
     <header className={styles.head}>
       <p className={styles.kicker}>
         <span className={styles.bar} aria-hidden="true" />
-        {no} <span>{label}</span>
+        {no} <span {...labelEdit}>{label}</span>
       </p>
-      <Tag className={level === 1 ? styles.title : styles.heading}>
+      <Tag className={level === 1 ? styles.title : styles.heading} {...titleEdit}>
         {parts.map(([text, green], i) => (
           <span key={i} className={green === true ? styles.green : undefined}>
             {text}
@@ -110,8 +129,12 @@ function Outputs({ outputs, no }: { outputs: StudyOutput[]; no: string }) {
   );
 }
 
-export default function StudyColumn({ c }: { c: StudyContent }) {
+// Study Cases (Studio): kapitoly → pole projektu (src/lib/site/study.ts).
+const FIELD: Record<ChapterKey, string> = { cover: "studyCover", play: "studyStack", campaigns: "studyStrip", trust: "studyRing" };
+
+export default function StudyColumn({ c, docId = null }: { c: StudyContent; docId?: string | null }) {
   const cover = c.chapters.cover;
+  const edit = (field: string) => caseEditable(docId, field);
   return (
     <>
       <section className={styles.section} aria-label="Úvod" data-scroll-label="Úvod">
@@ -120,13 +143,17 @@ export default function StudyColumn({ c }: { c: StudyContent }) {
           label="Případová studie"
           level={1}
           parts={[[c.title, true]]}
+          titleEdit={edit("title")}
         />
-        <p className={styles.kind}>{c.kind}</p>
-        {cover.text.map((paragraph, i) => (
-          <p key={i} className={styles.lead}>
-            <Parts parts={paragraph} />
-          </p>
-        ))}
+        <p className={styles.kind} {...edit("studyKind")}>{c.kind}</p>
+        {/* Odstavce jsou jedno pole — anotace na obalu, ne na odstavci. */}
+        <div {...edit("studyCover.text")}>
+          {cover.text.map((paragraph, i) => (
+            <p key={i} className={styles.lead}>
+              <Parts parts={paragraph} />
+            </p>
+          ))}
+        </div>
         <dl className={styles.meta}>
           {c.meta.map((item) => (
             <div key={item.label}>
@@ -135,7 +162,7 @@ export default function StudyColumn({ c }: { c: StudyContent }) {
             </div>
           ))}
         </dl>
-        <Strip works={cover.works} />
+        <Strip works={cover.works} docId={docId} field={FIELD.cover} />
         <p className={styles.hint}>Táhněte do strany · klepnutím otevřete detail</p>
         {cover.asides.map((aside, i) => (
           <Note key={i} parts={aside} tilt={i % 2 ? 1.2 : -1.4} />
@@ -146,13 +173,21 @@ export default function StudyColumn({ c }: { c: StudyContent }) {
         const ch = c.chapters[key];
         return (
           <section key={key} className={styles.section} aria-label={ch.label} data-scroll-label={ch.label}>
-            <Heading no={pad2(k + 2)} label={ch.label} parts={ch.heading} />
-            {ch.text.map((paragraph, i) => (
-              <p key={i} className={styles.text}>
-                <Parts parts={paragraph} />
-              </p>
-            ))}
-            <Strip works={ch.works} />
+            <Heading
+              no={pad2(k + 2)}
+              label={ch.label}
+              parts={ch.heading}
+              labelEdit={edit(`${FIELD[key]}.label`)}
+              titleEdit={edit(`${FIELD[key]}.heading`)}
+            />
+            <div {...edit(`${FIELD[key]}.text`)}>
+              {ch.text.map((paragraph, i) => (
+                <p key={i} className={styles.text}>
+                  <Parts parts={paragraph} />
+                </p>
+              ))}
+            </div>
+            <Strip works={ch.works} docId={docId} field={FIELD[key]} />
             {ch.asides.map((aside, i) => (
               <Note key={i} parts={aside} tilt={(k + i) % 2 ? 1.4 : -1.2} />
             ))}

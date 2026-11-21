@@ -25,11 +25,10 @@ export default defineSite({
     // deklaruje cms/projects.ts (projectPage); klikací pole dává caseEditable
     // v components/case-study a components/study/boards.
     caseStudies: 'project',
-    // Knihovní modul recenzí je fronta ke schválení recenzí z formuláře. Tenhle
-    // web takový formulář nemá — reference zapisuje Sabina sama do vlastního
-    // typu `reference` (src/lib/valecms.types.ts). Vypnuto, ať Studio nenabízí
-    // dvě různé „Recenze".
-    reviews: false,
-    // Deklarace 2.0.0-beta.11 klíč `caseStudies` ještě neznají (běh ano —
-    // src/site/define.js SITE_KEYS); přetypování je jen pro TypeScript.
-} as Parameters<typeof defineSite>[0] & { caseStudies?: boolean | string })
+    // Recenze ve Studiu (valecms 2.0.0-beta.12): položka „Recenze" v menu nad
+    // VLASTNÍM typem `reference` — Sabina je píše sama, žádný formulář pro
+    // návštěvníky, takže bez knihovní fronty ke schválení (a bez typu `review`).
+    // Vedle seznamu je záložka „Nastavení" (typ siteSettings ve stejném modulu)
+    // s přepínačem, jestli se recenze a jejich 3D pás na webu ukazují.
+    reviews: 'reference',
+})

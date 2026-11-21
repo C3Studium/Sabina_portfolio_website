@@ -13,6 +13,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useInStudio } from "@c3studium/valecms/edit";
 
 import { useGate } from "@/motion/LoadProvider";
 import { readMotionChoice, setMotionChoice, systemReducedMotion, type MotionChoice as Level } from "@/lib/motion-preference";
@@ -23,6 +24,7 @@ const LANDSCAPE = "(orientation: landscape)";
 
 export default function MotionChoice() {
   const { go } = useGate();
+  const inStudio = useInStudio();
   const [open, setOpen] = useState(false);
   const [system, setSystem] = useState(false);
   const [lift, setLift] = useState(0);
@@ -74,7 +76,8 @@ export default function MotionChoice() {
 
   return (
     <AnimatePresence>
-      {open && go && (
+      {/* Ve Studiu (náhled i snímky karet) volba animací nepatří. */}
+      {open && go && !inStudio && (
         <motion.div
           className={styles.wrap}
           style={{ "--lift": `${lift}px` } as React.CSSProperties}

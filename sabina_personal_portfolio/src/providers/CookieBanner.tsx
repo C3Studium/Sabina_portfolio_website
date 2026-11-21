@@ -10,6 +10,7 @@
 import { useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 
+import { useInStudio } from '@c3studium/valecms/edit'
 import { useCookies } from './CookiesProvider'
 import { useGate } from '@/motion/LoadProvider'
 import styles from './CookieBanner.module.scss'
@@ -23,7 +24,9 @@ export default function CookieBanner() {
     // inline, takže by ji nepodržel ani `data-motion-hold`. Počká si tedy na
     // bránu: ukáže se až s ostatními slovy, ne přes oponu.
     const { go } = useGate()
-    const showBanner = wanted && go
+    // Ve Studiu (náhled i snímky karet) lišta překrývá, co se upravuje.
+    const inStudio = useInStudio()
+    const showBanner = wanted && go && !inStudio
 
     const toggle = (id: string) => setDraft((prev) => ({ ...prev, [id]: !prev[id] }))
 

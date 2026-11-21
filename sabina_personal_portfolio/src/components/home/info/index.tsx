@@ -582,7 +582,9 @@ export default function Info({
                 visibleCards={4}
                 cardRadius={52}
                 fitBy={tablet ? "both" : "height"}
-                align="start"
+                // Na šířku ukotvený vpravo: poslední karta končí ~2,5 % od
+                // pravého okraje okna (.cardsBuild končí na 97,5vw).
+                align={tablet ? "start" : "end"}
                 delay={4800}
                 bounce={0.3}
                 // Bez naklánění za kurzorem — balíček stojí, jen se dá táhnout.
@@ -596,6 +598,12 @@ export default function Info({
                   return (
                     // Nad kartou kurzor „Táhnout" jako nad 3D scénou v heru — karty se dají táhnout.
                     <Card key={service.id ?? index} className={styles.swapCard} data-cursor="drag">
+                      {/* Obrázek služby (pole „icon") přes celou kartu jako pozadí. */}
+                      {service.icon?.src ? (
+                        <span className={styles.swapMedia} aria-hidden="true">
+                          <Image src={service.icon.src} alt="" fill sizes="(max-width: 1100px) 60vw, 30vw" draggable={false} />
+                        </span>
+                      ) : null}
                       <span className={styles.swapNumber}>{cardNumber(service, index)}</span>
                       <p className={styles.cardLabel}>{cardLabelOf(service)}</p>
                       <h3 className={styles.cardTitle}>

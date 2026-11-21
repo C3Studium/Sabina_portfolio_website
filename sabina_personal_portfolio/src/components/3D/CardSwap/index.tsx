@@ -7,7 +7,8 @@
 // původní karty služeb v Info, rotateY -13°), jen vlastní karty
 // (`children`), bez ukázkových položek. `fitBy="height"` přizpůsobí
 // balíček jen výšce kontejneru (smí být i větší než 1 a přesáhnout do
-// strany), `align="start"` ho ukotví k levé hraně místo středu.
+// strany), `align="start"` ho ukotví k levé hraně místo středu, `align="end"`
+// k pravé (poslední karta končí u pravé hrany boxu).
 //
 //     <CardSwap width={440} height={560} tilt={-13} cardDistance={70}>
 //       <Card>…</Card>
@@ -43,7 +44,10 @@ const THEMES: Record<"dark" | "light", Record<string, string>> = {
     "--swap-shade": "#100e15",
   },
   light: {
-    "--swap-tile": `rgba(${SNOW_RGB}, 0.92)`,
+    // Plná světle šedá (jako balíček na výšku přes tmavé pozadí). Dřív sněhová
+    // s 92% krytím — zadní karta prosvítala skrz přední („Sociální sítě"
+    // přes „Reklamní grafika").
+    "--swap-tile": "rgb(226, 230, 237)",
     "--swap-tile-edge": `rgba(${SNOW_RGB}, 0.7)`,
     "--swap-tile-highlight": `rgba(${SNOW_RGB}, 1)`,
     "--swap-shadow": "0 30px 60px -28px rgba(24, 24, 27, 0.35), 0 10px 24px -14px rgba(24, 24, 27, 0.2)",
@@ -152,7 +156,7 @@ type CardSwapProps = {
   /** "both" = vejde se celý (max 1×), "height" = podle výšky, i větší, přesah do strany. */
   fitBy?: "both" | "height";
   /** Kotva balíčku v kontejneru: střed, nebo levá hrana. */
-  align?: "center" | "start";
+  align?: "center" | "start" | "end";
   theme?: "dark" | "light";
   onCardClick?: (index: number) => void;
   onChange?: (index: number) => void;
@@ -577,7 +581,7 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
             ? h / s.bounds.height
             : Math.min(1, w / s.bounds.width, h > 0 ? h / s.bounds.height : 1);
         state.scale = scale > 0 ? scale : 1;
-        const shift = s.align === "start" ? "0" : "-50%";
+        const shift = s.align === "start" ? "0" : s.align === "end" ? "-100%" : "-50%";
         stage.style.transform = `translate(${shift}, -50%) scale(${state.scale.toFixed(4)})`;
       };
 
