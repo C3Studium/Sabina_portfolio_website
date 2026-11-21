@@ -51,7 +51,10 @@ const THEMES: Record<"dark" | "light" | "grey", Record<string, string>> = {
     "--swap-tile-solid": `${FROST_GRAIN}, linear-gradient(160deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 38%, rgba(255, 255, 255, 0) 60%), rgb(54, 56, 57)`,
     "--swap-tile-edge": `rgba(${SNOW_RGB}, 0.22)`,
     "--swap-tile-highlight": `rgba(${SNOW_RGB}, 0.32)`,
-    "--swap-rim-extra": "inset 0 0 28px rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(255, 255, 255, 0.08)",
+    // Tloušťka skla: světlejší pruh pod horní hranou, tmavší nad spodní, jemný
+    // vnitřní obrys a záře.
+    "--swap-rim-extra":
+      "inset 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 14px 22px -14px rgba(255, 255, 255, 0.2), inset 12px 0 22px -16px rgba(255, 255, 255, 0.08), inset 0 -16px 24px -16px rgba(0, 0, 0, 0.45), inset 0 0 30px rgba(255, 255, 255, 0.04)",
     "--swap-shadow": "0 30px 60px -24px rgba(0, 0, 0, 0.5), 0 10px 24px -12px rgba(0, 0, 0, 0.3)",
     "--swap-ink": SNOW,
     "--swap-shade": "#1f2022",

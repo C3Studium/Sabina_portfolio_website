@@ -170,6 +170,14 @@
   border-radius: inherit;
   pointer-events: none;
   mix-blend-mode: screen;
+  // Světlo dopadá zleva shora: měkký jas, který ke středu karty slábne
+  // (lineární, žádná skvrna).
+  background: linear-gradient(
+    152deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.035) 26%,
+    rgba(255, 255, 255, 0) 48%
+  );
   animation: glint-drift 16s ease-in-out infinite alternate;
 }
 
@@ -193,14 +201,26 @@
   inset: 0;
   padding: 1.5px;
   border-radius: inherit;
+  // Nad bílou hranou nepatrný duhový lom (jako hrana skla, která rozkládá
+  // světlo) — jen tón, ne barva.
   background:
-    radial-gradient(55% 45% at var(--glint-x) var(--glint-y), rgba(255, 255, 255, 0.85), transparent 70%),
+    radial-gradient(55% 45% at var(--glint-x) var(--glint-y), rgba(255, 255, 255, 0.9), transparent 70%),
     linear-gradient(
       140deg,
       rgba(255, 255, 255, 0.5) 0%,
       rgba(255, 255, 255, 0.08) 30%,
       rgba(255, 255, 255, 0) 55%,
       rgba(255, 255, 255, 0.14) 100%
+    ),
+    conic-gradient(
+      from 210deg,
+      rgba(150, 215, 255, 0.32),
+      rgba(255, 255, 255, 0.04) 16%,
+      rgba(255, 175, 225, 0.24) 30%,
+      rgba(255, 255, 255, 0.04) 46%,
+      rgba(255, 238, 160, 0.22) 64%,
+      rgba(255, 255, 255, 0.04) 80%,
+      rgba(150, 215, 255, 0.32)
     );
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
@@ -222,13 +242,16 @@
     radial-gradient(circle at 13% 1.2%, rgba(255, 255, 255, 0.95) 0 1.4px, transparent 4.5px),
     radial-gradient(circle at 98.6% 24%, rgba(255, 255, 255, 0.8) 0 1.1px, transparent 3.8px),
     radial-gradient(circle at 1.4% 66%, rgba(255, 255, 255, 0.7) 0 1px, transparent 3.2px),
+    // Hlavní pruh: měkké okraje a ostré jasné jádro (světlo lámané hranou).
     linear-gradient(
       116deg,
-      transparent calc(var(--glint-x) - 7%),
-      rgba(255, 255, 255, 0.02) calc(var(--glint-x) - 4%),
-      rgba(255, 255, 255, 0.11) calc(var(--glint-x) - 1%),
-      rgba(255, 255, 255, 0.03) calc(var(--glint-x) + 2%),
-      transparent calc(var(--glint-x) + 5%)
+      transparent calc(var(--glint-x) - 8%),
+      rgba(255, 255, 255, 0.03) calc(var(--glint-x) - 4%),
+      rgba(255, 255, 255, 0.1) calc(var(--glint-x) - 1.4%),
+      rgba(255, 255, 255, 0.26) calc(var(--glint-x) - 0.8%),
+      rgba(255, 255, 255, 0.1) calc(var(--glint-x) - 0.2%),
+      rgba(255, 255, 255, 0.03) calc(var(--glint-x) + 3%),
+      transparent calc(var(--glint-x) + 6%)
     ),
     linear-gradient(
       109deg,
