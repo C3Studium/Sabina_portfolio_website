@@ -11,7 +11,7 @@
 // díla si vizuál najde podle adresy obrázku.
 import { imageValue, numberValue, stringValue } from '@c3studium/valecms/server/site'
 
-import type { StudyChapter, StudyContent, StudyImage, StudyOutput, StudyPart, StudyWork } from '../../components/study/content'
+import type { StudyBoard, StudyChapter, StudyContent, StudyImage, StudyOutput, StudyPart, StudyWork } from '../../components/study/content'
 
 type Data = Record<string, unknown>
 type Reader = (args: Record<string, unknown>) => Promise<Record<string, unknown>[]>
@@ -114,7 +114,14 @@ export const studyFrom = (data: Data, title: string, order: number): StudyConten
     const cta = obj(data.studyCta)
     const lead = stringValue(cta.lead)
     const leadAccent = stringValue(cta.leadAccent)
+    // Kapitoly skryté ve Studiu (přepínače „Sekce na stránce" → hiddenFields).
+    // Titulní skrýt nejde — z ní si ostatní půjčují díla a plátno na ní začíná.
+    const HIDEABLE: Record<string, StudyBoard> = { studyStack: 'play', studyStrip: 'campaigns', studyRing: 'trust', studyOutputs: 'outputs' }
+    const hidden = list(data.hiddenFields)
+        .map((name) => HIDEABLE[stringValue(name)])
+        .filter((board): board is StudyBoard => Boolean(board))
     return {
+        hidden,
         index: String(order).padStart(2, '0'),
         kind: stringValue(data.studyKind) || stringValue(data.tagline),
         title,

@@ -130,6 +130,8 @@ const studyChapter = (name: string, title: string, layout: string, works: { max:
         title,
         type: 'object',
         group: 'studie',
+        // Kapitolu jde skrýt přepínačem „Sekce na stránce" (valecms 2.0.0-beta.15).
+        options: { section: true },
         description: layout,
         fields: [
             defineField({
@@ -326,6 +328,7 @@ const project = defineType({
             title: 'Výstupy',
             type: 'array',
             group: 'studie',
+            options: { section: true },
             of: [
                 {
                     type: 'object',
@@ -342,6 +345,8 @@ const project = defineType({
             description: 'Všechny formáty do editoru na konci — libovolné tvary. Formát (Story / Post / Banner) a rozměr se dopočítají.',
             validation: (rule) => rule.max(40),
         }),
+        // Skryté kapitoly — přepínače „Sekce na stránce" nahoře ve formuláři Studia.
+        defineField({ name: 'hiddenFields', title: 'Skryté sekce', type: 'array', group: 'studie', of: [{ type: 'string' }] }),
         defineField({
             name: 'studyCta',
             title: 'Výzva na konci',

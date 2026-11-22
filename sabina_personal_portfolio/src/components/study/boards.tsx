@@ -58,6 +58,8 @@ export type BoardProps = {
   native: boolean;
   /** Id dokumentu projektu (jen koncept / Studio) — pole studie jsou v náhledu Study Cases klikací. */
   docId?: string | null;
+  /** Pořadí artboardu na plátně („02") — skryté kapitoly se nepočítají. */
+  no: string;
 };
 
 // Anotace pole projektu pro Study Cases (Studio); mimo Studio prázdný objekt.
@@ -656,7 +658,7 @@ export function CoverBoard({ c, act, rect, go, reduce, seen, progress, range, na
 
 const STACK = { dx: 0.03, dy: -0.036, scale: 0.05 };
 
-export function PlayBoard({ c, act, rect, go, reduce, seen, docId }: BoardProps) {
+export function PlayBoard({ c, act, rect, go, reduce, seen, docId, no }: BoardProps) {
   const ch = c.chapters.play;
   const { w: W, h: H } = rect;
   const portrait = H > W;
@@ -688,7 +690,7 @@ export function PlayBoard({ c, act, rect, go, reduce, seen, docId }: BoardProps)
   return (
     <div className={styles.chBoard}>
       <BgDiamond W={W} H={H} cx={base.x + cw * 0.62} cy={base.y + ch0 * 0.45} r={portrait ? W * 0.62 : H * 0.72} />
-      <Heading no="02" label={ch.label} sweep={go && seen} parts={ch.heading} docId={docId} chapter="studyStack" style={portrait ? { left: M, top: M, right: M } : { left: W * 0.57, top: M, width: W * 0.36 }}>
+      <Heading no={no} label={ch.label} sweep={go && seen} parts={ch.heading} docId={docId} chapter="studyStack" style={portrait ? { left: M, top: M, right: M } : { left: W * 0.57, top: M, width: W * 0.36 }}>
         {!portrait ? <Typed text={ch.text} on={go && seen} reduce={reduce} edit={caseOf(docId, "studyStack.text")} /> : null}
       </Heading>
       <div className={styles.stack} data-z="2">
@@ -748,7 +750,7 @@ export function PlayBoard({ c, act, rect, go, reduce, seen, docId }: BoardProps)
  *  na menší obrazovce je větší díl artboardu, mapa mu uhne. */
 const MAP_CONTROLS = 360;
 
-export function CampaignsBoard({ c, act, rect, go, reduce, seen, progress, range, native, docId }: BoardProps) {
+export function CampaignsBoard({ c, act, rect, go, reduce, seen, progress, range, native, docId, no }: BoardProps) {
   const ch = c.chapters.campaigns;
   const { w: W, h: H } = rect;
   const portrait = H > W;
@@ -792,7 +794,7 @@ export function CampaignsBoard({ c, act, rect, go, reduce, seen, progress, range
   return (
     <div className={styles.chBoard}>
       <BgCurve W={W} H={H} reduce={reduce} />
-      <Heading no="03" label={ch.label} sweep={go && seen} parts={ch.heading} docId={docId} chapter="studyStrip" style={portrait ? { left: M, top: M, right: M } : { left: M, top: M, width: W * 0.5 }} />
+      <Heading no={no} label={ch.label} sweep={go && seen} parts={ch.heading} docId={docId} chapter="studyStrip" style={portrait ? { left: M, top: M, right: M } : { left: M, top: M, width: W * 0.5 }} />
       {!portrait ? <Typed text={ch.text} on={go && seen} reduce={reduce} edit={caseOf(docId, "studyStrip.text")} style={{ position: "absolute", left: W * 0.58, top: M * 1.55, width: W * 0.34, marginTop: 0 }} /> : null}
       <div className={styles.strip} data-z="2" style={{ left: win.x, top: win.y, width: win.w, height: win.h + H * 0.07 }}>
         <motion.div className={styles.stripTrack} data-glide={picked !== null || undefined} style={stripStyle}>
@@ -936,7 +938,7 @@ function RingCard({
   );
 }
 
-export function TrustBoard({ c, act, rect, go, reduce, seen, progress, range, native, docId }: BoardProps) {
+export function TrustBoard({ c, act, rect, go, reduce, seen, progress, range, native, docId, no }: BoardProps) {
   const ch = c.chapters.trust;
   const { w: W, h: H } = rect;
   const portrait = H > W;
@@ -963,7 +965,7 @@ export function TrustBoard({ c, act, rect, go, reduce, seen, progress, range, na
         orbit={{ cy: centre.y + cardH * 0.5 + H * 0.04, rx: R * 1.7, ry: H * 0.05 }}
         reduce={reduce}
       />
-      <Heading no="04" label={ch.label} sweep={go && seen} parts={ch.heading} docId={docId} chapter="studyRing" style={portrait ? { left: M, top: M, right: M } : { left: W * 0.6, top: M, width: W * 0.33 }}>
+      <Heading no={no} label={ch.label} sweep={go && seen} parts={ch.heading} docId={docId} chapter="studyRing" style={portrait ? { left: M, top: M, right: M } : { left: W * 0.6, top: M, width: W * 0.33 }}>
         {!portrait ? <Typed text={ch.text} on={go && seen} reduce={reduce} edit={caseOf(docId, "studyRing.text")} /> : null}
       </Heading>
       <div className={styles.ring} data-z="2" data-glide={picked !== null || undefined}>

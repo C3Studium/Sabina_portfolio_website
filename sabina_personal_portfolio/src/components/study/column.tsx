@@ -169,7 +169,8 @@ export default function StudyColumn({ c, docId = null }: { c: StudyContent; docI
         ))}
       </section>
 
-      {CHAPTERS.map((key, k) => {
+      {/* Kapitoly skryté ve Studiu (hidden) se vynechají a čísla jdou bez děr. */}
+      {CHAPTERS.filter((key) => !c.hidden?.includes(key)).map((key, k) => {
         const ch = c.chapters[key];
         return (
           <section key={key} className={styles.section} aria-label={ch.label} data-scroll-label={ch.label}>
@@ -195,7 +196,9 @@ export default function StudyColumn({ c, docId = null }: { c: StudyContent; docI
         );
       })}
 
-      <Outputs outputs={c.outputs} no={pad2(CHAPTERS.length + 2)} />
+      {c.hidden?.includes("outputs") ? null : (
+        <Outputs outputs={c.outputs} no={pad2(CHAPTERS.filter((key) => !c.hidden?.includes(key)).length + 2)} />
+      )}
 
       <section className={`${styles.section} ${styles.cta}`} aria-label="Spolupráce" data-scroll-label="Spolupráce" data-contact-zone="">
         <p className={styles.ctaLead}>

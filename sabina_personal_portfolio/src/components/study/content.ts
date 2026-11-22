@@ -28,6 +28,8 @@ export type StudyChapter = { label: string; heading: StudyPart[]; text: StudyPar
 export type StudyBoard = "cover" | "play" | "campaigns" | "trust" | "outputs";
 
 export type StudyContent = {
+  /** Kapitoly skryté ve Studiu (Sekce na stránce) — plátno je vynechá. */
+  hidden?: StudyBoard[];
   /** Pořadí projektu („01") a druh práce. */
   index: string;
   kind: string;

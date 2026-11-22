@@ -21,7 +21,7 @@
 //
 // NDA: na plátně nejsou názvy písem ani kódy barev klienta.
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   animate,
   motion,
@@ -38,7 +38,7 @@ import { FULL, PORTRAIT_PHONE, PORTRAIT_TABLET, useMedia, viewportHeight } from 
 import { ACCENT_RGB } from "@/lib/palette";
 import { STUDY_TEMPLATE, type StudyBoard, type StudyContent, type StudyImage } from "./content";
 import { InspectContext, InspectorDock } from "./inspector";
-import { editableDoc } from "@c3studium/valecms/edit";
+import { editableDoc, shown } from "@c3studium/valecms/edit";
 import { registerVisuals, type VisualDef } from "@/lib/banner-layers";
 import { CampaignsBoard, CoverBoard, ENTRANCE, OutputsBoard, Parts, PlayBoard, TrustBoard, easeInOut, span, type BoardProps, type Rect } from "./boards";
 import MeasureText from "@/components/common/measure-text";
@@ -56,39 +56,36 @@ const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayout
 // zabraly skoro celou šířku i výšku.
 // Na výšku: telefon 1000 × 1800 (~0,56 : 1), tablet širší 1400 × 1800
 // (~0,78 : 1) — úzký artboard by na tabletu zabral jen půlku šířky.
-const LAYOUT: Record<"wide" | "tall" | "tablet", Record<StudyBoard, Rect>> = {
-  wide: {
-    cover: { x: 0, y: 0, w: 1900, h: 1000 },
-    play: { x: 2150, y: 0, w: 1900, h: 1000 },
-    campaigns: { x: 0, y: 1250, w: 1900, h: 1000 },
-    trust: { x: 2150, y: 1250, w: 1900, h: 1000 },
-    outputs: { x: 1075, y: 2500, w: 1900, h: 1000 },
-  },
-  tall: {
-    cover: { x: 0, y: 0, w: 1000, h: 1800 },
-    play: { x: 0, y: 2000, w: 1000, h: 1800 },
-    campaigns: { x: 0, y: 4000, w: 1000, h: 1800 },
-    trust: { x: 0, y: 6000, w: 1000, h: 1800 },
-    outputs: { x: 0, y: 8000, w: 1000, h: 1600 },
-  },
-  tablet: {
-    cover: { x: 0, y: 0, w: 1400, h: 1800 },
-    play: { x: 0, y: 2000, w: 1400, h: 1800 },
-    campaigns: { x: 0, y: 4000, w: 1400, h: 1800 },
-    trust: { x: 0, y: 6000, w: 1400, h: 1800 },
-    outputs: { x: 0, y: 8000, w: 1400, h: 1600 },
-  },
+// Rozmístění se počítá z VIDITELNÝCH artboardů (kapitoly jde ve Studiu
+// skrýt): na šířku dva sloupce po sobě, lichý poslední na střed; na výšku
+// pod sebou. Se všemi pěti vyjde přesně původní rozložení.
+type LayoutKind = "wide" | "tall" | "tablet";
+const layoutFor = (kind: LayoutKind, boards: StudyBoard[]): Record<StudyBoard, Rect> => {
+  const out: Partial<Record<StudyBoard, Rect>> = {};
+  boards.forEach((board, i) => {
+    if (kind === "wide") {
+      const lone = i > 0 && i === boards.length - 1 && i % 2 === 0;
+      out[board] = { x: lone ? 1075 : (i % 2) * 2150, y: Math.floor(i / 2) * 1250, w: 1900, h: 1000 };
+    } else {
+      out[board] = { x: 0, y: i * 2000, w: kind === "tall" ? 1000 : 1400, h: board === "outputs" ? 1600 : 1800 };
+    }
+  });
+  return out as Record<StudyBoard, Rect>;
 };
 
-const BOARDS: StudyBoard[] = ["cover", "play", "campaigns", "trust", "outputs"];
-const LAST = BOARDS.length - 1;
+const ALL_BOARDS: StudyBoard[] = ["cover", "play", "campaigns", "trust", "outputs"];
+/** Cesta kamery přes viditelné artboardy: zastávky, poslední, oddálení (end) a konec (total). */
+type Plan = { boards: StudyBoard[]; last: number; end: number; total: number };
+const planOf = (hidden: readonly StudyBoard[] = []): Plan => {
+  const boards = ALL_BOARDS.filter((board) => board === "cover" || !hidden.includes(board));
+  const last = boards.length - 1;
+  return { boards, last, end: last + 1, total: last + 2 };
+};
 // Krok scrollu (vh) a jeho část, kdy kamera stojí a scroll řídí artboard;
 // zbytek je přejezd (dlouhý, ať je jemný). Po Výstupech ještě jeden krok:
 // oddálení na celé plátno (END) a výzva.
 const STEP_VH = 170;
 const DWELL = 0.5;
-const END = LAST + 1;
-const TOTAL = END + 1;
 // Rámování celého plátna na konci.
 const OVERVIEW = { fw: 0.86, fh: 0.78, fx: 0.5, fy: 0.52 };
 // Přejezd je PLOCHÝ: jen odjezd kamery (podíl měřítka), bez 3D náklonu —
@@ -135,7 +132,7 @@ const boardNames = (c: StudyContent): Record<StudyBoard, string> => ({
   campaigns: c.chapters.campaigns.label || BOARD_NAME.campaigns,
   trust: c.chapters.trust.label || BOARD_NAME.trust,
 });
-const chaptersOf = (names: Record<StudyBoard, string>): Chapter[] => [...BOARDS.map((board, i) => ({ at: i, label: names[board] })), { at: END, label: "Spolupráce" }];
+const chaptersOf = (names: Record<StudyBoard, string>, plan: Plan): Chapter[] => [...plan.boards.map((board, i) => ({ at: i, label: names[board] })), { at: plan.end, label: "Spolupráce" }];
 
 /* ---------- Kamera ---------- */
 
@@ -159,20 +156,20 @@ const boundsOf = (layout: Record<StudyBoard, Rect>): Rect => {
 };
 
 /** Kde na cestě jsme: zastávka, průběh jejího stání, přejezd k další a výzva na konci. */
-const where = (x: number) => {
-  const i = Math.min(Math.floor(x), END);
+const where = (x: number, plan: Plan) => {
+  const i = Math.min(Math.floor(x), plan.end);
   const f = x - i;
-  if (i >= END) return { i, act: 1, travel: 0, end: span(f, 0, 0.55) };
+  if (i >= plan.end) return { i, act: 1, travel: 0, end: span(f, 0, 0.55) };
   return { i, act: span(f, 0, DWELL), travel: span(f, DWELL, 1), end: 0 };
 };
 
 /** Kamera v bodě cesty x (0…TOTAL) — přesně jako apply(), bez náletu a zaokrouhlení. */
-const cameraAt = (cams: Cam[], W: number, H: number, x: number, reduce: boolean) => {
-  const { i, travel } = where(Math.min(Math.max(x, 0), TOTAL));
+const cameraAt = (cams: Cam[], W: number, H: number, x: number, reduce: boolean, plan: Plan) => {
+  const { i, travel } = where(Math.min(Math.max(x, 0), plan.total), plan);
   const e = easeInOut(travel);
   const m = reduce ? 0 : Math.sin(Math.PI * e);
   const a = cams[i];
-  const b = cams[Math.min(i + 1, END)];
+  const b = cams[Math.min(i + 1, plan.end)];
   const s = Math.exp(Math.log(a.s) * (1 - e) + Math.log(b.s) * e) * (1 - ISO.pull * m);
   const cx = a.cx + (b.cx - a.cx) * e;
   const cy = a.cy + (b.cy - a.cy) * e;
@@ -193,14 +190,14 @@ const CAM_SAMPLES = 24;
 const IDENTITY = "translate(0px, 0px) scale(1)";
 type CamFrames = { key: string; times: number[]; frames: string[] };
 
-const cameraFrames = (cams: Cam[], W: number, H: number, reduce: boolean, key: string): CamFrames => {
+const cameraFrames = (cams: Cam[], W: number, H: number, reduce: boolean, key: string, plan: Plan): CamFrames => {
   const xs: number[] = [];
-  for (let i = 0; i < END; i++) {
+  for (let i = 0; i < plan.end; i++) {
     xs.push(i, i + DWELL);
     for (let k = 1; k < CAM_SAMPLES; k++) xs.push(i + DWELL + ((1 - DWELL) * k) / CAM_SAMPLES);
   }
-  xs.push(END, TOTAL);
-  return { key, times: xs.map((x) => x / TOTAL), frames: xs.map((x) => camTransform(cameraAt(cams, W, H, x, reduce))) };
+  xs.push(plan.end, plan.total);
+  return { key, times: xs.map((x) => x / plan.total), frames: xs.map((x) => camTransform(cameraAt(cams, W, H, x, reduce, plan))) };
 };
 
 /* ---------- Výzva na konci ---------- */
@@ -300,7 +297,12 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
 
 function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
   const names = boardNames(c);
-  const CHAPTERS = chaptersOf(names);
+  // Viditelné kapitoly (skryté ve Studiu se vynechají) — klíč drží plán stálý.
+  const hiddenKey = (c.hidden ?? []).join(",");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const plan = useMemo(() => planOf(c.hidden ?? []), [hiddenKey]);
+  const CHAPTERS = chaptersOf(names, plan);
+  const { boards: BOARDS, last: LAST, end: END, total: TOTAL } = plan;
   const sectionRef = useRef<HTMLElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const lensRef = useRef<HTMLDivElement>(null);
@@ -313,7 +315,7 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
   const reduce = Boolean(useReducedMotion());
   const tall = useMedia(PORTRAIT_TABLET);
   const phone = useMedia(PORTRAIT_PHONE);
-  const layout = LAYOUT[tall ? (phone ? "tall" : "tablet") : "wide"];
+  const layout = useMemo(() => layoutFor(tall ? (phone ? "tall" : "tablet") : "wide", plan.boards), [tall, phone, plan]);
   const bounds = boundsOf(layout);
 
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start start", "end end"] });
@@ -398,7 +400,7 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
     const { W, H } = L;
     const isNative = nativeRef.current;
     const x = Math.min(Math.max((isNative ? posTouch : pos).get(), 0), TOTAL);
-    const { i, act, travel, end } = where(x);
+    const { i, act, travel, end } = where(x, plan);
     const e = easeInOut(travel);
     const m = reduce ? 0 : Math.sin(Math.PI * e);
     const a = cams.current[i];
@@ -505,7 +507,7 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
       // Nativní kamera: cesta navzorkovaná pro tenhle rozměr (klíč přemountuje svět).
       if (nativeRef.current) {
         const key = `${W}x${H}:${Math.round(f.fy * 1000)}:${Math.round(f.fh * 1000)}`;
-        setCamFrames((prev) => (prev?.key === key ? prev : cameraFrames(cams.current, W, H, reduce, key)));
+        setCamFrames((prev) => (prev?.key === key ? prev : cameraFrames(cams.current, W, H, reduce, key, plan)));
       }
       // Štítek zoomu vpravo dole ustoupí, když by ležel přes artboard
       // (úzké okno — artboard zabere skoro celou šířku).
@@ -525,7 +527,8 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
     const observer = new ResizeObserver(measure);
     observer.observe(frame);
     return () => observer.disconnect();
-  }, [tall, phone, native]);
+    // plan: skrytí/odkrytí kapitoly ve Studiu = jiné zastávky kamery.
+  }, [tall, phone, native, plan]);
   useMotionValueEvent(pos, "change", () => {
     if (!nativeRef.current) apply();
   });
@@ -551,7 +554,7 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
       const section = sectionRef.current;
       if (!section) return;
       const x = target.get();
-      const { i, travel } = where(x);
+      const { i, travel } = where(x, plan);
       if (travel <= 0.02 || travel >= 0.98) return;
       const to = travel > 0.5 ? i + 1 : i + DWELL;
       const top = section.getBoundingClientRect().top + window.scrollY;
@@ -583,7 +586,7 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [reduce, target]);
+  }, [reduce, target, plan, TOTAL]);
 
   // Skok na kapitolu (pravítko dole).
   const jump = (k: number) => {
@@ -646,6 +649,8 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
                 // Obsah se staví až po příletu kamery (FLY_IN).
                 const props: BoardProps = {
                   c,
+                  // Číslo kapitoly v nadpisu — po skrytí jiné kapitoly se čísla neděraví.
+                  no: pad2(k + 1),
                   // Study Cases ve Studiu: pole projektu na artboardech jsou klikací (caseEditable).
                   docId,
                   act: acts[board],
@@ -756,9 +761,12 @@ export default function Study({
   // v HTML), větší obrazovky ji po hydrataci vymění za plátno — pod oponou
   // přechodu stránky, takže to není vidět.
   const canvas = useMedia(CANVAS_SCREEN);
+  // Skryté kapitoly platí jako u valecms `shown()`: na webu a v náhledu
+  // Study Cases chybí, v „Upravit web" zůstanou vidět, ať jdou dál upravovat.
+  const study = visibleOf(content);
   return (
     <InspectContext.Provider value={inspect}>
-      {canvas ? <Canvas c={content} docId={docId} /> : <StudyColumn c={content} docId={docId} />}
+      {canvas ? <Canvas c={study} docId={docId} /> : <StudyColumn c={study} docId={docId} />}
       <InspectorDock image={inspected?.image ?? null} anchor={inspected?.anchor} onClose={close} />
     </InspectContext.Provider>
   );
@@ -766,3 +774,14 @@ export default function Study({
 
 /** Plné plátno všude kromě zjednodušené verze (STACKED: telefon na výšku i na šířku). */
 const CANVAS_SCREEN = FULL;
+
+/** Pole projektu ve Studiu, které kapitolu skrývá (hiddenFields). */
+const SECTION_FIELD: Partial<Record<StudyBoard, string>> = { play: "studyStack", campaigns: "studyStrip", trust: "studyRing", outputs: "studyOutputs" };
+
+/** Obsah se skrytými kapitolami podle prostředí (viz shown() ve valecms). */
+const visibleOf = (content: StudyContent): StudyContent => {
+  if (!content.hidden?.length) return content;
+  const hiddenFields = content.hidden.map((board) => SECTION_FIELD[board]).filter(Boolean);
+  const hidden = content.hidden.filter((board) => !shown({ hiddenFields }, SECTION_FIELD[board]));
+  return hidden.length === content.hidden.length ? content : { ...content, hidden };
+};
