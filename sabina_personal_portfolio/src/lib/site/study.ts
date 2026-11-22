@@ -50,11 +50,17 @@ export const studyImage = (value: unknown, alt: string): StudyImage | null => {
     const width = Number(picture.width)
     const height = Number(picture.height)
     const sized = Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0
+    const w = sized ? width : FALLBACK_SIZE.width
+    let h = sized ? height : FALLBACK_SIZE.height
+    // Poměr stran zvolený ve Studiu (pole s options.aspect) má přednost před
+    // rozměrem souboru — rámeček díla se podle něj vykreslí (aspectOf v boards).
+    const chosen = picture.aspect ? Number(picture.aspectRatio) : 0
+    if (chosen > 0) h = Math.round(w / chosen)
     return {
         src: String(picture.src ?? picture.url),
         alt: stringValue(picture.alt) || alt,
-        width: sized ? width : FALLBACK_SIZE.width,
-        height: sized ? height : FALLBACK_SIZE.height,
+        width: w,
+        height: h,
     }
 }
 

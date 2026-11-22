@@ -668,7 +668,22 @@ export function PlayBoard({ c, act, rect, go, reduce, seen, docId }: BoardProps)
   const note2In = useActState(act, (v) => v > 0.4);
   const { current: front, picked, choose, step } = usePick(scrolledFront, n);
   const ch0 = portrait ? H * 0.34 : H * 0.68;
-  const cw = ch0 * aspectOf(works[0]);
+  // Každá karta má SVŮJ tvar (story, příspěvek, banner) — dřív se všechny
+  // řídily prvním dílem. Vejde se do společného rámu: výška ch0, šířka nejvýš
+  // maxW; širší díla se zmenší na šířku a sednou do středu rámu.
+  const maxW = portrait ? W - M * 2 : W * 0.44;
+  const fit = (work: StudyWork) => {
+    const a = aspectOf(work);
+    let h = ch0;
+    let w = h * a;
+    if (w > maxW) {
+      w = maxW;
+      h = w / a;
+    }
+    return { w, h };
+  };
+  const sizes = works.map(fit);
+  const cw = Math.max(...sizes.map((s) => s.w));
   const base = portrait ? { x: M, y: H * 0.26 } : { x: M * 1.3, y: H * 0.24 };
   return (
     <div className={styles.chBoard}>
@@ -679,12 +694,13 @@ export function PlayBoard({ c, act, rect, go, reduce, seen, docId }: BoardProps)
       <div className={styles.stack} data-z="2">
         {works.map((work, k) => {
           const rank = (k - front + n) % n;
+          const size = sizes[k];
           return (
             <Work
               key={work.name + k}
               work={work}
-              w={cw}
-              h={ch0}
+              w={size.w}
+              h={size.h}
               className={styles.stackCard}
               picked={picked === k}
               front={k === front}
@@ -692,8 +708,8 @@ export function PlayBoard({ c, act, rect, go, reduce, seen, docId }: BoardProps)
               edit={workEdit(docId, "studyStack", k)}
               style={
                 {
-                  left: base.x + rank * W * STACK.dx,
-                  top: base.y + rank * H * STACK.dy * (portrait ? 0.6 : 1),
+                  left: base.x + (cw - size.w) / 2 + rank * W * STACK.dx,
+                  top: base.y + (ch0 - size.h) / 2 + rank * H * STACK.dy * (portrait ? 0.6 : 1),
                   scale: `${1 - rank * STACK.scale}`,
                   zIndex: n - rank,
                   "--dim": rank * 0.22,

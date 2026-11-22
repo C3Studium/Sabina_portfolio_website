@@ -75,7 +75,9 @@ const studyWork = {
     name: 'work',
     title: 'Dílo',
     fields: [
-        defineField({ name: 'image', title: 'Obrázek', type: 'image', validation: (rule) => rule.required() }),
+        // Poměr stran ve Studiu (valecms 2.0.0-beta.14): „Podle obrázku" = tvar
+        // fotky; jinak vybraný (story 9:16, příspěvek 4:5…). Web ho drží.
+        defineField({ name: 'image', title: 'Obrázek', type: 'image', options: { aspect: true }, validation: (rule) => rule.required() }),
         defineField({
             name: 'name',
             title: 'Název',
@@ -330,7 +332,9 @@ const project = defineType({
                     name: 'output',
                     title: 'Výstup',
                     fields: [
-                        defineField({ name: 'image', title: 'Obrázek', type: 'image', validation: (rule) => rule.required() }),
+                        // Poměr stran ve Studiu (valecms 2.0.0-beta.14): „Podle obrázku" = tvar
+        // fotky; jinak vybraný (story 9:16, příspěvek 4:5…). Web ho drží.
+        defineField({ name: 'image', title: 'Obrázek', type: 'image', options: { aspect: true }, validation: (rule) => rule.required() }),
                         defineField({ name: 'caption', title: 'Název', type: 'string', validation: (rule) => rule.max(60) }),
                     ],
                 },
