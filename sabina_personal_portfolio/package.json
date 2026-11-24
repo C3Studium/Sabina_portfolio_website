@@ -18,7 +18,7 @@
     "cms:seo": "node --import @c3studium/valecms/register.mjs scripts/cms-seo.mjs"
   },
   "dependencies": {
-    "@c3studium/valecms": "2.0.0-beta.16",
+    "@c3studium/valecms": "2.0.0-beta.17",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.1.0",
     "@react-three/fiber": "^9.7.0",

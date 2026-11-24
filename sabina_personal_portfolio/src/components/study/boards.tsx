@@ -136,14 +136,25 @@ function Typed({ text, on, reduce, className, style, edit }: { text: StudyPart[]
   const total = parts.flat().reduce((n, [t]) => n + t.length, 0);
   const [count, setCount] = useState(0);
   const shown = reduce ? total : count;
+  // Text se změnil, zatímco je napsaný (živý náhled Studia: editor píše
+  // vlevo) — psaní pokračuje od toho, co už stojí, nezačíná znovu od nuly.
+  // Nový příjezd na artboard (on: ne → ano) píše jako dřív od začátku.
+  const countRef = useRef(0);
+  const wasOn = useRef(false);
   useEffect(() => {
-    if (!on || reduce) return;
+    if (!on || reduce) {
+      wasOn.current = false;
+      return;
+    }
+    const resume = wasOn.current;
+    wasOn.current = true;
     let raf = 0;
     let last = performance.now();
-    let n = 0;
+    let n = resume ? Math.min(countRef.current, total) : 0;
     const tick = (now: number) => {
       n = Math.min(total, n + (now - last) * 0.12);
       last = now;
+      countRef.current = Math.floor(n);
       setCount(Math.floor(n));
       if (n < total) raf = requestAnimationFrame(tick);
     };

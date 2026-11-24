@@ -1,4 +1,5 @@
-// Případová studie z dokumentu projektu — SERVER ONLY.
+// Případová studie z dokumentu projektu — čisté, i pro prohlížeč (živý náhled
+// Studia převádí rozepsaný formulář stejnou funkcí, viz project-body.ts).
 //
 // Pole záložky „Případová studie" (src/lib/valecms.types.ts, `study*`) →
 // StudyContent, jak ho kreslí components/study. Bez díla na Titulní studie
@@ -9,7 +10,7 @@
 //
 // Plus 3D vizuály (typ `visual3d`): obrázek a volitelně jeho vrstvy. Detail
 // díla si vizuál najde podle adresy obrázku.
-import { imageValue, numberValue, stringValue } from '@c3studium/valecms/server/site'
+import { imageValue, numberValue, stringValue } from '@c3studium/valecms/site/values.js'
 
 import type { StudyBoard, StudyChapter, StudyContent, StudyImage, StudyOutput, StudyPart, StudyWork } from '../../components/study/content'
 

@@ -38,7 +38,7 @@ import { FULL, PORTRAIT_PHONE, PORTRAIT_TABLET, useMedia, viewportHeight } from 
 import { ACCENT_RGB } from "@/lib/palette";
 import { STUDY_TEMPLATE, type StudyBoard, type StudyContent, type StudyImage } from "./content";
 import { InspectContext, InspectorDock } from "./inspector";
-import { editableDoc, shown } from "@c3studium/valecms/edit";
+import { editableDoc, shown, useRevealField } from "@c3studium/valecms/edit";
 import { registerVisuals, type VisualDef } from "@/lib/banner-layers";
 import { CampaignsBoard, CoverBoard, ENTRANCE, OutputsBoard, Parts, PlayBoard, TrustBoard, easeInOut, span, type BoardProps, type Rect } from "./boards";
 import MeasureText from "@/components/common/measure-text";
@@ -132,6 +132,20 @@ const boardNames = (c: StudyContent): Record<StudyBoard, string> => ({
   campaigns: c.chapters.campaigns.label || BOARD_NAME.campaigns,
   trust: c.chapters.trust.label || BOARD_NAME.trust,
 });
+/**
+ * Na kterém artboardu leží pole projektu — pro „ukaž pole" ze Studia
+ * (dvojklik na pole ve formuláři Study Cases). `end` = závěrečná výzva.
+ */
+const REVEAL_BOARD: [RegExp, StudyBoard | "end"][] = [
+  [/^studyStack(\.|$)/, "play"],
+  [/^studyStrip(\.|$)/, "campaigns"],
+  [/^studyRing(\.|$)/, "trust"],
+  [/^studyOutputs(\.|$)/, "outputs"],
+  [/^studyCta(\.|$)/, "end"],
+  [/^(studyCover|studyKind|studyMeta|title|tagline)(\.|$)/, "cover"],
+];
+const boardOfField = (field: string) => REVEAL_BOARD.find(([pattern]) => pattern.test(field))?.[1] ?? null;
+
 const chaptersOf = (names: Record<StudyBoard, string>, plan: Plan): Chapter[] => [...plan.boards.map((board, i) => ({ at: i, label: names[board] })), { at: plan.end, label: "Spolupráce" }];
 
 /* ---------- Kamera ---------- */
@@ -589,14 +603,34 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
   }, [reduce, target, plan, TOTAL]);
 
   // Skok na kapitolu (pravítko dole).
-  const jump = (k: number) => {
-    const section = sectionRef.current;
-    if (!section) return;
-    const top = section.getBoundingClientRect().top + window.scrollY;
-    const y = top + (section.offsetHeight - viewportHeight()) * (k / TOTAL);
-    if (window.lenisInstance) window.lenisInstance.scrollTo(y, { duration: 1.8 });
-    else window.scrollTo({ top: y, behavior: "smooth" });
-  };
+  const jump = useCallback(
+    (k: number) => {
+      const section = sectionRef.current;
+      if (!section) return;
+      const top = section.getBoundingClientRect().top + window.scrollY;
+      const y = top + (section.offsetHeight - viewportHeight()) * (k / TOTAL);
+      if (window.lenisInstance) window.lenisInstance.scrollTo(y, { duration: 1.8 });
+      else window.scrollTo({ top: y, behavior: "smooth" });
+    },
+    [TOTAL],
+  );
+
+  // Ve Studiu (Study Cases): dvojklik na pole ve formuláři chce prvek ukázat.
+  // Kamera jede scrollem, takže na artboard se dojíždí jako z pravítka
+  // kapitol — obyčejný scrollIntoView by skončil kdekoli v přišpendlené sekci.
+  useRevealField(
+    useCallback(
+      (field: string) => {
+        const board = boardOfField(field);
+        if (!board) return false;
+        const k = board === "end" ? plan.end : plan.boards.indexOf(board);
+        if (k < 0) return false;
+        jump(k);
+        return true;
+      },
+      [plan, jump],
+    ),
+  );
 
   const index = BOARDS.indexOf(stop);
 

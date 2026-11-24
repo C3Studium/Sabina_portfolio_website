@@ -7,21 +7,9 @@
 //
 // Import jen z `getStaticProps` / `getStaticPaths`. Komponenty si odsud smí vzít
 // jedině `import type`.
-import {
-    documentId,
-    imageValue,
-    numberValue,
-    readPublished,
-    registerSources,
-    seoOf,
-    slugValue,
-    stringValue,
-    plainText,
-    viewOf,
-} from '@c3studium/valecms/server/site'
+import { readPublished, registerSources, seoOf, viewOf } from '@c3studium/valecms/server/site'
 
-import { projectSlug } from '../cms/slug.ts'
-import { studyFrom } from './study.ts'
+import { projectFrom } from './project-body.ts'
 import type { StudyContent } from '../../components/study/content'
 import type { PageSeo } from '@c3studium/valecms/server/site'
 
@@ -82,29 +70,6 @@ export type Project = {
  */
 export type Reader = (args: Record<string, unknown>) => Promise<Record<string, unknown>[]>
 
-/** Řádek, ze kterého tělo pochází — jako spread, nikdy jako klíč s undefined. */
-const provenance = (data: Record<string, unknown>): { id?: string } => {
-    const id = documentId(data)
-    return id ? { id } : {}
-}
-
-const asImage = (value: unknown, fallbackAlt: string): ProjectImage | null => {
-    const picture = imageValue(value)
-    if (!picture?.url) return null
-    return {
-        src: String(picture.src ?? picture.url),
-        url: String(picture.url),
-        // Alt, který editor napsal k assetu; bez něj název projektu — lepší
-        // než prázdno u obrázku, který je hlavním obsahem karty.
-        alt: stringValue(picture.alt) || fallbackAlt,
-        ...(Number.isFinite(picture.width) && Number.isFinite(picture.height)
-            ? { width: Number(picture.width), height: Number(picture.height) }
-            : {}),
-    }
-}
-
-const asTone = (value: unknown): ProjectTone => (value === 'light' ? 'light' : 'dark')
-
 /**
  * Publikované projekty v pořadí `order`, pak podle názvu.
  *
@@ -124,32 +89,10 @@ export const getProjects = async ({
         perPage: limit,
     })
 
+    // Převod těla je v project-body.ts — čistý, aby ho stejně použil i živý
+    // náhled Studia v prohlížeči ([slug].tsx).
     return rows
-        .map((data) => {
-            const title = stringValue(data.title)
-            return {
-                ...provenance(data),
-                // Prázdný slug = adresa z názvu, stejně jako `paths` v konfiguraci.
-                slug: slugValue(data.slug) || projectSlug({ title }),
-                title,
-                tagline: stringValue(data.tagline),
-                perex: stringValue(data.perex),
-                goals: Array.isArray(data.goals) ? data.goals.map(stringValue).filter(Boolean) : [],
-                shared: Array.isArray(data.shared) ? data.shared.map(stringValue).filter(Boolean) : [],
-                body: stringValue(data.body),
-                bodyText: plainText(data.body),
-                cover: asImage(data.cover, title),
-                gallery: Array.isArray(data.gallery)
-                    ? data.gallery.map((entry) => asImage(entry, title)).filter((p): p is ProjectImage => p !== null)
-                    : [],
-                tone: asTone(data.tone),
-                order: numberValue(data.order) ?? 100,
-                featured: data.featured === true,
-                cardCta: stringValue(data.cardCta),
-                study: studyFrom(data, title, numberValue(data.order) ?? 100),
-                seo: seoOf(data),
-            }
-        })
+        .map((data) => projectFrom(data, seoOf(data)))
         .filter((project) => project.title && project.slug)
         // Dotaz řadí přes jsonb; seřadit stránku ještě jednou je levné a
         // výsledek pak nezávisí na tom, jak databáze porovnává čísla v JSON.
