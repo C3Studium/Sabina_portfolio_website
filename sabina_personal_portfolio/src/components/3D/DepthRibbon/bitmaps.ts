@@ -10,6 +10,7 @@
 // Sdílená cache na celou návštěvu: plní ji předehřátí (motion/ScenePreload)
 // už na jiných stránkách a při návratu na Portfolio je všechno hned.
 // Bez three.js — modul je malý a smí se načíst kdekoli.
+import { IMAGE_ACCEPT, mediaUrl } from "@/lib/media";
 
 export type Decoded = {
   bitmap: ImageBitmap;
@@ -35,7 +36,7 @@ const supported = () => typeof window !== "undefined" && typeof window.createIma
 
 async function decode(src: string, slot: number, aspect: number | null): Promise<Decoded | null> {
   // Stejný režim jako <img crossOrigin="anonymous"> ve scéně — sdílí cache HTTP.
-  const response = await fetch(src, { mode: "cors", credentials: "omit" });
+  const response = await fetch(mediaUrl(src, slot), { mode: "cors", credentials: "omit", headers: IMAGE_ACCEPT });
   if (!response.ok) return null;
   const blob = await response.blob();
   // Bez známého poměru (CMS ho nemá) se dekóduje celý — poměr se z něj přečte.

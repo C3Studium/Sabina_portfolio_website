@@ -16,6 +16,7 @@
 // skutečného obrázku a uvolní se.
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { mediaUrl } from "@/lib/media";
 import type { MotionValue } from "framer-motion";
 import { createLayered, loadLayers, type Layered, type LayersData } from "@/motion/intro/layered";
 import styles from "./styles.module.scss";
@@ -38,7 +39,7 @@ const loadImage = (src: string) =>
     img.decoding = "async";
     img.onload = () => resolve(img);
     img.onerror = () => resolve(null);
-    img.src = src;
+    img.src = mediaUrl(src, 828);
   });
 
 const clamp01 = (v: number) => Math.min(Math.max(v, 0), 1);

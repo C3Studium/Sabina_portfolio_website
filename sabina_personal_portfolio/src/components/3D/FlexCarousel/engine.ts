@@ -13,6 +13,7 @@
 //  - hlášení karty pod myší HTML vrstvě (../OrbitCards/overlay.ts).
 
 import { Mesh, Plane, Program, RenderTarget, Renderer, Texture, Triangle } from "ogl";
+import { mediaUrl, IMAGE_ACCEPT } from "@/lib/media";
 import type { OverlayState } from "../OrbitCards/engine";
 import { MARGIN, drawCardLayer } from "./hover";
 import { isTouchDevice, releaseContext, sceneImage } from "@/lib/device";
@@ -658,14 +659,14 @@ export function createFlexCarousel(
         if (live()) show(image, image.naturalWidth, image.naturalHeight, color);
       };
       image.onerror = fail;
-      image.src = src;
+      image.src = mediaUrl(src, 828);
     };
     if (typeof window.createImageBitmap !== "function") viaImage();
     else
       void (async () => {
         try {
           if (!(await bitmapFlipWorks())) throw new Error("flipY");
-          const response = await fetch(src, { mode: "cors", credentials: "omit" });
+          const response = await fetch(mediaUrl(src, 828), { mode: "cors", credentials: "omit", headers: IMAGE_ACCEPT });
           if (!response.ok) throw new Error(String(response.status));
           const blob = await response.blob();
           const [decoded, color] = await Promise.all([

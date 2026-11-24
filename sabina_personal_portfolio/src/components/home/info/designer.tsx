@@ -7,6 +7,7 @@
 // hranice sekcí (hero → Info → Proces).
 
 import { useSyncExternalStore, type ReactNode, type Ref } from "react";
+import { mediaUrl } from "@/lib/media";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useTransform, type MotionValue } from "framer-motion";
 import type { Shortcut } from "./choreography";
@@ -266,7 +267,7 @@ export function FlightImage({
   return (
     <Portal>
       <motion.img
-        src={src}
+        src={mediaUrl(src, 828)}
         alt=""
         className={styles.flightImage}
         style={{ x, y, width, height, opacity }}

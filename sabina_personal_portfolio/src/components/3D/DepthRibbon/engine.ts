@@ -12,6 +12,7 @@
 // Vychází z „Depth Ribbon" (React Bits Pro), upravené pro tenhle web.
 
 import * as THREE from "three";
+import { mediaUrl } from "@/lib/media";
 // Popisek a hover rámeček karty — stejná kresba jako galerie v heru úvodní
 // stránky (FlexCarousel), jen na vlastním 2D plátně nad kartou.
 import { MARGIN as LABEL_MARGIN, drawCardLayer } from "../FlexCarousel/hover";
@@ -1081,7 +1082,7 @@ export const createRibbon = (
         context.drawImage(image, x, y, slot, slot);
         queueAtlas(index);
       };
-      image.src = url;
+      image.src = mediaUrl(url, 1080);
       return image;
     });
     if (ready && atlasTexture) atlasTexture.needsUpdate = true;

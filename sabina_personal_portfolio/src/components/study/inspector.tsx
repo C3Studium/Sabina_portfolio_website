@@ -28,6 +28,7 @@ import {
   type CSSProperties,
   type PointerEvent,
 } from "react";
+import { mediaUrl } from "@/lib/media";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -143,7 +144,7 @@ function Preview({ image, zoom, setZoom, loupe }: { image: StudyImage; zoom: num
               <span
                 className={styles.loupeImage}
                 style={{
-                  backgroundImage: `url("${image.src}")`,
+                  backgroundImage: `url("${mediaUrl(image.src, 1920)}")`,
                   backgroundSize: `${cursor.w * LOUPE_ZOOM}px ${cursor.h * LOUPE_ZOOM}px`,
                   backgroundPosition: `${-(cursor.x * LOUPE_ZOOM - LOUPE / 2)}px ${-(cursor.y * LOUPE_ZOOM - LOUPE / 2)}px`,
                 }}

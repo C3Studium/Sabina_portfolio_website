@@ -13,6 +13,7 @@
 // jen okno přední části dráhy, zbytek zhasne do stínu.
 
 import * as THREE from "three";
+import { mediaUrl } from "@/lib/media";
 import { SNOW } from "@/lib/palette";
 
 export interface OrbitCardsItem {
@@ -674,7 +675,7 @@ export const createOrbit = (
         };
         image.decode().then(finish, finish);
       };
-      image.src = item.src;
+      image.src = mediaUrl(item.src, 828);
       return layer;
     });
     layerCount = 0;

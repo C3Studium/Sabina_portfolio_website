@@ -18,6 +18,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { mediaUrl } from "@/lib/media";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { readMotionLevel, subscribeMotion } from "@/lib/motion-preference";
@@ -386,11 +387,11 @@ const DepthRibbon = forwardRef<DepthRibbonHandle, DepthRibbonProps>(function Dep
             item.href ? (
               <Link key={`${item.src}-${index}`} href={item.href}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.src} alt={item.alt} />
+                <img src={mediaUrl(item.src, 828)} alt={item.alt} />
               </Link>
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={`${item.src}-${index}`} src={item.src} alt={item.alt} />
+              <img key={`${item.src}-${index}`} src={mediaUrl(item.src, 828)} alt={item.alt} />
             ),
           )}
         </div>

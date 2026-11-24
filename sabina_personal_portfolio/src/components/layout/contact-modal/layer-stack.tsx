@@ -11,6 +11,7 @@
 // přechod `transform`, spuštěný snímek po vykreslení (data-spread).
 
 import { useEffect, useState, type CSSProperties } from "react";
+import { mediaUrl } from "@/lib/media";
 import { splitGrouped, type GroupedSplit } from "@/lib/banner-layers";
 import styles from "./layer-stack.module.scss";
 
@@ -50,7 +51,7 @@ export default function LayerStack() {
             style={{ "--i": i } as CSSProperties}
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- blob z canvasu, next/image ho neumí */}
-            <img src={layer.url} alt="" draggable={false} />
+            <img src={mediaUrl(layer.url, 828)} alt="" draggable={false} />
             {/* Rám vrstvy, který se ve smyčce kreslí (pathLength 1). */}
             <svg className={styles.frame} viewBox="0 0 100 100" preserveAspectRatio="none">
               <rect x="0" y="0" width="100" height="100" pathLength={1} vectorEffect="non-scaling-stroke" />

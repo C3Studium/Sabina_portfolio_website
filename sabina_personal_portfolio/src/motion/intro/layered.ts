@@ -17,6 +17,7 @@
 // plátno (drawImage) a přes něj dokreslí rámečky.
 
 import { clamp01, frame, label, linear, stage, type Box, type Look, type Span } from "./draw";
+import { mediaUrl } from "@/lib/media";
 
 export type LayerInfo = {
   kind: "background" | "shape" | "object" | "text";
@@ -80,7 +81,7 @@ const loadImage = (url: string) =>
     img.decoding = "async";
     img.onload = () => resolve(img);
     img.onerror = reject;
-    img.src = url;
+    img.src = mediaUrl(url, 828);
   });
 
 /** Rozklad banneru, nebo `null`, když k němu není. */

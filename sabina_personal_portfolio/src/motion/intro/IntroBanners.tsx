@@ -13,6 +13,7 @@
 // Bez pohybu (`still`) rovnou hotový stav / nic, bez smyčky.
 
 import { useEffect, useRef, useState, type RefObject } from "react";
+import { mediaUrl } from "@/lib/media";
 import { animate, useMotionValue, useMotionValueEvent, type AnimationPlaybackControls } from "framer-motion";
 import { createBanners, type BannerSource } from "./banners";
 import { loadLayers } from "./layered";
@@ -136,7 +137,7 @@ export default function IntroBanners({ sources, area, show, delay = 0, still = f
       // Další dvojici načíst dopředu, ať nová stavba nečeká.
       for (const { src, url } of pairAt(list, round + 1)) {
         const img = new Image();
-        img.src = url;
+        img.src = mediaUrl(url, 828);
         void loadLayers(src);
       }
       timer = window.setTimeout(() => {

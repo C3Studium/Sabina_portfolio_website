@@ -17,6 +17,7 @@
 //                   ohýbá s pásem
 
 import * as THREE from "three";
+import { mediaUrl } from "@/lib/media";
 
 export type ScrollBendOrientation = "vertical" | "horizontal";
 export type ScrollBendMode = "convex" | "concave" | "direction";
@@ -528,7 +529,7 @@ export const createStrip = (
       };
       image.crossOrigin = "anonymous";
       image.decoding = "async";
-      image.src = src;
+      image.src = mediaUrl(src, 828);
       image.decode().then(accept, () => {
         if (image.complete) accept();
       });

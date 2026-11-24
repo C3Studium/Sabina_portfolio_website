@@ -21,6 +21,7 @@
 // z místního souboru (stejný původ — canvas se nezamkne).
 
 import { loadLayers } from "@/motion/intro/layered";
+import { mediaUrl } from "@/lib/media";
 import { groupLayers, type GroupKind, type LayerGroup } from "./banner-groups";
 
 export type { GroupKind, LayerGroup } from "./banner-groups";
@@ -42,7 +43,7 @@ const loadImage = (src: string) =>
     img.decoding = "async";
     img.onload = () => resolve(img);
     img.onerror = reject;
-    img.src = src;
+    img.src = mediaUrl(src, 1080);
   });
 
 const cache = new Map<string, Promise<GroupedSplit | null>>();
@@ -131,7 +132,7 @@ const loadCross = (src: string) =>
     img.decoding = "async";
     img.onload = () => resolve(img);
     img.onerror = reject;
-    img.src = src;
+    img.src = mediaUrl(src, 1080);
   });
 
 /** Box neprůhledných pixelů (0–1), nebo celý obrázek, když se pixely číst nedají. */

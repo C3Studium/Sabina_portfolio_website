@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { mediaUrl } from "@/lib/media";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { readMotionLevel } from "@/lib/motion-preference";
 
@@ -367,7 +368,7 @@ function useImageSource(src: string, alphaThreshold: number): Source | null {
     const img = new window.Image();
     img.crossOrigin = "anonymous";
     img.decoding = "async";
-    img.src = src;
+    img.src = mediaUrl(src, 828);
 
     img
       .decode()

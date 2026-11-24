@@ -29,6 +29,7 @@ import {
   type Look,
   type Pt,
 } from "./draw";
+import { mediaUrl } from "@/lib/media";
 import { createLayered, loadLayers, type Layered } from "./layered";
 import { BANNERS } from "./timeline";
 import { viewFrame } from "@/lib/fluid";
@@ -158,7 +159,7 @@ export function createBanners(
   const images = picked.map(({ url }) => {
     const img = new Image();
     img.decoding = "async";
-    img.src = url;
+    img.src = mediaUrl(url, 828);
     return img;
   });
   // Rozklad na vrstvy (když ho banner má) — přehrávač vznikne, až je

@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
     // stránce ještě třikrát lazy — jiné q= dá heru vlastní URL, jinak
     // falešně hlásí LCP bez loading="eager". Viz komentář u <Image> v heru.
     qualities: [75, 80],
+    // Optimalizované obrázky drží Vercel 31 dní (výchozí 4 h). Supabase posílá
+    // originály s `private, no-cache`, takže by se pro každé obnovení cache
+    // stahovaly znovu a placený „cached egress" free plánu přetekl (24. 11. 2026).
+    // Soubory knihovny médií mají v názvu hash — nový obrázek = nová adresa.
+    minimumCacheTTL: 2678400,
   },
 };
 

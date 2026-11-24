@@ -20,6 +20,7 @@ import {
   useSyncExternalStore,
   type CSSProperties,
 } from "react";
+import { mediaUrl } from "@/lib/media";
 import {
   clamp,
   createStrip,
@@ -215,7 +216,7 @@ const ScrollBend = forwardRef<ScrollBendHandle, ScrollBendProps>(function Scroll
                 height: horizontal ? `${clamp(itemSize, 0.05, 1) * 100}%` : undefined,
                 aspectRatio: String(clamp(tileAspect, 0.2, 5)),
                 borderRadius: radius,
-                backgroundImage: `url(${JSON.stringify(item.canvas ? item.canvas.toDataURL() : item.src)})`,
+                backgroundImage: `url(${JSON.stringify(item.canvas ? item.canvas.toDataURL() : mediaUrl(item.src, 828))})`,
               }}
             />
           ))}
