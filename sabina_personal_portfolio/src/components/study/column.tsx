@@ -8,8 +8,8 @@
 // větší obrazovky ji po hydrataci vymění za plátno (index.tsx).
 
 import Image from "next/image";
-import type { CSSProperties } from "react";
-import { caseEditable } from "@c3studium/valecms/edit";
+import { useRef, type CSSProperties } from "react";
+import { caseEditable, useFitText } from "@c3studium/valecms/edit";
 import { Parts } from "./boards";
 import type { StudyChapter, StudyContent, StudyImage, StudyOutput, StudyWork } from "./content";
 import { useInspect } from "./inspector";
@@ -82,13 +82,16 @@ function Heading({
   titleEdit?: Record<string, string>;
 }) {
   const Tag = level === 1 ? "h1" : "h2";
+  // Název studie (level 1) se na úzkém telefonu zmenší, když se nejdelší slovo nevejde.
+  const ref = useRef<HTMLHeadingElement>(null);
+  useFitText(ref, { enabled: level === 1 });
   return (
     <header className={styles.head}>
       <p className={styles.kicker}>
         <span className={styles.bar} aria-hidden="true" />
         {no} <span {...labelEdit}>{label}</span>
       </p>
-      <Tag className={level === 1 ? styles.title : styles.heading} {...titleEdit}>
+      <Tag ref={ref} className={level === 1 ? styles.title : styles.heading} {...titleEdit}>
         {parts.map(([text, green], i) => (
           <span key={i} className={green === true ? styles.green : undefined}>
             {text}

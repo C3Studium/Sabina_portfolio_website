@@ -23,7 +23,7 @@
 // Vrstvy artboardu (`data-z`) se při přejezdu kamery zvednou nad sebe.
 // NDA: žádné názvy písem ani kódy barev klienta.
 
-import { caseEditable } from "@c3studium/valecms/edit";
+import { caseEditable, useFitText } from "@c3studium/valecms/edit";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Image from "next/image";
 import { motion, useMotionValueEvent, useTransform, type MotionStyle, type MotionValue } from "framer-motion";
@@ -555,6 +555,10 @@ function Construct({ style }: { style: CSSProperties }) {
 const DRIFT = [30, 70, 130];
 
 export function CoverBoard({ c, act, rect, go, reduce, seen, progress, range, native, docId }: BoardProps) {
+  // Název studie jedním slovem („Gummyplus") se do třetiny artboardu nevejde
+  // a ořízl by se — písmo se zmenší na šířku (valecms useFitText; živě i ve Studiu).
+  const nameRef = useRef<HTMLHeadingElement>(null);
+  useFitText(nameRef);
   const ch = c.chapters.cover;
   const { w: W, h: H } = rect;
   const portrait = H > W;
@@ -611,7 +615,7 @@ export function CoverBoard({ c, act, rect, go, reduce, seen, progress, range, na
       {!portrait ? <Construct style={{ left: M, top: H * 0.15, width: W * 0.22 }} /> : null}
       <div className={styles.cvTitle} data-z="1" style={portrait ? { left: M, top: M * 1.9, right: M } : { left: M, bottom: M, width: W * 0.36 }}>
         <MeasureText sweep={go && seen}>
-          <h1 className={styles.cvName} {...caseOf(docId, "title")}>
+          <h1 ref={nameRef} className={styles.cvName} {...caseOf(docId, "title")}>
             <span className={styles.chLine}>
               <span data-green="">
                 <span data-measure="">{c.title}</span>
