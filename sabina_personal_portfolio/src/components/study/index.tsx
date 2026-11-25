@@ -625,7 +625,11 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
         if (!board) return false;
         const k = board === "end" ? plan.end : plan.boards.indexOf(board);
         if (k < 0) return false;
-        jump(k);
+        // Lístky (poznámky; na výšku nesou i odstavce textu) se nalepí až kus
+        // do stání (act > 0,05, druhý v Play > 0,4). Na začátku stání by výběr
+        // obkreslil prázdné místo — kamera proto dojede doprostřed stání.
+        const sticky = board !== "end" && /\.(asides\.\d+|text)$/.test(field);
+        jump(sticky ? k + DWELL / 2 : k);
         return true;
       },
       [plan, jump],

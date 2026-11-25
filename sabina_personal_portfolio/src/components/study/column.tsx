@@ -53,10 +53,11 @@ function Strip({ works, docId = null, field }: { works: StudyWork[]; docId?: str
   );
 }
 
-/** Poznámka (postřeh) jako lístek s páskou. */
-function Note({ parts, tilt }: { parts: StudyChapter["asides"][number]; tilt: number }) {
+/** Poznámka (postřeh) jako lístek s páskou; prázdná se nevykreslí. `edit` = anotace pro Study Cases. */
+function Note({ parts, tilt, edit }: { parts: StudyChapter["asides"][number]; tilt: number; edit?: object }) {
+  if (!parts?.length) return null;
   return (
-    <p className={styles.note} style={{ "--tilt": `${tilt}deg` } as CSSProperties}>
+    <p {...edit} className={styles.note} style={{ "--tilt": `${tilt}deg` } as CSSProperties}>
       <Parts parts={parts} />
     </p>
   );
@@ -168,7 +169,7 @@ export default function StudyColumn({ c, docId = null }: { c: StudyContent; docI
         <Strip works={cover.works} docId={docId} field={FIELD.cover} />
         <p className={styles.hint}>Táhněte do strany · klepnutím otevřete detail</p>
         {cover.asides.map((aside, i) => (
-          <Note key={i} parts={aside} tilt={i % 2 ? 1.2 : -1.4} />
+          <Note key={i} parts={aside} tilt={i % 2 ? 1.2 : -1.4} edit={edit(`studyCover.asides.${i}`)} />
         ))}
       </section>
 
@@ -193,7 +194,7 @@ export default function StudyColumn({ c, docId = null }: { c: StudyContent; docI
             </div>
             <Strip works={ch.works} docId={docId} field={FIELD[key]} />
             {ch.asides.map((aside, i) => (
-              <Note key={i} parts={aside} tilt={(k + i) % 2 ? 1.4 : -1.2} />
+              <Note key={i} parts={aside} tilt={(k + i) % 2 ? 1.4 : -1.2} edit={edit(`${FIELD[key]}.asides.${i}`)} />
             ))}
           </section>
         );

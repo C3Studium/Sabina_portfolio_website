@@ -87,7 +87,10 @@ const chapter = (value: unknown, brand: string, fallbackLabel: string): StudyCha
         label: stringValue(row.label) || fallbackLabel,
         heading,
         text: paragraphs(stringValue(row.text)),
-        asides: list(row.asides).map((a) => parts(stringValue(a))).filter((p) => p.length),
+        // Prázdné poznámky se NEvyhazují: index poznámky = index položky ve
+        // Studiu (`studyStack.asides.1`), na tom stojí klik v náhledu Study
+        // Cases. Prázdný lístek se nevykreslí (Note v boards / column).
+        asides: list(row.asides).map((a) => parts(stringValue(a))),
         works: works(row.works, brand),
     }
 }

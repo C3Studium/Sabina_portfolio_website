@@ -109,7 +109,10 @@ const studyNotes = () => defineField({
     name: 'asides',
     title: 'Poznámky přes díla',
     type: 'array',
-    of: [{ type: 'string' }],
+    // `text`, ne `string`: seznam řetězců kreslí Studio jako štítky, které
+    // rostou s textem — věta poznámky přetekla sloupec formuláře. Uložená
+    // hodnota je pořád řetězec, jen pole je řádek přes celou šířku.
+    of: [{ type: 'text', options: { rows: 2 } }],
     description: 'Krátké postřehy nalepené přes díla (lístek s páskou), nejvýš dva. ' + '**Tučně** jde i tady.',
     validation: (rule) => rule.max(2),
 })

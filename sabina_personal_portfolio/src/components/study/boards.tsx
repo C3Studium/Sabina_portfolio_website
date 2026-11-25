@@ -67,6 +67,10 @@ export type BoardProps = {
 // trust → studyRing (src/lib/site/study.ts).
 const caseOf = (docId: string | null | undefined, field: string, kind?: string) => caseEditable(docId ?? null, field, kind);
 const workEdit = (docId: string | null | undefined, chapter: string, k: number) => caseOf(docId, `${chapter}.works.${k}.image`, "image");
+// Lístek: na šířku nese poznámku `asides.i`, na výšku odstavec textu kapitoly
+// (`text` je jedno pole — odstavec se do něj neadresuje).
+const noteEdit = (docId: string | null | undefined, chapter: string, portrait: boolean, i: number) =>
+  caseOf(docId, portrait ? `${chapter}.text` : `${chapter}.asides.${i}`);
 
 /**
  * Plynulý pohyb ze scrollu stání artboardu jako `transform` řetězec.
@@ -225,10 +229,16 @@ function Heading({ no, label, parts, style, sweep, children, docId, chapter }: {
 /** Poloha poznámky: zleva `x`, nebo zprava `r` (šířka má minimum na obrazovce). */
 type NoteAt = { x: number; y: number; w: number; tilt?: number; r?: number };
 
-/** Poznámka nalepená PŘES díla (poloha v px artboardu); nalepí se při `on`. */
-function Note({ parts, at, on, small = false }: { parts: StudyPart[]; at: NoteAt; on: boolean; small?: boolean }) {
+/**
+ * Poznámka nalepená PŘES díla (poloha v px artboardu); nalepí se při `on`.
+ * `edit` = anotace pole pro Study Cases (klik vybere, dvojklik ukáže pole
+ * vlevo). Bez textu (poznámka chybí nebo je prázdná) se nevykreslí.
+ */
+function Note({ parts, at, on, small = false, edit }: { parts: StudyPart[] | undefined; at: NoteAt; on: boolean; small?: boolean; edit?: object }) {
+  if (!parts?.length) return null;
   return (
     <p
+      {...edit}
       className={styles.note}
       data-z="3"
       data-on={on || undefined}
@@ -660,7 +670,7 @@ export function CoverBoard({ c, act, rect, go, reduce, seen, progress, range, na
         </span>
         <Steps onStep={step} label="Story vpředu" />
       </div>
-      <Note parts={portrait ? ch.text[0] : ch.asides[0]} at={noteAt} on={go} small={!portrait} />
+      <Note parts={portrait ? ch.text[0] : ch.asides[0]} at={noteAt} on={go} small={!portrait} edit={noteEdit(docId, "studyCover", portrait, 0)} />
     </div>
   );
 }
@@ -741,12 +751,14 @@ export function PlayBoard({ c, act, rect, go, reduce, seen, docId, no }: BoardPr
         small={!portrait}
         at={portrait ? { x: 0, r: M * 0.5, y: H * 0.24, w: W * 0.5, tilt: 1.6 } : { x: base.x + cw * 0.86, y: H * 0.2, w: W * 0.12, tilt: 2.2 }}
         on={noteIn}
+        edit={noteEdit(docId, "studyStack", portrait, 0)}
       />
       <Note
         parts={portrait ? ch.text[1] : ch.asides[1]}
         small={!portrait}
         at={portrait ? { x: M * 0.5, y: H * 0.56, w: W * 0.6, tilt: -1.4 } : { x: M * 0.5, y: H * 0.76, w: W * 0.12, tilt: -2.6 }}
         on={note2In}
+        edit={noteEdit(docId, "studyStack", portrait, 1)}
       />
       {/* Na výšku dole naproti počítadlu — pod díly ho kryje poznámka. */}
       <DetailButton work={works[front]} style={portrait ? { left: M, bottom: M } : { left: base.x, top: underWork(base.y + ch0 + H * 0.022, H) }} />
@@ -847,6 +859,7 @@ export function CampaignsBoard({ c, act, rect, go, reduce, seen, progress, range
         small={!portrait}
         at={portrait ? { x: 0, r: M * 0.5, y: H * 0.23, w: W * 0.6, tilt: 1.4 } : { x: W * 0.4, y: H * 0.31, w: W * 0.13, tilt: 1.8 }}
         on={noteIn}
+        edit={noteEdit(docId, "studyStrip", portrait, 0)}
       />
     </div>
   );
@@ -1010,6 +1023,7 @@ export function TrustBoard({ c, act, rect, go, reduce, seen, progress, range, na
         small={!portrait}
         at={portrait ? { x: 0, r: M * 0.5, y: H * 0.56, w: W * 0.6, tilt: -1.6 } : { x: centre.x + W * 0.1, y: H * 0.68, w: W * 0.12, tilt: -2.2 }}
         on={noteIn}
+        edit={noteEdit(docId, "studyRing", portrait, 0)}
       />
       {/* Na výšku dole naproti počítadlu — pod díly ho kryje poznámka. */}
       <DetailButton work={works[front]} style={portrait ? { right: M, bottom: M } : { left: centre.x, top: underWork(centre.y + cardH / 2 + H * 0.025, H), translate: "-50% 0" }} />
