@@ -6,7 +6,7 @@ import { getPageContent, readerFor } from "@c3studium/valecms/server/site";
 import CaseStudy from "@/components/case-study";
 import Study from "@/components/study";
 import type { LabelsCopy } from "@/components/projects/hero-list";
-import { FALLBACK_PROJECTS, projectsOrFallback } from "@/components/projects/fallback";
+import { projectsOrFallback } from "@/components/projects/fallback";
 import { STUDIES } from "@/components/study/studies";
 import { getGlobalCopy, type GlobalCopy } from "@/lib/site/globals";
 import { getProjects, viewFrom, type Project, type Reader } from "@/lib/site/projects";
@@ -28,12 +28,12 @@ type Props = {
 
 export const getStaticPaths: GetStaticPaths = async () => {
   // Bez databáze se generují detaily zálohy z kódu, aby odkazy z karet vedly
-  // někam i na webu bez CMS.
+  // někam i na webu bez CMS. S databází JEN publikované projekty — studie
+  // v kódu (STUDIES) stránku nezaloží: projekt skrytý, archivovaný nebo
+  // smazaný ve Studiu by jinak žil dál ze zálohy (tak zůstala /projects/jordan).
   const projects = projectsOrFallback(await getProjects());
-  // Plus projekty s případovou studií v kódu (záloha), i když ve Studiu ještě nejsou.
-  const slugs = new Set([...projects.map((project) => project.slug), ...Object.keys(STUDIES)]);
   return {
-    paths: [...slugs].map((slug) => ({ params: { slug } })),
+    paths: projects.map((project) => ({ params: { slug: project.slug } })),
     // Projekt publikovaný po posledním buildu stránku dostane: první požadavek
     // ji vykreslí a od té chvíle je v cache. Bez toho by Studio publikovalo
     // něco, co do dalšího nasazení vrací 404.
@@ -55,16 +55,14 @@ export const getStaticProps: GetStaticProps<Props> = async ({ params, ...context
   ]);
 
   const slug = typeof params?.slug === "string" ? params.slug : "";
+  // Záloha z kódu jen bez databáze (projectsOrFallback). Projekt, který ve
+  // Studiu není publikovaný (stažený, archivovaný, smazaný, přejmenovaný),
+  // vrací 404 — i když pro jeho adresu leží v kódu studie.
   const list = projectsOrFallback(projects);
-  let index = list.findIndex((project) => project.slug === slug);
-  // Projekt se studií v kódu, který ve Studiu ještě není: záložní projekt.
-  // (Jen detail — řada karet na /projects zůstává podle Studia.)
-  const backup = index < 0 && STUDIES[slug] ? FALLBACK_PROJECTS.find((project) => project.slug === slug) : undefined;
-  if (backup) index = list.length;
-  // Smazaný nebo přejmenovaný projekt musí vrátit 404, ne prázdnou stránku.
+  const index = list.findIndex((project) => project.slug === slug);
   if (index < 0) return { notFound: true, revalidate: REVALIDATE_SECONDS };
 
-  const found = backup ?? list[index];
+  const found = list[index];
   // Studie: ze Studia, jinak záloha z kódu (stejná adresa).
   const project = { ...found, study: found.study ?? STUDIES[slug] ?? null };
   const next = list.length > 1 ? list[(index + 1) % list.length] ?? null : null;

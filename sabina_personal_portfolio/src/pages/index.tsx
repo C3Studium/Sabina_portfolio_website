@@ -110,6 +110,7 @@ export default function HomePage({ content, globals }: HomeProps) {
             <Cta
               copy={content?.cta}
               references={content?.references ?? null}
+              projects={content?.projects ?? null}
               words={content?.heroWords?.filter((word) => word.place === "cta") ?? null}
               progress={progress}
               still={still}

@@ -27,7 +27,9 @@ const usePathname = () =>
     () => "",
   );
 
-// Bannery za číslem — jako v pozadí výzvy na úvodní stránce.
+// Bannery za číslem — jako v pozadí výzvy na úvodní stránce. Tenhle seznam
+// je jen záloha bez databáze; jinak publikované projekty (`banners` z 404
+// getStaticProps), ať tu skrytý projekt nezůstane.
 const BANNERS = [
   "/assets/banners/vecicky_banner16.png",
   "/assets/banners/vikio_banner8.png",
@@ -83,7 +85,8 @@ function Construct() {
   );
 }
 
-export default function NotFound() {
+export default function NotFound({ banners = null }: { banners?: string[] | null }) {
+  const sources = banners?.length ? banners : BANNERS;
   const reduce = Boolean(useReducedMotion());
   const { go } = useGate();
   const tall = useMedia(PORTRAIT_TABLET);
@@ -101,7 +104,7 @@ export default function NotFound() {
       <div ref={areaRef} className={styles.bannerArea} aria-hidden="true" />
       {!reduce && go ? (
         <IntroBanners
-          sources={BANNERS}
+          sources={sources}
           area={areaRef}
           show
           delay={0.4}

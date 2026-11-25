@@ -16,11 +16,12 @@ import { ease, within, type Window } from "@/components/home/info/choreography";
 import { editableDoc, editableIn } from "@c3studium/valecms/edit";
 import { inStudio } from "@/lib/editing";
 import type { HeroWord, Reference } from "@/lib/site/home";
+import type { Project } from "@/lib/site/projects";
+import { projectBanners } from "@/lib/site/project-banners";
 import { lerp, PORTRAIT_PHONE, PORTRAIT_TABLET, useLandscapeFluid, useMedia } from "@/lib/fluid";
 import Lines, {
   hasLines,
   picture,
-  pictures,
   text,
   type CmsImage,
   type MarkedLine,
@@ -254,7 +255,6 @@ export type CtaCopy = {
   action?: string;
   stats?: { value?: string; label?: string }[];
   portrait?: CmsImage | null;
-  gallery?: CmsImage[] | string;
 };
 
 /** Monogram, když recenze nemá logo: firma za čárkou v pozici, jinak jméno. */
@@ -363,6 +363,7 @@ function Swoosh({ draw }: { draw?: MotionValue<number> }) {
 export default function Cta({
   copy = null,
   references = null,
+  projects = null,
   words = null,
   progress,
   still: forcedStill = false,
@@ -371,6 +372,8 @@ export default function Cta({
 }: {
   copy?: CtaCopy | null;
   references?: Reference[] | null;
+  /** Publikované projekty — jejich bannery jdou do vrstvy vpravo (IntroBanners). */
+  projects?: Project[] | null;
   /**
    * Přepínač ze Studia („Nastavení webu" → Zobrazit reference). Vypnuto:
    * bez 3D pásu recenzí i karty recenze — dokud klientka nemá aspoň jednu.
@@ -529,9 +532,14 @@ export default function Cta({
   });
   const claim = FALLBACK.claim.map((row, index) => line(AT.claim + index, row));
   const portrait = picture(copy?.portrait, FALLBACK.portrait);
-  const gallery = pictures(copy?.gallery);
-  const banners = FALLBACK.banners.map((banner, index) => picture(gallery[index], banner));
-  const bannerSources = [...new Set([...banners.map((banner) => banner.src), ...BACKGROUND.banners])];
+  // Bannery vpravo: z PUBLIKOVANÝCH projektů (jako karty v heru) — skrytý
+  // nebo archivovaný projekt tu nesmí být. Dřív seznam v kódu + galerie
+  // bloku (v ní seedované bannery i projektu, který je ve Studiu skrytý).
+  // Kód jen bez databáze (žádný projekt).
+  const fromProjects = projectBanners(projects);
+  const bannerSources = fromProjects.length
+    ? fromProjects
+    : [...new Set([...FALLBACK.banners.map((banner) => banner.src), ...BACKGROUND.banners])];
   const reviewsKey = reviews.map((r) => `${r.name}|${r.role}`).join("\n");
   const statsKey = cardStats.map((st) => `${st.value}|${st.label}`).join("\n");
   const rootRef = useRef<HTMLDivElement>(null);

@@ -1,5 +1,5 @@
 // O mně. Rozepisuje agent „about".
-import { defineBlock, definePage, f } from '@c3studium/valecms/site'
+import { defineBlock, defineList, definePage, f } from '@c3studium/valecms/site'
 
 // Klíče bloků téhle stránky. Tvar `<stránka>.<sekce>` = `page` v getSiteCopy.
 // Komponenty i seed se odkazují jen na ně; keys.ts je pouze rozcestník.
@@ -34,7 +34,10 @@ export const aboutPage = definePage({
     route: '/about',
     title: 'O mně',
     copy: 'about',
-    sources: {},
+    // Publikované projekty: bannery za portrétem (O mně → IntroBanners). Jako
+    // zdroj, ne vlastní čtení — revalidace pak ví, že /about drží projekty,
+    // a skrytý projekt zmizí i odsud hned, ne až po okně ISR.
+    sources: { projects: { type: 'project' } },
     blocks: [
         defineBlock({
             at: 'me',
@@ -78,5 +81,8 @@ export const aboutPage = definePage({
         }),
         defineBlock({ at: 'courses', key: ABOUT.courses, title: 'O mně — kurzy', fields: panelFields() }),
         defineBlock({ at: 'skills', key: ABOUT.skills, title: 'O mně — specializace', fields: panelFields() }),
+        // Zdroj se do `content` dostane jen seznamem (resolvePage). Stránka
+        // z něj bere jen adresy bannerů (pages/about, projectBanners).
+        defineList({ at: 'projects', source: 'projects', title: 'Projekty (bannery za portrétem)' }),
     ],
 })

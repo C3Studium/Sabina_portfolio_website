@@ -197,6 +197,8 @@ const CARDS_AT = 0.9;
 
 // Bannery za portrétem (motion/intro — stavějí se vrstvami), ztlumené
 // a pomalejší než v heru; částice na portrétu (hero jich má 300 000).
+// `banners` jsou jen záloha bez databáze — jinak publikované projekty
+// (content.projects), ať skrytý projekt za portrétem nezůstane.
 const BACKGROUND = {
   banners: [
     "/assets/banners/gummylife_banner1.png",
@@ -373,10 +375,15 @@ function Panel({
 
 /* ----------------------------------------------------------- komponenta --- */
 
-export default function AboutMe({ content = null }: { content?: AboutContent | null }) {
+/**
+ * `banners` = adresy bannerů z publikovaných projektů (getStaticProps,
+ * projectBanners); prázdné / chybí = záloha z kódu (web bez databáze).
+ */
+export default function AboutMe({ content = null, banners: projectBanners = null }: { content?: AboutContent | null; banners?: string[] | null }) {
   const me = content?.me;
   const lead = content?.lead;
   const highlights = content?.highlights;
+  const bannerSources = projectBanners?.length ? projectBanners : BACKGROUND.banners;
 
   const editMe = editableIn(me?.docId ?? null);
   const editLead = editableIn(lead?.docId ?? null);
@@ -509,7 +516,7 @@ export default function AboutMe({ content = null }: { content?: AboutContent | n
       {banners ? (
         <div className={styles.bannersLayer} aria-hidden="true">
           <IntroBanners
-            sources={BACKGROUND.banners}
+            sources={bannerSources}
             area={bannerAreaRef}
             show={go}
             delay={0.25}

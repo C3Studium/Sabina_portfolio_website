@@ -189,6 +189,7 @@ export default function SectionPopups({ content: pageContent = null, showReviews
         <Cta
           copy={content?.cta}
           references={content?.references ?? null}
+          projects={content?.projects ?? null}
           words={content?.heroWords?.filter((word) => word.place === "cta") ?? null}
           progress={ctaProgress}
           instant={stacked}
@@ -217,6 +218,7 @@ export default function SectionPopups({ content: pageContent = null, showReviews
           <Cta
             copy={content?.cta}
             references={content?.references ?? null}
+            projects={content?.projects ?? null}
             words={content?.heroWords?.filter((word) => word.place === "cta") ?? null}
             progress={progress}
             still={still}

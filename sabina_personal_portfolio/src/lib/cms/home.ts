@@ -28,10 +28,6 @@ const { label, plain } = f as unknown as {
     plain: () => Reader
 }
 
-// `siteCopy` má pole `gallery`, ale žádnou čtečku `f.gallery`. `f.text` je holé
-// `block[path] || ''`, takže pole obrázků projde beze změny.
-const gallery = () => f.text('gallery')
-
 // Zdroje dokumentů. Jméno vlevo je klíč v `content`, typ vpravo říká, kterou
 // čtečku `registerSources` zavolat.
 const sources = {
@@ -113,8 +109,9 @@ export const homepage = definePage({
                 // Čísla pod recenzí — ručně psaná, ne počítaná.
                 stats: f.rows({ from: 3, count: 2, pick: ['value', 'label'] }),
                 portrait: f.image({ alt: 'none' }),
-                // Bannery vpravo, v pořadí zobrazení.
-                gallery: gallery(),
+                // Bannery vpravo už galerie bloku nedává: berou se z publikovaných
+                // projektů (content.projects → Cta, src/lib/site/project-banners.ts),
+                // aby skrytý projekt nezůstal ve vrstvě bannerů.
                 docId: f.docId(),
             },
         }),
