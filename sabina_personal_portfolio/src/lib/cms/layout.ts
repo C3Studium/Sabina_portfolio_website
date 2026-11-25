@@ -15,7 +15,17 @@ export const GLOBAL = {
     contact: 'global.contact',
 } as const
 
-export const globals = defineGlobals({ copy: 'global', sources: {} })
+// `sources` tu web nečte (globals.ts má vlastní čtečky) — říkají revalidaci,
+// že dokument těch typů je pod KAŽDOU routou. Bez nich uložené nastavení
+// (hlavička bez Reference) nebo sociální síť v patičce dorazily na web až po
+// okně ISR (10 min), protože publikace neobnovila žádnou stránku.
+export const globals = defineGlobals({
+    copy: 'global',
+    sources: {
+        settings: { type: 'siteSettings' },
+        socials: { type: 'socialLink' },
+    },
+})
 
 /**
  * Povrchy — co se ve Studiu vybírá ze seznamu, protože na stránce na to nejde

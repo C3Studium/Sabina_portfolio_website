@@ -983,11 +983,18 @@ const briefContact = defineType({
 // Web čte PRVNÍ publikovaný (src/lib/site/globals.ts); bez dokumentu platí
 // výchozí hodnoty (reference se ukazují). Sem patří, co klientka chce
 // vypínat bez nasazení.
+//
+// `singleton` (valecms 2.0.0-beta.19): Studio ukáže rovnou formulář s jediným
+// „Uložit změny", které platí hned na webu — bez konceptu a bez „Stáhnout
+// z webu". Staženým nastavením web četl výchozí hodnoty a reference se vrátily,
+// i když přepínač ve Studiu říkal „Ne". Revalidaci všech stránek po uložení
+// zařizuje zdroj v `globals` (src/lib/cms/layout.ts).
 const siteSettings = defineType({
     name: 'siteSettings',
     title: 'Nastavení',
     icon: 'settings',
     module: RECENZE,
+    singleton: true,
     fields: [
         defineField({
             name: 'showReviews',

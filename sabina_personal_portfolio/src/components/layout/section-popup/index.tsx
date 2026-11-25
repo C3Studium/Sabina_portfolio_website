@@ -88,7 +88,7 @@ const fetchContent = () =>
       return null;
     }));
 
-export default function SectionPopups({ content: pageContent = null }: { content?: HomeContent | null }) {
+export default function SectionPopups({ content: pageContent = null, showReviews = true }: { content?: HomeContent | null; showReviews?: boolean }) {
   const [active, setActive] = useState<SectionKey | null>(null);
   // Na úvodní stránce obsah z pageProps; jinde se načte, než se okno
   // poprvé otevře (chvíli po načtení stránky), a do té doby zálohy.
@@ -118,12 +118,15 @@ export default function SectionPopups({ content: pageContent = null }: { content
     const open = (event: Event) => {
       const key = (event as CustomEvent<SectionKey>).detail;
       if (!key) return;
+      // Vypnuté reference (Studio → Recenze → Nastavení): okno Referencí se
+      // neotevře, ani kdyby ho něco požádalo (odkaz v menu chybí).
+      if (key === "references" && !showReviews) return;
       setClosing(false);
       setActive(key);
     };
     window.addEventListener(SECTION_OPEN_EVENT, open);
     return () => window.removeEventListener(SECTION_OPEN_EVENT, open);
-  }, []);
+  }, [showReviews]);
 
   // CTA se po otevření postaví svým nástupem. Telefon bez nástupu: průběh
   // skočí rovnou na konec (CTA reaguje na změnu hodnoty).
@@ -189,6 +192,7 @@ export default function SectionPopups({ content: pageContent = null }: { content
           words={content?.heroWords?.filter((word) => word.place === "cta") ?? null}
           progress={ctaProgress}
           instant={stacked}
+          showReviews={showReviews}
         />
       </div>
     );

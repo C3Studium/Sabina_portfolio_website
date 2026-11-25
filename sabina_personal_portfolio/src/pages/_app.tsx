@@ -189,6 +189,7 @@ function App({ Component, pageProps, router }: AppProps) {
       <ScenePreload />
       <SectionPopups
         content={router.pathname === "/" ? ((pageProps as { content?: HomeContent }).content ?? null) : null}
+        showReviews={globals?.settings?.showReviews ?? true}
       />
       <ContactModal
         open={contactOpen}
