@@ -1159,13 +1159,20 @@ $chapters: 30px;
   left: 0;
   border-right: 1px solid $line;
 
+  // Do spodu panelu; co se nevejde (výstupy = všechny bannery projektu),
+  // se posouvá — kolečko nad seznamem neveze kameru (data-lenis-prevent).
   ul {
     position: absolute;
     left: 0;
     right: 0;
+    bottom: 0;
     margin: 0;
     padding: 0 0.6cqw;
     list-style: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(var(--snow-rgb), 0.18) transparent;
   }
 
   li {

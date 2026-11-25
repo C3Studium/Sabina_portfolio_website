@@ -98,6 +98,18 @@ const chapter = (value: unknown, brand: string, fallbackLabel: string): StudyCha
 const formatOf = (image: StudyImage) =>
     `${image.width === image.height ? 'Post' : image.height / image.width > 1.6 ? 'Story' : 'Banner'} · ${image.width} × ${image.height}`
 
+/** Výstupy doplněné o díla kapitol, která mezi nimi nejsou (stejný obrázek = stejná adresa). */
+const withChapterWorks = (outputs: StudyOutput[], works: StudyWork[]): StudyOutput[] => {
+    const seen = new Set(outputs.map((output) => output.image.src))
+    const extra: StudyOutput[] = []
+    for (const work of works) {
+        if (seen.has(work.image.src)) continue
+        seen.add(work.image.src)
+        extra.push({ image: work.image, caption: work.name, format: formatOf(work.image) })
+    }
+    return [...outputs, ...extra]
+}
+
 /** Studie z těla projektu, nebo null (bez díla na Titulní). */
 export const studyFrom = (data: Data, title: string, order: number): StudyContent | null => {
     const cover = chapter(data.studyCover, title, 'Titulní')
@@ -141,12 +153,11 @@ export const studyFrom = (data: Data, title: string, order: number): StudyConten
             campaigns: strip,
             trust: ring,
         },
-        // Bez výstupů editor ukáže všechna díla kapitol.
-        outputs: outputs.length
-            ? outputs
-            : [...cover.works, ...stack.works, ...strip.works, ...ring.works]
-                  .filter((w, i, all) => all.findIndex((x) => x.image.src === w.image.src) === i)
-                  .map((w) => ({ image: w.image, caption: w.name, format: formatOf(w.image) })),
+        // Výstupy = VŠECHNY bannery projektu: nejdřív vybrané výstupy (pořadí
+        // a popisky ze Studia), za nimi díla kapitol, která mezi nimi nejsou.
+        // Dřív seznam výstupů díla kapitol nahradil — „Ostatní bannery" měly
+        // ve výstupech 6 bannerů ze šablony a 17 bannerů z kapitol chybělo.
+        outputs: withChapterWorks(outputs, [...cover.works, ...stack.works, ...strip.works, ...ring.works]),
         cta: {
             lead: [
                 ...(lead ? ([[lead, false]] as StudyPart[]) : []),

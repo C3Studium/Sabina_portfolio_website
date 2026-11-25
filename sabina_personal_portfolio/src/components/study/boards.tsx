@@ -1037,14 +1037,15 @@ export function TrustBoard({ c, act, rect, go, reduce, seen, progress, range, na
 type Placed = { i: number; x: number; y: number; w: number; h: number };
 
 /**
- * Díla libovolných tvarů v řádcích (zarovnaných do šířky). Zkusí 1–4
- * řádky a vybere rozvržení s největší plochou děl, které se vejde.
+ * Díla libovolných tvarů v řádcích (zarovnaných do šířky). Zkusí 1–6
+ * řádků (výstupy mají i 20+ bannerů — všechna díla projektu) a vybere
+ * rozvržení s největší plochou děl, které se vejde.
  */
 const justify = (aspects: number[], area: Rect, gap: number, caption: number): Placed[] => {
   const n = aspects.length;
   let best: Placed[] = [];
   let bestArea = -1;
-  for (let r = 1; r <= Math.min(n, 4); r++) {
+  for (let r = 1; r <= Math.min(n, 6); r++) {
     // Rozdělení do r řádků s podobným součtem poměrů stran.
     const target = aspects.reduce((a, b) => a + b, 0) / r;
     const rows: number[][] = [[]];
@@ -1095,6 +1096,8 @@ const EXPORT_AT = (i: number, n: number) => 0.42 + (i / n) * 0.3;
 // Rám editoru (podíl artboardu): lišta, panely, pata s výzvou.
 // Rozhraní je úzké — hlavní je plocha. Spodní lišta není (výzva je na konci).
 const EDITOR = { bar: 0.05, left: 0.13, right: 0.14, rows: 0.1, row: 0.045 };
+// Nejnižší řádek Vrstev (podíl výšky artboardu) — pod ním už se seznam posouvá.
+const LAYER_ROW_MIN = 0.032;
 const ZOOM = { min: 0.4, max: 3 };
 
 
@@ -1134,6 +1137,21 @@ export function OutputsBoard({ c, act, rect }: BoardProps) {
   const done = useActState(act, (v) => items.filter((_, i) => v >= EXPORT_AT(i, n) + 0.04).length);
   const exported = items.map((_, i) => i < done);
   const busy = useActState(act, (v) => v > 0.4);
+
+  // Vrstvy: výstupy jsou všechny bannery projektu (i 20+). Řádky se zmenší,
+  // aby se vešly (nejvýš na LAYER_ROW_MIN), a co se nevejde, panel posune —
+  // vybraný řádek drží ve výhledu (scrollTop, ne scrollIntoView: to by
+  // pohnulo i stránkou a s ní kamerou plátna).
+  const listTop = H * EDITOR.rows - bar;
+  const rowH = Math.max(H * LAYER_ROW_MIN, Math.min(H * EDITOR.row, (H - bar - listTop) / Math.max(1, n)));
+  const layersRef = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    const list = layersRef.current;
+    const row = selected == null ? null : (list?.children[selected] as HTMLElement | undefined);
+    if (!list || !row) return;
+    if (row.offsetTop < list.scrollTop) list.scrollTop = row.offsetTop;
+    else if (row.offsetTop + row.offsetHeight > list.scrollTop + list.clientHeight) list.scrollTop = row.offsetTop + row.offsetHeight - list.clientHeight;
+  }, [selected]);
 
   /** Obrazovka → px artboardu (kamera plátna mění měřítko). */
   const ratio = () => {
@@ -1278,11 +1296,11 @@ export function OutputsBoard({ c, act, rect }: BoardProps) {
           <p className={styles.edPanelHead}>
             Vrstvy <span>{n}</span>
           </p>
-          <ul style={{ top: H * EDITOR.rows - bar }}>
+          <ul ref={layersRef} style={{ top: listTop }} data-lenis-prevent="">
             {items.map((item, i) => (
               <li
                 key={i}
-                style={{ height: H * EDITOR.row }}
+                style={{ height: rowH }}
                 data-active={selected === i || undefined}
                 data-done={exported[i] || undefined}
                 onClick={() => {
