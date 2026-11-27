@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion, useTransform, type MotionValue } from "framer-motion";
-import { editableIn, surfaceRoot, useStudioSurface } from "@c3studium/valecms/edit";
+import { editableIn, surfaceRoot, useLiveBody, useStudioSurface } from "@c3studium/valecms/edit";
 import { inStudio } from "@/lib/editing";
 import type { CopyItem, GlobalBlock } from "@/lib/site/globals";
+import { liveGlobalBlock } from "@/lib/site/global-block";
 import type { BriefCopy } from "@/lib/site/brief";
 import { decodeMarked } from "@/lib/site/marks";
 import Lines from "@/components/home/lines";
@@ -254,7 +255,12 @@ type ContactModalProps = {
   brief?: BriefCopy | null;
 };
 
-export default function ContactModal({ open, onClose, copy = null, brief = null }: ContactModalProps) {
+export default function ContactModal({ open, onClose, copy: stored = null, brief = null }: ContactModalProps) {
+  // Živý náhled ve Studiu (Kontakt — formulář vlevo, modál vpravo): editor
+  // posílá rozepsaný blok a modál se z něj překreslí při psaní. Mimo editor
+  // dokumentu je `live` vždy null a platí blok z getStaticProps.
+  const live = useLiveBody(stored?.docId ?? null);
+  const copy = live ? liveGlobalBlock(live, stored?.docId) : stored;
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
 

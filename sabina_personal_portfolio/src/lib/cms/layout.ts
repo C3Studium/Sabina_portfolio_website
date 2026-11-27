@@ -40,10 +40,17 @@ export const globals = defineGlobals({
  * nich jde rovnou.
  */
 export const surfaces = [
+    // Kontakt se upravuje jako případová studie (valecms 2.0.0-beta.19,
+    // `editor: 'split'`): formulář bloku vlevo, modál vpravo na vlastní
+    // stránce (pages/studio/preview/contact.tsx) — živě, dvojklik na text
+    // najde jeho pole (telefon je položka 2, „Hodnota"). Dřív formulář nad
+    // stránkou modál zakrýval a pole se hledala naslepo.
     defineSurface({
         name: 'contact',
         title: 'Kontakt',
         kind: 'modal',
         copy: GLOBAL.contact,
+        preview: '/studio/preview/contact',
+        editor: 'split',
     }),
 ]

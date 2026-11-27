@@ -53,11 +53,9 @@ const FALLBACK = {
     { label: "Cookies", href: "/cookies" },
   ],
   followTitle: "Sledujte mě",
-  socials: [
-    { label: "Instagram", href: "#" },
-    { label: "LinkedIn", href: "#" },
-    { label: "Behance", href: "#" },
-  ],
+  // Jen LinkedIn (přání klientky 27. 11. 2026). Na webu rozhodují dokumenty
+  // „Sociální sítě" ve Studiu — tohle je záloha bez databáze.
+  socials: [{ label: "LinkedIn", href: "#" }],
   copyright: `© ${YEAR} Sabina Hudrmentová. Všechna práva vyhrazena.`,
   sign: "Pojďme tvořit.",
 };

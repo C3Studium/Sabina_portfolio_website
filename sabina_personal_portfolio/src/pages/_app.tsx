@@ -63,6 +63,9 @@ declare global {
 // sáhnou po záloze z kódu.
 type GlobalPageProps = { globals?: GlobalCopy | null };
 
+// Stránka náhledu povrchu Kontakt pro Studio (src/lib/cms/layout.ts `preview`).
+const CONTACT_PREVIEW = "/studio/preview/contact";
+
 function App({ Component, pageProps, router }: AppProps) {
   const scenePage = isScenePage(router.pathname);
   // Stav kontaktního modalu žije tady: otevírá ho tlačítko v hlavičce,
@@ -192,7 +195,8 @@ function App({ Component, pageProps, router }: AppProps) {
         showReviews={globals?.settings?.showReviews ?? true}
       />
       <ContactModal
-        open={contactOpen}
+        // Náhled povrchu Kontakt ve Studiu (pages/studio/preview/contact): modál otevřený sám.
+        open={contactOpen || router.pathname === CONTACT_PREVIEW}
         onClose={() => setContactOpen(false)}
         copy={globals?.contact}
         brief={globals?.brief ?? null}
