@@ -341,9 +341,26 @@ $line: rgba(var(--charcoal-rgb), 0.22);
   background: $ink;
   color: var(--green);
 
-  &:disabled {
+  &:disabled,
+  &[aria-disabled="true"] {
     opacity: 0.35;
-    cursor: not-allowed;
+  }
+}
+
+// Dál bez odpovědi: volby krátce zablikají rámečkem (brief.tsx next()).
+.cards[data-nudge] {
+  animation: brief-nudge 0.9s ease-out;
+}
+
+@keyframes brief-nudge {
+  0% {
+    box-shadow: 0 0 0 0 rgba(var(--green-rgb), 0);
+  }
+  25% {
+    box-shadow: 0 0 0 4px rgba(var(--green-rgb), 0.75);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--green-rgb), 0);
   }
 }
 

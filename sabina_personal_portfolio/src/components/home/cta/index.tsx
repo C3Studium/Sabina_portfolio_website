@@ -547,7 +547,9 @@ export default function Cta({
   // Karty se kreslí do plátna rozměrem DOM karty (.reviewFrame) a písmem
   // stránky, až jsou písma načtená.
   useEffect(() => {
-    if (still) return;
+    // Vypnuté reference (Studio → Recenze → Nastavení): nic se nekreslí ani
+    // neposlouchá — pás recenzí jako by v kódu nebyl (i na telefonu).
+    if (still || !showReviews) return;
     let cancelled = false;
     // Překreslit jen při skutečně jiném rozměru karty. iOS posílá `resize`
     // pokaždé, když se při scrollu schová/ukáže lišta Safari — dřív se tím
@@ -595,7 +597,7 @@ export default function Cta({
     };
     // Klíče místo polí — pole se tvoří každý render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [still, reviewsKey, statsKey, phoneLayout]);
+  }, [still, showReviews, reviewsKey, statsKey, phoneLayout]);
 
   // Telefon: nakreslené karty jako obrázky pro FlexCarousel (bez textové
   // vrstvy — položky nemají název ani odkaz).

@@ -211,6 +211,30 @@ export default function Brief({
     setStep(Math.max(0, Math.min(last, to)));
   };
 
+  // Dál na telefonu (27. 11. 2026): volby kroku jsou pod okrajem výhledu,
+  // takže zašedlé Dál vypadalo, že nefunguje. Bez odpovědi Dál posune panel
+  // na volby a krátce je zvýrazní; s odpovědí jde dál a posune panel na
+  // začátek formuláře (další otázka i její volby jsou vidět). Posun jen
+  // tehdy, když cíl není celý vidět — na počítači se nic nehne.
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [nudge, setNudge] = useState(0);
+  const reveal = (el: Element | null | undefined) => {
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const fits = r.top >= 0 && r.bottom <= window.innerHeight;
+    if (!fits) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const next = (answered: boolean) => {
+    if (!answered) {
+      reveal(stageRef.current?.querySelector("[data-brief-options]"));
+      setNudge((n) => n + 1);
+      return;
+    }
+    go(step + 1);
+    // Po výměně kroku (AnimatePresence) — nový krok už je v DOM.
+    window.setTimeout(() => reveal(stageRef.current), 380);
+  };
+
   const pick = (q: Question, option: string) => {
     const now = answers[q.key] ?? [];
     if (q.multi) {
@@ -289,13 +313,13 @@ export default function Brief({
         </ol>
       </div>
 
-      <div className={styles.stage}>
+      <div ref={stageRef} className={styles.stage}>
         <AnimatePresence mode="wait" custom={dir} initial={false}>
           <motion.div key={step} className={q ? styles.step : `${styles.step} ${styles.contactStep}`} custom={dir} variants={STEP} initial="enter" animate="center" exit="exit">
             {q ? (
               <>
                 <StepHead step={step} total={last + 1} titleId={titleId} title={q.title} hint={q.hint} docId={editing ? q.id : undefined} docType="briefStep" />
-                <div className={styles.cards} role="group" aria-labelledby={titleId}>
+                <div key={nudge} className={styles.cards} role="group" aria-labelledby={titleId} data-brief-options="" data-nudge={nudge > 0 || undefined}>
                   {q.options.map(({ label: option, icon }) => {
                     const on = (answers[q.key] ?? []).includes(option);
                     return (
@@ -420,8 +444,9 @@ export default function Brief({
           <button
             type="button"
             className={styles.next}
-            disabled={!(answers[q.key]?.length)}
-            onClick={() => go(step + 1)}
+            // Ne `disabled`: klik bez odpovědi ukáže volby (next výš).
+            aria-disabled={!(answers[q.key]?.length) || undefined}
+            onClick={() => next(Boolean(answers[q.key]?.length))}
           >
             {q.multi ? "Pokračovat" : "Dál"}
             <Arrow />
