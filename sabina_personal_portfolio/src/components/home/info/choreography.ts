@@ -673,6 +673,11 @@ export function useDesigner({ stage, names, refs, cardsPad, enabled }: Options) 
   // Jen v dosahu: od příletu myši v heru po odchod z Procesu (a jednou za
   // hranicí, ať se vše schová).
   const live = useRef(false);
+  // Klid: stejný průběh, rám Procesu i okno jako minulý snímek → update()
+  // (zápisy stylů a ~10 čtení obdélníků = vynucený layout) se přeskočí.
+  // Dřív běžel každý snímek, i když návštěvník jen stál — v Safari znatelné.
+  // Výjimka: volný čas (rest), tam myš krouží podle času.
+  const lastKey = useRef("");
   useAnimationFrame(() => {
     const h = heroProgress.get();
     // Před příletem myši v heru nic neměřit (dřív se rám Procesu četl
@@ -688,6 +693,10 @@ export function useDesigner({ stage, names, refs, cardsPad, enabled }: Options) 
     const ps = box ? clamp01(-box.top / Math.max(1, box.height - vh)) : 0;
     const inRange = h > HERO.arrive[0] - 0.02 && ps < PROCESS.leave[1] + 0.01;
     if (!inRange && !live.current) return;
+    const resting = p >= flow.rest[0] && p < flow.delBar.to[0];
+    const key = `${h.toFixed(5)}|${p.toFixed(5)}|${pe.toFixed(5)}|${ps.toFixed(5)}|${vh}|${window.innerWidth}|${inRange}`;
+    if (key === lastKey.current && !resting) return;
+    lastKey.current = key;
     live.current = inRange;
     update(h, p, pe, ps, processImg);
   });

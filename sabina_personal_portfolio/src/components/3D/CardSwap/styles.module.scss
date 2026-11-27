@@ -149,6 +149,30 @@
   }
 }
 
+// Safari na Macu a iPhone / iPad (index.tsx `data-webkit`, lib/device
+// isWebKit). WebKit kreslí backdrop-filter i SVG filtr na HTML procesorem
+// a při každém překreslení znovu: čtyři rozmazané karty nad pohyblivým
+// pozadím a zvlněné odlesky s nekonečnými animacemi stály v Safari snímek
+// za snímkem, i když balíček stál (27. 11. 2026). Lom (url() v
+// backdrop-filter) tam stejně nefunguje. Proto jako na dotyku: plné dlaždice
+// bez rozmazání, odlesky bez zvlnění a bez nekonečných animací (zůstává
+// světlá hrana a pruh podle natočení karty — --glint-* z index.tsx).
+.root[data-webkit][data-theme="grey"] .card,
+.root[data-webkit][data-theme="grey"] .slot[data-swap-index] .card {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: var(--swap-tile-solid, var(--swap-tile));
+}
+
+.root[data-webkit][data-theme="grey"] .glint {
+  animation: none;
+}
+
+.root[data-webkit][data-theme="grey"] .glint::after {
+  filter: brightness(calc(1 + var(--glint-gain, 0) * 0.9));
+  animation: none;
+}
+
 /* ---------- Odlesky světla scény (theme="grey") ----------
    Jako by na skleněné karty svítilo světlo ve scéně: světlá hrana tam, kam
    světlo dopadá, šikmé zvlněné pruhy odlesku (na kurzor nereagují, světlo

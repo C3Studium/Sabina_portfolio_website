@@ -24,6 +24,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useSyncExternalStore,
   type CSSProperties,
   type HTMLAttributes,
   type KeyboardEvent,
@@ -31,6 +32,9 @@ import {
 } from "react";
 import styles from "./styles.module.scss";
 import { INK, SNOW, SNOW_RGB } from "@/lib/palette";
+import { isWebKit } from "@/lib/device";
+
+const noSubscribe = () => () => {};
 
 const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
@@ -242,6 +246,9 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
   ) => {
     const rootRef = useRef<HTMLDivElement>(null);
     const stageRef = useRef<HTMLDivElement>(null);
+    // Safari / iOS (lib/device isWebKit): na serveru i v prvním renderu false,
+    // pak skutečnost — bez nesouladu hydratace.
+    const webkit = useSyncExternalStore(noSubscribe, isWebKit, () => false);
     const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
     const shadeRefs = useRef<(HTMLSpanElement | null)[]>([]);
     // Lom podkladu u skla (theme="grey"): posun obrazu za kartou podle její
@@ -431,7 +438,8 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
           el.style.setProperty("--glint-gain", gain.toFixed(2));
           // Světlo zezadu prochází sklem pod jiným úhlem: obraz za kartou se
           // posune (lom) proti pohybu karty.
-          const refract = refractRefs.current[card.index];
+          // Safari lom v backdrop-filter neumí — atributy by jen překreslovaly.
+          const refract = isWebKit() ? null : refractRefs.current[card.index];
           if (refract) {
             refract.setAttribute("dx", (-mx * 46).toFixed(1));
             refract.setAttribute("dy", (-my * 30 + card.r * 0.6).toFixed(1));
@@ -960,6 +968,8 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
         aria-label="Karty"
         onKeyDown={onKeyDown}
         data-theme={theme}
+        // Safari / iOS: bez drahého skla (styles — [data-webkit]).
+        data-webkit={webkit || undefined}
       >
         {/* Sklo (theme="grey"): zvlnění podkladu u průsvitných okrajů karty —
             backdrop-filter na .card odkazuje na tenhle filtr (styles). Šum

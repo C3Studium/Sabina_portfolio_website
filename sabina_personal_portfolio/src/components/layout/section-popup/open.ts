@@ -31,21 +31,25 @@ const POPUP = "[role='dialog'][data-section]";
 
 /**
  * Kam v přišpendlené sekci doscrollovat: podíl její choreografie (0 = začátek
- * tracku, 1 = konec). Služby mají stavbu řízenou scrollem — skok na začátek
- * ukazoval prázdný rám s „Nadpis / Text", proto 0,9: sekce je skoro hotová.
+ * tracku, 1 = konec). Sekce ho může říct sama atributem `data-scroll-at`
+ * (Služby: klidová chvíle po stavbě, z choreografie — info/index.tsx);
+ * tohle je záloha. Dřív Služby natvrdo 0,9 — to už sekce mizela (mazání,
+ * portrét odnesený do Procesu) a odkaz vypadal, že nefunguje; celá je
+ * zhruba 0,49–0,62.
  * Počítá se v PIXELECH z výšky tracku a okna (ne ve vh ani %, ty se na
  * telefonu a monitoru liší): průběh `p` sekce (useScroll „start start" →
  * „end end") je scrollY = top + p × (výška − výška okna).
  */
 const SECTION_AT: Partial<Record<SectionKey, number>> = {
-  services: 0.9,
+  services: 0.5,
 };
 
 /** Cílový scrollY (px) pro sekci — její horní okraj, u přišpendlených podíl choreografie. */
 function scrollTargetOf(target: HTMLElement, key: SectionKey): number {
   const rect = target.getBoundingClientRect();
   const top = rect.top + window.scrollY;
-  const fraction = SECTION_AT[key] ?? 0;
+  const own = Number(target.dataset.scrollAt);
+  const fraction = Number.isFinite(own) && own > 0 ? own : SECTION_AT[key] ?? 0;
   // Krátká sekce (telefon, zjednodušená verze) nemá co „přehrát" — jen okraj.
   const pinned = Math.max(0, rect.height - window.innerHeight);
   return Math.round(top + pinned * fraction);

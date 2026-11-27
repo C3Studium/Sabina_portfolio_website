@@ -6,7 +6,7 @@ import DesignCursor from "@/components/common/design-cursor";
 import CardSwap, { Card } from "@/components/3D/CardSwap";
 import { BuildGrid, DrawFrame, NavPill, SketchText, span, useRemoved } from "./reveal";
 import { ContextMenu, DesignSelection, FlightImage, ToolPanels } from "./designer";
-import { useDesigner } from "./choreography";
+import { flowFor, useDesigner } from "./choreography";
 import { markTyped } from "@/components/home/typing";
 import Image from "next/image";
 import { editableDoc, editableIn } from "@c3studium/valecms/edit";
@@ -333,6 +333,10 @@ export default function Info({
       ref={sectionRef}
       className={popup ? `${styles.infoTrack} ${styles.infoPopup}` : styles.infoTrack}
       id={popup ? undefined : "sluzby"}
+      // Kam doscrolluje odkaz „Služby" (section-popup/open.ts): kousek do
+      // klidové chvíle, kdy je sekce celá postavená (nástroje, text,
+      // statistiky, karty) a před mazáním — ze stejné choreografie.
+      data-scroll-at={popup ? undefined : (flowFor(tools.length).rest[0] + 0.015).toFixed(3)}
       data-cursor="user"
       data-scroll-label="Služby"
     >

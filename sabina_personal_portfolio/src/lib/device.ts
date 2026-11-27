@@ -13,6 +13,26 @@
 export const isTouchDevice = () =>
   typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
 
+let webkit: boolean | null = null;
+
+/**
+ * Safari na Macu a cokoli na iPhonu / iPadu (všechno je tam WebKit). WebKit
+ * kreslí SVG filtry na HTML a backdrop-filter na procesoru — při každém
+ * překreslení znovu — a `url()` v backdrop-filter neumí vůbec. Drahé
+ * skleněné efekty se tam vypínají (3D/CardSwap). Výsledek je stálý, počítá
+ * se jednou. Na serveru „ne".
+ */
+export const isWebKit = () => {
+  if (typeof navigator === "undefined") return false;
+  if (webkit === null) {
+    const ua = navigator.userAgent;
+    const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const safari = /AppleWebKit/.test(ua) && !/(Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS)\//.test(ua);
+    webkit = ios || safari;
+  }
+  return webkit;
+};
+
 // Šířky musí být v `deviceSizes` Nextu (výchozí 640, 750, 828, 1080, …)
 // a kvalita v `images.qualities` (next.config.ts: 75, 80).
 const NEXT_WIDTHS = [640, 750, 828, 1080, 1200, 1920, 2048, 3840];

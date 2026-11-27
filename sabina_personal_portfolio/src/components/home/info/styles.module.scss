@@ -1870,8 +1870,10 @@ $col-portrait: 24%;
    živý obdélník — choreography.ts), jen se jinak umístí: absolutně v .info
    (sticky = obsahující blok) u levého sloupce. Levý sloupec si pod textem
    nechá místo (padding-bottom = výška mřížky). Na výšku platí blok xs-v. */
-$stat-tile-h: 10vh;
-$stat-gap: 1vh;
+// Menší a tlumené (27. 11. 2026, přání klientky: „ať víc zapadnou do tmy,
+// méně výrazné"), mřížka široká jako text nad ní (.lead max-width 15vw).
+$stat-tile-h: 8vh;
+$stat-gap: 0.8vh;
 $stats-grid-h: calc(#{$stat-tile-h} * 2 + #{$stat-gap});
 
 // Telefon na šířku (do 520px výšky) si nechává lištu dole — dlaždice by se
@@ -1908,7 +1910,8 @@ $stats-grid-h: calc(#{$stat-tile-h} * 2 + #{$stat-gap});
   .statsBar {
     left: 7vw;
     bottom: calc(2vh + 3vh);
-    width: 16vw;
+    // Šířka textu nad mřížkou (.lead max-width) — dřív 16vw, o kus širší.
+    width: 15vw;
     height: $stats-grid-h;
   }
 
@@ -1937,18 +1940,19 @@ $stats-grid-h: calc(#{$stat-tile-h} * 2 + #{$stat-gap});
     grid-template-rows: auto minmax(0, 1fr);
     align-items: center;
     column-gap: 0.45vw;
-    row-gap: 0.7vh;
+    row-gap: 0.5vh;
     height: $stat-tile-h;
     min-width: 0;
-    padding: 1.4vh 0.8vw;
-    border: 1px solid rgba(var(--snow-rgb), 0.14);
-    border-radius: 0.9vh;
-    background: rgba(24, 24, 26, 0.72);
-    backdrop-filter: blur(10px);
+    padding: 1.1vh 0.7vw;
+    // Zapadnout do tmy: průsvitná tmavá plocha, sotva znatelný okraj, bez
+    // rozmazání pozadí (backdrop-filter byl navíc drahý v Safari).
+    border: 1px solid rgba(var(--snow-rgb), 0.06);
+    border-radius: 0.8vh;
+    background: rgba(16, 16, 18, 0.34);
 
     &:first-child,
     &:last-child {
-      padding: 1.4vh 0.8vw;
+      padding: 1.1vh 0.7vw;
     }
 
     .statBadge {
@@ -1968,17 +1972,20 @@ $stats-grid-h: calc(#{$stat-tile-h} * 2 + #{$stat-gap});
     }
 
     .statValue {
-      font-size: clamp(0.8rem, min(#{fit-vh(2.8vh)}, 1.6vw), 3.4rem);
+      font-size: clamp(0.75rem, min(#{fit-vh(2.2vh)}, 1.25vw), 2.8rem);
+      font-weight: 400;
       line-height: 1;
       white-space: nowrap;
+      color: rgba(var(--snow-rgb), 0.86);
     }
 
     .statLabel {
       grid-column: 1 / -1;
       align-self: start;
-      font-size: clamp(0.6rem, min(#{fit-vh(1.6vh)}, 0.95vw), 2.1rem);
+      font-size: clamp(0.55rem, min(#{fit-vh(1.3vh)}, 0.78vw), 1.8rem);
       line-height: 1.2;
       white-space: normal;
+      color: rgba(var(--snow-rgb), 0.5);
     }
   }
 
