@@ -38,7 +38,7 @@ import { FULL, PORTRAIT_PHONE, PORTRAIT_TABLET, useMedia, viewportHeight } from 
 import { ACCENT_RGB } from "@/lib/palette";
 import { STUDY_TEMPLATE, type StudyBoard, type StudyContent, type StudyImage } from "./content";
 import { InspectContext, InspectorDock } from "./inspector";
-import { editableDoc, shown, useRevealField } from "@c3studium/valecms/edit";
+import { caseEditable, editableDoc, shown, useRevealField } from "@c3studium/valecms/edit";
 import { registerVisuals, type VisualDef } from "@/lib/banner-layers";
 import { CampaignsBoard, CoverBoard, ENTRANCE, OutputsBoard, Parts, PlayBoard, TrustBoard, easeInOut, span, type BoardProps, type Rect } from "./boards";
 import MeasureText from "@/components/common/measure-text";
@@ -125,9 +125,11 @@ const BOARD_NAME: Record<StudyBoard, string> = {
   outputs: "Výstupy",
 };
 
-/** Názvy zastávek: kapitoly podle obsahu (štítek), ostatní pevně. */
+/** Názvy zastávek: štítky ze Studia (i Titulní a Výstupy), jinak výchozí. */
 const boardNames = (c: StudyContent): Record<StudyBoard, string> => ({
   ...BOARD_NAME,
+  cover: c.chapters.cover.label || BOARD_NAME.cover,
+  outputs: c.outputsLabel || BOARD_NAME.outputs,
   play: c.chapters.play.label || BOARD_NAME.play,
   campaigns: c.chapters.campaigns.label || BOARD_NAME.campaigns,
   trust: c.chapters.trust.label || BOARD_NAME.trust,
@@ -140,13 +142,27 @@ const REVEAL_BOARD: [RegExp, StudyBoard | "end"][] = [
   [/^studyStack(\.|$)/, "play"],
   [/^studyStrip(\.|$)/, "campaigns"],
   [/^studyRing(\.|$)/, "trust"],
-  [/^studyOutputs(\.|$)/, "outputs"],
+  [/^studyOutputs(Label)?(\.|$)/, "outputs"],
   [/^studyCta(\.|$)/, "end"],
   [/^(studyCover|studyKind|studyMeta|title|tagline)(\.|$)/, "cover"],
 ];
 const boardOfField = (field: string) => REVEAL_BOARD.find(([pattern]) => pattern.test(field))?.[1] ?? null;
 
-const chaptersOf = (names: Record<StudyBoard, string>, plan: Plan): Chapter[] => [...plan.boards.map((board, i) => ({ at: i, label: names[board] })), { at: plan.end, label: "Spolupráce" }];
+const chaptersOf = (names: Record<StudyBoard, string>, plan: Plan, endLabel = "Spolupráce"): Chapter[] => [
+  ...plan.boards.map((board, i) => ({ at: i, label: names[board] })),
+  { at: plan.end, label: endLabel },
+];
+
+// Pole štítku zastávky v liště kapitol — pro klik ve Studiu (lišta je plátno,
+// anotace nese neviditelný popisek nad ním, viz Canvas).
+const RULER_FIELD: Record<StudyBoard | "end", string> = {
+  cover: "studyCover.label",
+  play: "studyStack.label",
+  campaigns: "studyStrip.label",
+  trust: "studyRing.label",
+  outputs: "studyOutputsLabel",
+  end: "studyCta.label",
+};
 
 /* ---------- Kamera ---------- */
 
@@ -315,7 +331,8 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
   const hiddenKey = (c.hidden ?? []).join(",");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const plan = useMemo(() => planOf(c.hidden ?? []), [hiddenKey]);
-  const CHAPTERS = chaptersOf(names, plan);
+  const CHAPTERS = chaptersOf(names, plan, c.cta.label || "Spolupráce");
+  const chapterLabels = CHAPTERS.map((ch) => ch.label).join("|");
   const { boards: BOARDS, last: LAST, end: END, total: TOTAL } = plan;
   const sectionRef = useRef<HTMLElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -493,7 +510,9 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
       drawn.current.left = leftKey;
       drawRuler(rulerLeft.current, true, ty, s, [{ from: r.y * s + ty, to: (r.y + r.h) * s + ty, color: band }], [], reveal, true);
     }
-    const chaptersKey = `${x.toFixed(4)}|${L.hover}|${reveal.toFixed(3)}`;
+    // Štítky v klíči: ve Studiu se mění při psaní (živý náhled) a lišta je
+    // musí překreslit hned, ne až po posunu.
+    const chaptersKey = `${x.toFixed(4)}|${L.hover}|${reveal.toFixed(3)}|${chapterLabels}`;
     if (chaptersKey !== drawn.current.chapters) {
       drawn.current.chapters = chaptersKey;
       drawChapters(rulerBottom.current, CHAPTERS, TOTAL, x, L.hover, reveal);
@@ -551,6 +570,9 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
   });
   useMotionValueEvent(rulerIn, "change", apply);
   useMotionValueEvent(flyIn, "change", apply);
+  // Nové štítky lišty (živý náhled Studia) — překreslit hned, bez posunu.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => apply(), [chapterLabels]);
 
 
   // Dosednutí: scroll se zastavil uprostřed přejezdu → dojet na bližší
@@ -767,6 +789,27 @@ function Canvas({ c, docId }: { c: StudyContent; docId: string | null }) {
             if (k >= 0) jump(CHAPTERS[k].at);
           }}
         />
+        {/* Ve Studiu (Study Cases): štítky lišty kapitol jsou klikací — lišta je
+            plátno, takže nad každý nakreslený popisek jde neviditelný se
+            stejnou polohou (drawChapters: okraj 18 px, poloha podle zastávky)
+            a anotací pole. Klik vybere, dvojklik dojede na pole vlevo. */}
+        {docId ? (
+          <div className={styles.rulerEdits}>
+            {CHAPTERS.map((ch, i) => {
+              const board = i < BOARDS.length ? BOARDS[i] : "end";
+              return (
+                <span
+                  key={board}
+                  className={styles.rulerEdit}
+                  style={{ left: `calc(18px + ${ch.at / TOTAL} * (100% - 36px) + 4px)` }}
+                  {...caseEditable(docId, RULER_FIELD[board])}
+                >
+                  {pad2(i + 1)} {ch.label}
+                </span>
+              );
+            })}
+          </div>
+        ) : null}
         <span className={styles.zoomBadge} aria-hidden="true">
           {c.title}.fig · <span ref={zoomRef}>100 %</span>
         </span>

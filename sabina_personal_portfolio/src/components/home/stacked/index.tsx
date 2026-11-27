@@ -18,6 +18,7 @@ import { usePerformance } from "@/providers/PerformanceProvider";
 import { inStudio } from "@/lib/editing";
 import Image from "next/image";
 import Link from "next/link";
+import SwipeHint from "@/components/common/swipe-hint";
 import type { FlexControls } from "@/components/3D/FlexCarousel";
 import { FlexCaption } from "@/components/3D/FlexCarousel/caption";
 import Lines, { hasLines, picture, text, type MarkedLine } from "../lines";
@@ -267,6 +268,25 @@ export function InfoStacked({ copy, stack, stats, services }: { copy?: InfoCopy 
 // Obrázky kroků jako v plné verzi (process/index.tsx, FALLBACK.shots):
 // zadání = foto briefu, tvorba = 3, ladění = 1, předání = 3.
 const SHOTS: Record<string, number[]> = { "03": [0, 1, 2], "04": [3], "05": [4, 5, 6] };
+// Barva v detailech kroku 02 (stejné pravidlo jako home/process HEX).
+const HEX = /^#[0-9a-f]{3,8}$/i;
+
+/** Pás obrázků kroku do strany; s víc než jedním nápověda „táhněte" (SwipeHint). */
+function StepStrip({ images }: { images: Img[] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  return (
+    <>
+      <div ref={ref} className={styles.strip} role="list">
+        {images.map((image, k) => (
+          <div key={image.src + k} className={styles.shot} role="listitem">
+            <Shot image={image} />
+          </div>
+        ))}
+      </div>
+      <SwipeHint scroller={ref} count={images.length} />
+    </>
+  );
+}
 
 export function ProcessStacked({ copy, steps: docs }: { copy?: ProcessCopy | null; steps?: ProcessStep[] | null }) {
   const F = PROCESS_FALLBACK;
@@ -300,8 +320,11 @@ export function ProcessStacked({ copy, steps: docs }: { copy?: ProcessCopy | nul
       <ol className={styles.steps}>
         {steps.map((step) => {
           // Zadání (01) ukazuje řádky briefu. Detaily dalších kroků (písmo,
-          // barvy klientů) se nevypisují — NDA, viz paměť projektu.
+          // barvy klientů) se nevypisují jako TEXT — NDA, viz paměť projektu.
+          // Koncept (02) má jako na počítači paletu: jen barevné plochy, bez
+          // kódů (27. 11. 2026 — na telefonu chyběla).
           const brief = step.stage === "01" ? step.details.filter((d) => !d.label.trim().endsWith(":")) : [];
+          const palette = step.stage === "02" ? step.details.map((d) => d.value.trim()).filter((v) => HEX.test(v)) : [];
           const focus = step.stage === "01" ? step.details.find((d) => d.label.trim().endsWith(":")) : undefined;
           return (
             <li key={step.stage} className={styles.step}>
@@ -329,15 +352,14 @@ export function ProcessStacked({ copy, steps: docs }: { copy?: ProcessCopy | nul
                   ) : null}
                 </dl>
               ) : null}
-              {step.images.length ? (
-                <div className={styles.strip} role="list">
-                  {step.images.map((image, k) => (
-                    <div key={image.src + k} className={styles.shot} role="listitem">
-                      <Shot image={image} />
-                    </div>
+              {palette.length ? (
+                <ul className={styles.palette} aria-label="Paleta barev">
+                  {palette.map((color, k) => (
+                    <li key={color + k} style={{ background: color }} />
                   ))}
-                </div>
+                </ul>
               ) : null}
+              {step.images.length ? <StepStrip images={step.images} /> : null}
             </li>
           );
         })}

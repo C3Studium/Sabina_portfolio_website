@@ -65,7 +65,6 @@ export const STUDY_VLNENE_ZBOZI: StudyContent = {
   title: "Vlněné zboží",
   meta: [
     { label: "Klient", value: "Vlněné zboží" },
-    { label: "Rok", value: "2025–2026" },
     { label: "Rozsah", value: "14 vizuálů" },
     { label: "Formáty", value: "Post · Banner" },
   ],
@@ -207,7 +206,6 @@ export const STUDY_VIKIO: StudyContent = {
   title: "VIKIO",
   meta: [
     { label: "Klient", value: "VIKIO" },
-    { label: "Rok", value: "2025" },
     { label: "Rozsah", value: "14 vizuálů" },
     { label: "Formáty", value: "Post · Story · Banner" },
   ],
@@ -352,7 +350,6 @@ export const STUDY_JORDAN: StudyContent = {
   title: "Jordan",
   meta: [
     { label: "Klient", value: "Jordan" },
-    { label: "Rok", value: "2025" },
     { label: "Rozsah", value: "6 vizuálů" },
     { label: "Formáty", value: "Banner · Post · Story" },
   ],

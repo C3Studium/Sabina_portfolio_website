@@ -39,8 +39,11 @@ export type StudyContent = {
   chapters: Record<Exclude<StudyBoard, "outputs">, StudyChapter>;
   /** Výstupy — libovolné tvary, rozměry a názvy. */
   outputs: StudyOutput[];
+  /** Štítek zastávky Výstupy v liště kapitol (Studio), jinak „Výstupy". */
+  outputsLabel?: string;
   /** Závěrečná výzva (po oddálení na celé plátno): věta, tlačítko, stav. */
-  cta: { lead: StudyPart[]; button: string; status: StudyPart[] };
+  /** `label` = štítek poslední zastávky v liště kapitol (Studio), jinak „Spolupráce". */
+  cta: { lead: StudyPart[]; button: string; status: StudyPart[]; label?: string };
 };
 
 const vecicky = (n: number, alt: string, width: number, height: number): StudyImage => ({
@@ -85,7 +88,6 @@ export const STUDY_TEMPLATE: StudyContent = {
   title: "Věcičky",
   meta: [
     { label: "Klient", value: "Věcičky" },
-    { label: "Rok", value: "2025" },
     { label: "Rozsah", value: "18 vizuálů" },
     { label: "Formáty", value: "Story · Post · Banner" },
   ],

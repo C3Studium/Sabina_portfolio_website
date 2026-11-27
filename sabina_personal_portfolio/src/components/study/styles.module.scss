@@ -1866,6 +1866,29 @@ $chapters: 30px;
   cursor: pointer;
 }
 
+// Ve Studiu: neviditelné popisky nad štítky lišty (index.tsx) — jen kvůli
+// anotaci pole; písmo jako na plátně (rulers.ts), aby výběr seděl na text.
+.rulerEdits {
+  position: absolute;
+  z-index: 6;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: $chapters;
+  pointer-events: none;
+}
+
+.rulerEdit {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  padding-top: 4px;
+  color: transparent;
+  font: 500 10px system-ui, sans-serif;
+  white-space: nowrap;
+  pointer-events: auto;
+}
+
 .zoomBadge {
   position: absolute;
   z-index: 4;

@@ -146,7 +146,9 @@ export const studyFrom = (data: Data, title: string, order: number): StudyConten
                 const row = obj(entry)
                 return { label: stringValue(row.label), value: stringValue(row.value) }
             })
-            .filter((m) => m.label && m.value),
+            // Rok se ve studiích neukazuje vůbec (27. 11. 2026) — ani když
+            // řádek „Rok" ve Studiu zůstal nebo přibude.
+            .filter((m) => m.label && m.value && !/^rok\b/i.test(m.label.trim())),
         chapters: {
             cover: { ...cover, heading: [[title, true]] },
             play: stack,
@@ -158,11 +160,13 @@ export const studyFrom = (data: Data, title: string, order: number): StudyConten
         // Dřív seznam výstupů díla kapitol nahradil — „Ostatní bannery" měly
         // ve výstupech 6 bannerů ze šablony a 17 bannerů z kapitol chybělo.
         outputs: withChapterWorks(outputs, [...cover.works, ...stack.works, ...strip.works, ...ring.works]),
+        outputsLabel: stringValue(data.studyOutputsLabel),
         cta: {
             lead: [
                 ...(lead ? ([[lead, false]] as StudyPart[]) : []),
                 ...(leadAccent ? ([[leadAccent, true]] as StudyPart[]) : []),
             ],
+            label: stringValue(cta.label),
             button: stringValue(cta.button) || 'Začněme spolu',
             status: parts(stringValue(cta.status) || 'Odpovím do *24 hodin*'),
         },

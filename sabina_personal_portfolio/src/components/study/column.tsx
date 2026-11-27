@@ -14,6 +14,7 @@ import { Parts } from "./boards";
 import type { StudyChapter, StudyContent, StudyImage, StudyOutput, StudyWork } from "./content";
 import { useInspect } from "./inspector";
 import { openContact } from "@/components/layout/contact-modal/open";
+import SwipeHint from "@/components/common/swipe-hint";
 import styles from "./column.module.scss";
 
 type ChapterKey = keyof StudyContent["chapters"];
@@ -36,20 +37,28 @@ function Shot({ image, label, className }: { image: StudyImage; label: string; c
   );
 }
 
-/** Pás děl do strany (scroll-snap). `field` = cesta kapitoly pro Study Cases (`studyCover` …). */
-function Strip({ works, docId = null, field }: { works: StudyWork[]; docId?: string | null; field?: string }) {
+/**
+ * Pás děl do strany (scroll-snap). `field` = cesta kapitoly pro Study Cases
+ * (`studyCover` …). Pod ním SwipeHint (víc než jedno dílo): počítadlo, linka
+ * a „táhněte" — dílo je skoro na šířku telefonu a další nevykukuje.
+ */
+function Strip({ works, docId = null, field, hint }: { works: StudyWork[]; docId?: string | null; field?: string; hint?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
   if (!works.length) return null;
   return (
-    <div className={styles.strip} role="list">
-      {works.map((work, i) => (
-        <figure key={work.name + i} className={styles.stripItem} role="listitem" {...(field ? caseEditable(docId, `${field}.works.${i}.image`, "image") : {})}>
-          <Shot image={work.image} label={work.name} />
-          <figcaption>
-            <span>{work.tag}</span> {work.name}
-          </figcaption>
-        </figure>
-      ))}
-    </div>
+    <>
+      <div ref={ref} className={styles.strip} role="list">
+        {works.map((work, i) => (
+          <figure key={work.name + i} className={styles.stripItem} role="listitem" {...(field ? caseEditable(docId, `${field}.works.${i}.image`, "image") : {})}>
+            <Shot image={work.image} label={work.name} />
+            <figcaption>
+              <span>{work.tag}</span> {work.name}
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+      <SwipeHint scroller={ref} count={works.length} label={hint} />
+    </>
   );
 }
 
@@ -166,8 +175,7 @@ export default function StudyColumn({ c, docId = null }: { c: StudyContent; docI
             </div>
           ))}
         </dl>
-        <Strip works={cover.works} docId={docId} field={FIELD.cover} />
-        <p className={styles.hint}>Táhněte do strany · klepnutím otevřete detail</p>
+        <Strip works={cover.works} docId={docId} field={FIELD.cover} hint="Táhněte · klepnutím detail" />
         {cover.asides.map((aside, i) => (
           <Note key={i} parts={aside} tilt={i % 2 ? 1.2 : -1.4} edit={edit(`studyCover.asides.${i}`)} />
         ))}

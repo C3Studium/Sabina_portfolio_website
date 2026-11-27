@@ -303,7 +303,9 @@ const project = defineType({
                     ],
                 },
             ],
-            description: 'Řádek údajů pod názvem — Klient, Rok, Rozsah, Formáty…',
+            // Rok se na webu neukazuje (přání klientky 27. 11. 2026) — řádek
+            // s popiskem „Rok…" převod studie vynechá (lib/site/study.ts).
+            description: 'Řádek údajů pod názvem — Klient, Rozsah, Formáty… (rok se na webu neukazuje).',
             validation: (rule) => rule.max(5),
         }),
         defineField({
@@ -312,7 +314,19 @@ const project = defineType({
             type: 'object',
             group: 'studie',
             description: 'Velký název vlevo, vpravo díla do hloubky (vpředu poslední).',
-            fields: [studyText(), studyNotes(), studyWorks(3, 'Tři díla do hloubky — nejlépe story. Vpředu je poslední.')],
+            fields: [
+                // Lišta kapitol dole na plátně (27. 11. 2026 — dřív natvrdo „Titulní").
+                defineField({
+                name: 'label',
+                title: 'Štítek v liště',
+                type: 'string',
+                description: 'Název zastávky v liště kapitol dole na plátně (výchozí „Titulní").',
+                validation: (rule) => rule.max(30),
+            }),
+                studyText(),
+                studyNotes(),
+                studyWorks(3, 'Tři díla do hloubky — nejlépe story. Vpředu je poslední.'),
+            ],
         }),
         studyChapter('studyStack', 'Kapitola 2 — balíček karet', 'Díla vlevo jako balíček karet, nadpis a text vpravo.', {
             max: 6,
@@ -325,6 +339,15 @@ const project = defineType({
         studyChapter('studyRing', 'Kapitola 4 — kolotoč', 'Kolotoč děl vlevo, nadpis a text vpravo.', {
             max: 6,
             help: 'Díla na kolotoči, 3–5 je ideál.',
+        }),
+        // Štítek zastávky Výstupy v liště kapitol (27. 11. 2026 — dřív natvrdo).
+        defineField({
+            name: 'studyOutputsLabel',
+            title: 'Výstupy — štítek v liště',
+            type: 'string',
+            group: 'studie',
+            description: 'Název zastávky Výstupy v liště kapitol dole na plátně (výchozí „Výstupy").',
+            validation: (rule) => rule.max(30),
         }),
         defineField({
             name: 'studyOutputs',
@@ -361,6 +384,13 @@ const project = defineType({
                 defineField({ name: 'leadAccent', title: 'Věta — zvýrazněná', type: 'string', description: 'Pod ní tučně, např. „Další studie může být ta vaše."', validation: (rule) => rule.max(80) }),
                 defineField({ name: 'button', title: 'Tlačítko', type: 'string', description: 'Dvě slova pod sebou, např. „Začněme spolu".', validation: (rule) => rule.max(30) }),
                 defineField({ name: 'status', title: 'Stav', type: 'string', description: 'Např. „Odpovím do *24 hodin*".', validation: (rule) => rule.max(60) }),
+                defineField({
+                name: 'label',
+                title: 'Štítek v liště',
+                type: 'string',
+                description: 'Název zastávky v liště kapitol dole na plátně (výchozí „Spolupráce").',
+                validation: (rule) => rule.max(30),
+            }),
             ],
         }),
         // Titulek, popis a náhled stránky projektu ve vyhledávání a na sítích.

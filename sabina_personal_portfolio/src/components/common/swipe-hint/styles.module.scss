@@ -1,0 +1,81 @@
+// Nápověda pásu děl na telefonu — viz index.tsx.
+.hint {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.75rem 0 0;
+  color: rgba(var(--snow-rgb), 0.62);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+.count {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+
+  b {
+    color: var(--green);
+    font-weight: 500;
+  }
+}
+
+// Linka s jezdcem: šířka jezdce = jedno dílo z počtu, poloha podle posunu.
+.track {
+  position: relative;
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(var(--snow-rgb), 0.16);
+  overflow: hidden;
+}
+
+.thumb {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--progress, 0) * (100% - var(--thumb, 0.2) * 100%));
+  width: calc(var(--thumb, 0.2) * 100%);
+  min-width: 14px;
+  border-radius: inherit;
+  background: var(--green);
+}
+
+.label {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  text-transform: uppercase;
+}
+
+.arrow {
+  width: 1.05rem;
+  height: 1.05rem;
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: swipe-nudge 1.4s ease-in-out infinite;
+}
+
+// Po prvním tažení šipka ztichne — návštěvník už ví.
+.hint[data-moved] .arrow {
+  animation: none;
+}
+
+@keyframes swipe-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arrow {
+    animation: none;
+  }
+}
