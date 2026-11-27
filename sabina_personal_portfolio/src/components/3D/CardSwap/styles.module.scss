@@ -157,20 +157,40 @@
 // backdrop-filter) tam stejně nefunguje. Proto jako na dotyku: plné dlaždice
 // bez rozmazání, odlesky bez zvlnění a bez nekonečných animací (zůstává
 // světlá hrana a pruh podle natočení karty — --glint-* z index.tsx).
+// Totéž pro `lite` (slabší zařízení, návštěvník chce méně pohybu — index.tsx).
 .root[data-webkit][data-theme="grey"] .card,
-.root[data-webkit][data-theme="grey"] .slot[data-swap-index] .card {
+.root[data-webkit][data-theme="grey"] .slot[data-swap-index] .card,
+.root[data-lite][data-theme="grey"] .card,
+.root[data-lite][data-theme="grey"] .slot[data-swap-index] .card {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   background: var(--swap-tile-solid, var(--swap-tile));
 }
 
-.root[data-webkit][data-theme="grey"] .glint {
+.root[data-webkit][data-theme="grey"] .glint,
+.root[data-lite][data-theme="grey"] .glint {
   animation: none;
 }
 
-.root[data-webkit][data-theme="grey"] .glint::after {
+.root[data-webkit][data-theme="grey"] .glint::after,
+.root[data-lite][data-theme="grey"] .glint::after {
   filter: brightness(calc(1 + var(--glint-gain, 0) * 0.9));
   animation: none;
+}
+
+// Mimo výhled (index.tsx `data-out`) odlesky stojí — dřív běžely, dokud
+// balíček nebyl půl obrazovky daleko (data-away), i když nebyl vidět.
+.root[data-out][data-theme="grey"] .glint,
+.root[data-out][data-theme="grey"] .glint::after {
+  animation-play-state: paused;
+}
+
+// Odlesky se pohybují jen na přední kartě — zadní jsou za ní z větší části
+// schované a jejich nekonečné animace (vlastní vlastnosti @property = přepočet
+// stylu každý snímek) stály ~40 % práce balíčku v klidu.
+.root[data-theme="grey"] .slot:not([data-front]) .glint,
+.root[data-theme="grey"] .slot:not([data-front]) .glint::after {
+  animation-play-state: paused;
 }
 
 /* ---------- Odlesky světla scény (theme="grey") ----------

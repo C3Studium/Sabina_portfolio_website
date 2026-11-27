@@ -11,6 +11,7 @@ import { markTyped } from "@/components/home/typing";
 import Image from "next/image";
 import { editableDoc, editableIn } from "@c3studium/valecms/edit";
 import { inStudio } from "@/lib/editing";
+import { usePerformance } from "@/providers/PerformanceProvider";
 import type { Service, StackItem, StatItem } from "@/lib/site/home";
 import Lines, {
   hasLines,
@@ -180,6 +181,11 @@ export default function Info({
   const portrait = picture(copy?.portrait, FALLBACK.portrait);
 
   const tools = or(stack, FALLBACK_STACK);
+  // Karty služeb lehčí (plné, bez rozmazání a animací odlesků) na slabším
+  // zařízení a pro návštěvníka, který zvolil méně pohybu. Safari / iOS si je
+  // zlehčí samy (CardSwap data-webkit).
+  const perf = usePerformance();
+  const liteCards = !perf.heavy || perf.motion !== "full";
   const statList = statsOf(stats);
   const [primary, ...rest] = or(services, FALLBACK_SERVICES);
   const stacked = rest.slice(0, STACKED_MAX);
@@ -597,6 +603,7 @@ export default function Info({
                 bounce={0.3}
                 // Bez naklánění za kurzorem — balíček stojí, jen se dá táhnout.
                 parallax={0}
+                lite={liteCards}
                 hoverSpread={0.1}
                 dim={0.35}
               >

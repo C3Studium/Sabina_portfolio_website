@@ -188,6 +188,12 @@ type CardSwapProps = {
   /** Kotva balíčku v kontejneru: střed, nebo levá hrana. */
   align?: "center" | "start" | "end";
   theme?: "dark" | "light" | "grey";
+  /**
+   * Lehčí sklo (27. 11. 2026): plné dlaždice bez rozmazání, odlesky bez
+   * zvlnění a nekonečných animací — jako v Safari (data-webkit). Pro slabší
+   * zařízení a pro návštěvníka, který chce méně pohybu.
+   */
+  lite?: boolean;
   onCardClick?: (index: number) => void;
   onChange?: (index: number) => void;
   className?: string;
@@ -210,6 +216,8 @@ type DeckCard = {
   v: Vec;
   /** Poslední zapsané hodnoty odlesků (write) — zapisuje se jen při změně. */
   glint?: string;
+  /** Vrstva odlesků karty (.glint) — proměnné --glint-* se píšou na ni. */
+  glintEl?: HTMLElement | null;
 } & Vec;
 
 const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
@@ -237,6 +245,7 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
       fitBy = "both",
       align = "center",
       theme = "dark",
+      lite = false,
       onCardClick,
       onChange,
       className = "",
@@ -432,10 +441,15 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
         const glint = `${shift.toFixed(1)}|${lift.toFixed(1)}|${tilt.toFixed(1)}|${gain.toFixed(2)}`;
         if (glint !== card.glint) {
           card.glint = glint;
-          el.style.setProperty("--glint-shift", `${shift.toFixed(1)}%`);
-          el.style.setProperty("--glint-lift", `${lift.toFixed(1)}%`);
-          el.style.setProperty("--glint-tilt", `${tilt.toFixed(1)}deg`);
-          el.style.setProperty("--glint-gain", gain.toFixed(2));
+          // Na vrstvu odlesků, ne na slot: --glint-* se dědí a na slotu se
+          // s každým snímkem přeskládání přepočítával styl celé karty (text,
+          // kresba) — ~1 ms na snímek (27. 11. 2026). Čte je jen .glint.
+          if (card.glintEl === undefined) card.glintEl = el.querySelector<HTMLElement>(`.${styles.glint}`);
+          const target = card.glintEl ?? el;
+          target.style.setProperty("--glint-shift", `${shift.toFixed(1)}%`);
+          target.style.setProperty("--glint-lift", `${lift.toFixed(1)}%`);
+          target.style.setProperty("--glint-tilt", `${tilt.toFixed(1)}deg`);
+          target.style.setProperty("--glint-gain", gain.toFixed(2));
           // Světlo zezadu prochází sklem pod jiným úhlem: obraz za kartou se
           // posune (lom) proti pohybu karty.
           // Safari lom v backdrop-filter neumí — atributy by jen překreslovaly.
@@ -659,18 +673,24 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
       const onMove = (event: PointerEvent) => {
         const s = settingsRef.current;
         if (event.pointerType !== "touch") {
-          const point = local(event);
-          const nx = clamp((point.x / Math.max(1, point.w)) * 2 - 1, -1, 1);
-          const ny = clamp((point.y / Math.max(1, point.h)) * 2 - 1, -1, 1);
-          state.tx = nx * s.parallax * 0.35 * s.bounds.width;
-          state.ty = ny * s.parallax * 0.35 * s.bounds.height;
+          // Bez paralaxy (Služby: parallax 0) se poloha myši nečte a smyčka
+          // se při každém pohybu nebudí — dřív getBoundingClientRect + wake()
+          // na každý pointermove, i když se nic nehnulo.
+          if (s.parallax > 0) {
+            const point = local(event);
+            const nx = clamp((point.x / Math.max(1, point.w)) * 2 - 1, -1, 1);
+            const ny = clamp((point.y / Math.max(1, point.h)) * 2 - 1, -1, 1);
+            state.tx = nx * s.parallax * 0.35 * s.bounds.width;
+            state.ty = ny * s.parallax * 0.35 * s.bounds.height;
+          }
+          const wasHovered = state.hovered;
           state.hovered = true;
           const overCard = Boolean((event.target as Element | null)?.closest?.("[data-swap-index]"));
           if (overCard !== state.overCard) {
             state.overCard = overCard;
             schedule();
           }
-          wake();
+          if (s.parallax > 0 || !wasHovered) wake();
         }
         const drag = state.drag;
         if (!drag || drag.id !== event.pointerId) return;
@@ -879,6 +899,8 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
       resizeObserver.observe(root);
       const intersectionObserver = new IntersectionObserver((entries) => {
         state.inView = entries[entries.length - 1]?.isIntersecting ?? true;
+        // Mimo výhled stojí i CSS animace odlesků (styles: data-out).
+        root.toggleAttribute("data-out", !state.inView);
         schedule();
       });
       intersectionObserver.observe(root);
@@ -970,6 +992,7 @@ const CardSwap = forwardRef<CardSwapHandle, CardSwapProps>(
         data-theme={theme}
         // Safari / iOS: bez drahého skla (styles — [data-webkit]).
         data-webkit={webkit || undefined}
+        data-lite={lite || undefined}
       >
         {/* Sklo (theme="grey"): zvlnění podkladu u průsvitných okrajů karty —
             backdrop-filter na .card odkazuje na tenhle filtr (styles). Šum
