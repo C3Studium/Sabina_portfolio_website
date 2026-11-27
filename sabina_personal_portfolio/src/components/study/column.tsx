@@ -2,7 +2,7 @@
 // řízené artboardy) obyčejná čtivá stránka v jednom sloupci — text napřed,
 // díla v pásech, které se táhnou prstem do strany (nativní scroll-snap,
 // žádná animace na scrollu). Klepnutí na dílo otevře stejný detail jako
-// na plátně (InspectorDock: náhled, vrstvy, pixely).
+// na plátně (InspectorDock: vrstvy, pixely).
 //
 // Server tuhle verzi vykresluje pro všechny (celý text studie je v HTML);
 // větší obrazovky ji po hydrataci vymění za plátno (index.tsx).

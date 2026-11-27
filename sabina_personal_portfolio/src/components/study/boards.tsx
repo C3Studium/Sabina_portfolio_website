@@ -345,7 +345,7 @@ function DetailButton({ work, style }: { work: StudyWork; style: MotionStyle }) 
         <path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" />
       </svg>
       Zobrazit detail
-      <span>náhled · vrstvy · pixely</span>
+      <span>vrstvy · pixely</span>
     </motion.button>
   );
 }
@@ -563,6 +563,13 @@ function Construct({ style }: { style: CSSProperties }) {
 }
 
 const DRIFT = [30, 70, 130];
+// Vějíř titulní: na konci stání otočení kolem spodní hrany (rz, °) a rozsah
+// natočení v prostoru (ry, ° na každou stranu) — 0 vzadu … 2 vpředu.
+const FAN = [
+  { rz: -9, ry: 14 },
+  { rz: -4.5, ry: 10 },
+  { rz: 0, ry: 6 },
+];
 
 export function CoverBoard({ c, act, rect, go, reduce, seen, progress, range, native, docId }: BoardProps) {
   // Název studie jedním slovem („Gummyplus") se do třetiny artboardu nevejde
@@ -602,15 +609,21 @@ export function CoverBoard({ c, act, rect, go, reduce, seen, progress, range, na
       p.x = frontX - (frontX - p.x) * k;
     });
   }
-  // Paralaxa děl při scrollu: `transform` z useBoardMotion (na dotyku nativní
-  // osa scrollu, jinak motion hodnota) — bez překreslení Reactu.
+  // Díla při scrollu jako karty v ruce (27. 11. 2026 — dřív jen paralaxa
+  // nahoru): rozevřou se do vějíře kolem spodní hrany (rotateZ, zadní víc),
+  // natočí se v prostoru (rotateY s perspektivou) a jemná paralaxa zůstává.
+  // `transform` z useBoardMotion (na dotyku nativní osa scrollu, jinak motion
+  // hodnota) — bez překreslení Reactu.
   const driftK = portrait ? 0.7 : 1;
   const motionArgs = { act, progress, range, native };
-  const drifts = [
-    useBoardMotion(motionArgs, (v) => `translateY(${((0.5 - v) * DRIFT[0] * driftK).toFixed(1)}px)`),
-    useBoardMotion(motionArgs, (v) => `translateY(${((0.5 - v) * DRIFT[1] * driftK).toFixed(1)}px)`),
-    useBoardMotion(motionArgs, (v) => `translateY(${((0.5 - v) * DRIFT[2] * driftK).toFixed(1)}px)`),
-  ];
+  const fanOf = (s: number) => (v: number) => {
+    const e = 0.5 - v;
+    const fan = FAN[s];
+    return `perspective(1600px) translateY(${(e * DRIFT[s] * 0.6 * driftK).toFixed(1)}px) rotateY(${(e * 2 * fan.ry * driftK).toFixed(2)}deg) rotateZ(${(v * fan.rz * driftK).toFixed(2)}deg)`;
+  };
+  const drifts = [useBoardMotion(motionArgs, fanOf(0)), useBoardMotion(motionArgs, fanOf(1)), useBoardMotion(motionArgs, fanOf(2))];
+  // Tlačítko detailu pod předním dílem: jen jeho paralaxa, bez natočení.
+  const buttonDrift = useBoardMotion(motionArgs, (v) => `translateY(${((0.5 - v) * DRIFT[2] * 0.6 * driftK).toFixed(1)}px)`);
   const drift = (s: number) => drifts[Math.min(s, drifts.length - 1)];
   const f = placed[current];
   const noteAt: NoteAt = portrait ? { x: W * 0.08, y: f.y + f.h * 0.6, w: W * 0.56, tilt: -1.8 } : { x: f.x - W * 0.06, y: f.y + f.h * 0.7, w: W * 0.12, tilt: -2.4 };
@@ -659,11 +672,11 @@ export function CoverBoard({ c, act, rect, go, reduce, seen, progress, range, na
             front={k === current}
             onPick={() => choose(k)}
             edit={workEdit(docId, "studyCover", k)}
-            style={{ left: p.x, top: p.y, transform: drift(s), "--dim": (1 - DEPTH[s]) * 1.4, zIndex: s } as MotionStyle}
+            style={{ left: p.x, top: p.y, transform: drift(s), transformOrigin: "50% 100%", "--dim": (1 - DEPTH[s]) * 1.4, zIndex: s } as MotionStyle}
           />
         );
       })}
-      <DetailButton work={works[current]} style={{ left: f.x, top: underWork(f.y + f.h + H * 0.022, H), transform: drift(n - 1) }} />
+      <DetailButton work={works[current]} style={{ left: f.x, top: underWork(f.y + f.h + H * 0.022, H), transform: buttonDrift }} />
       <div className={styles.controls} data-z="2" style={portrait ? { right: M, top: H * 0.33 } : { right: M, top: M * 0.45 }}>
         <span className={styles.controlsNo}>
           <b>{pad2(current + 1)}</b> / {pad2(n)}

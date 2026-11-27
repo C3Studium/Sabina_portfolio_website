@@ -1,4 +1,4 @@
-// Proklik obrázku do inspektoru (Náhled / Vrstvy / Pixely) odkudkoli z webu.
+// Proklik obrázku do inspektoru (Vrstvy / Pixely) odkudkoli z webu.
 //
 //   <InspectRoot>…</InspectRoot>       — drží otevřený obrázek a kreslí
 //                                         inspektor přes celou stránku (portál:

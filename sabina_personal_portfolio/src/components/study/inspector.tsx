@@ -1,25 +1,24 @@
 // Detail díla z plátna případové studie — malá karta, která se nalepí
 // vedle díla (jako poznámky), ne hlavní věc stránky.
 //
-//   hlava      přepínač Náhled / Vrstvy / Pixely · výrazné Zavřít
+//   hlava      přepínač Vrstvy / Pixely · výrazné Zavřít
 //   plocha     obrázek na tečkované ploše
-//   ovládání   přiblížení (−, %, +), lupa / výchozí pohled, u Vrstev
+//   ovládání   u Vrstev přiblížení (−, %, +), výchozí pohled,
 //              předvolby 3D (Zepředu, Izometrie, Z boku, Shora) a rozestup;
 //              hned vedle krátce, jak se ovládá
 //   pata       název a rozměr (u Vrstev vrstva pod kurzorem)
 //
 // Pohledy:
-//  - Náhled: kolečko / tlačítka přiblíží, tažením posun, dvojklik = celý
-//    obrázek; lupa pod kurzorem (jde vypnout).
+//  (Náhled s lupou a přiblížením je pryč — na přání klientky 27. 11. 2026
+//   zůstaly jen Vrstvy a Pixely.)
 //  - Vrstvy: rozklad banneru (lib/banner-layers) ve 3D — tah natočí,
 //    Shift / prostřední tlačítko / dva prsty posunou, kolečko přiblíží.
 //  - Pixely: obrázek z částic (common/particle-image), kurzor je rozfoukává.
 // Zavře ji klik mimo, Esc, Zavřít nebo scroll o víc než čtvrt okna.
-// Klávesy: 1–3 pohled, + / − přiblížení, 0 přizpůsobit.
+// Klávesy: 1–2 pohled, + / − přiblížení (Vrstvy), 0 přizpůsobit.
 
 import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -28,7 +27,6 @@ import {
   type CSSProperties,
   type PointerEvent,
 } from "react";
-import { mediaUrl } from "@/lib/media";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -43,7 +41,7 @@ const ParticleImage = dynamic(() => import("@/components/common/particle-image")
 export const InspectContext = createContext<((image: StudyImage, anchor?: HTMLElement | null) => void) | null>(null);
 export const useInspect = () => useContext(InspectContext);
 
-export type View = "preview" | "layers" | "pixels";
+export type View = "layers" | "pixels";
 
 const clampTo = (v: number, [lo, hi]: [number, number]) => Math.min(hi, Math.max(lo, v));
 
@@ -59,13 +57,11 @@ const useFinePointer = () => useSyncExternalStore(subscribeFine, () => window.ma
 /* ------------------------------------------------------- ikony --------- */
 
 const ICON = {
-  preview: "M4 5h16v14H4zM4 15l4.5-4.5 3.5 3.5 2.5-2.5L20 17",
   layers: "M12 4 3 9l9 5 9-5-9-5ZM3 14l9 5 9-5",
   pixels: "M5 5h3v3H5zM10.5 5h3v3h-3zM16 5h3v3h-3zM5 10.5h3v3H5zM10.5 10.5h3v3h-3zM16 10.5h3v3h-3zM5 16h3v3H5zM10.5 16h3v3h-3zM16 16h3v3h-3z",
   minus: "M6 12h12",
   plus: "M6 12h12M12 6v12",
   fit: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
-  loupe: "M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13ZM15.5 15.5 20 20",
   close: "M6 6l12 12M18 6 6 18",
   reset: "M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5",
 } as const;
@@ -81,82 +77,6 @@ function Icon({ d }: { d: string }) {
 
 
 /* ------------------------------------------------------- náhled -------- */
-
-const LOUPE = 180;
-const LOUPE_ZOOM = 2.5;
-const PREVIEW_ZOOM: [number, number] = [1, 4];
-
-function Preview({ image, zoom, setZoom, loupe }: { image: StudyImage; zoom: number; setZoom: (z: number) => void; loupe: boolean }) {
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [cursor, setCursor] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
-  const drag = useRef<{ id: number; x: number; y: number } | null>(null);
-  const stage = useRef<HTMLDivElement>(null);
-  // Při návratu na 100 % zpět na střed.
-  const shown = zoom <= 1 ? { x: 0, y: 0 } : pan;
-
-  useEffect(() => {
-    const el = stage.current;
-    if (!el) return;
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      setZoom(clampTo(zoom * Math.exp(-e.deltaY * 0.0015), PREVIEW_ZOOM));
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [zoom, setZoom]);
-
-  return (
-    <div
-      ref={stage}
-      className={styles.previewStage}
-      data-zoomed={zoom > 1 || undefined}
-      onPointerDown={(e) => {
-        if (zoom <= 1 || e.button !== 0) return;
-        drag.current = { id: e.pointerId, x: e.clientX - pan.x, y: e.clientY - pan.y };
-        e.currentTarget.setPointerCapture(e.pointerId);
-      }}
-      onPointerMove={(e) => {
-        const d = drag.current;
-        if (d && d.id === e.pointerId) setPan({ x: e.clientX - d.x, y: e.clientY - d.y });
-      }}
-      onPointerUp={() => {
-        drag.current = null;
-      }}
-      onDoubleClick={() => setZoom(zoom > 1 ? 1 : 2)}
-    >
-      <motion.div className={styles.previewPan} animate={{ x: shown.x, y: shown.y, scale: zoom }} transition={{ type: "spring", stiffness: 260, damping: 30 }}>
-        <div
-          className={styles.previewImage}
-          style={{ "--ar": image.width / image.height } as CSSProperties}
-          onPointerMove={(e) => {
-            const r = e.currentTarget.getBoundingClientRect();
-            setCursor({ x: (e.clientX - r.left) / zoom, y: (e.clientY - r.top) / zoom, w: r.width / zoom, h: r.height / zoom });
-          }}
-          onPointerLeave={() => setCursor(null)}
-        >
-          <Image src={image.src} alt={image.alt} fill sizes="70vw" draggable={false} />
-          {loupe && cursor && zoom <= 1 ? (
-            <span
-              className={styles.loupe}
-              style={{ width: LOUPE, height: LOUPE, transform: `translate(${cursor.x - LOUPE / 2}px, ${cursor.y - LOUPE / 2}px)` }}
-              aria-hidden="true"
-            >
-              <span
-                className={styles.loupeImage}
-                style={{
-                  backgroundImage: `url("${mediaUrl(image.src, 1920)}")`,
-                  backgroundSize: `${cursor.w * LOUPE_ZOOM}px ${cursor.h * LOUPE_ZOOM}px`,
-                  backgroundPosition: `${-(cursor.x * LOUPE_ZOOM - LOUPE / 2)}px ${-(cursor.y * LOUPE_ZOOM - LOUPE / 2)}px`,
-                }}
-              />
-              <span className={styles.loupeLabel}>{Math.round(LOUPE_ZOOM * 100)} %</span>
-            </span>
-          ) : null}
-        </div>
-      </motion.div>
-    </div>
-  );
-}
 
 /* ------------------------------------------------------- vrstvy -------- */
 
@@ -350,7 +270,6 @@ function ToolButton({ icon, label, onClick, active, disabled }: { icon: string; 
 const HINTS: Record<View, { fine: string[]; touch: string[] }> = {
   layers: { fine: ["Tažení", "natočí", "Shift + tažení", "posune", "Kolečko", "přiblíží"], touch: ["Jeden prst", "natočí", "Dva prsty", "posunou a přiblíží"] },
   pixels: { fine: ["Kurzor", "rozfouká pixely"], touch: ["Prst", "rozfouká pixely"] },
-  preview: { fine: ["Kolečko", "přiblíží", "Tažení", "posune", "Dvojklik", "celý obrázek"], touch: ["Tlačítka", "přiblíží", "Tažení", "posune"] },
 };
 
 function Hint({ parts }: { parts: string[] }) {
@@ -373,12 +292,11 @@ function Hint({ parts }: { parts: string[] }) {
  */
 function Detail({ image, onClose }: { image: StudyImage; onClose: () => void }) {
   const fine = useFinePointer();
-  // Začíná se na vrstvách; bez rozkladu na náhledu.
+  // Začíná se na vrstvách; bez rozkladu na pixelech.
   const [chosen, setView] = useState<View>("layers");
   const [split, setSplit] = useState<GroupedSplit | null | undefined>(undefined);
-  const view: View = chosen === "layers" && split === null ? "preview" : chosen;
-  const [zoom, setZoomState] = useState({ preview: 1, layers: 0.85 });
-  const [loupe, setLoupe] = useState(true);
+  const view: View = chosen === "layers" && split === null ? "pixels" : chosen;
+  const [zoom, setZoom] = useState(0.85);
   const [gap, setGap] = useState(90);
   const [preset, setPreset] = useState<{ key: PresetKey | null; ry: number; rx: number; tick: number }>({ key: "iso", ry: 34, rx: 14, tick: 0 });
   const [hover, setHover] = useState<number | null>(null);
@@ -391,11 +309,10 @@ function Detail({ image, onClose }: { image: StudyImage; onClose: () => void }) 
     };
   }, [image]);
 
-  const range = view === "layers" ? LAYER_ZOOM : PREVIEW_ZOOM;
-  const zoomKey = view === "layers" ? "layers" : "preview";
-  const fitZoom = zoomKey === "layers" ? 0.85 : 1;
-  const current = zoom[zoomKey];
-  const setZoom = useCallback((z: number) => setZoomState((s) => ({ ...s, [zoomKey]: z })), [zoomKey]);
+  // Přiblížení jen u Vrstev (Pixely ho nemají).
+  const range = LAYER_ZOOM;
+  const fitZoom = 0.85;
+  const current = zoom;
   const choosePreset = (key: PresetKey | null) => {
     const p = PRESETS.find((x) => x.key === key);
     if (!p) {
@@ -405,12 +322,11 @@ function Detail({ image, onClose }: { image: StudyImage; onClose: () => void }) 
     setPreset((s) => ({ key: p.key, ry: p.ry, rx: p.rx, tick: s.tick + 1 }));
   };
 
-  // Klávesy: 1 vrstvy, 2 pixely, 3 náhled, + / − přiblížení, 0 přizpůsobit.
+  // Klávesy: 1 vrstvy, 2 pixely, + / − přiblížení, 0 přizpůsobit.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "1" && split) setView("layers");
       else if (e.key === "2") setView("pixels");
-      else if (e.key === "3") setView("preview");
       else if (e.key === "+" || e.key === "=") setZoom(clampTo(current * 1.25, range));
       else if (e.key === "-") setZoom(clampTo(current / 1.25, range));
       else if (e.key === "0") setZoom(fitZoom);
@@ -424,7 +340,6 @@ function Detail({ image, onClose }: { image: StudyImage; onClose: () => void }) 
   const views: { key: View; label: string; off?: boolean }[] = [
     { key: "layers", label: "Vrstvy", off: split === null },
     { key: "pixels", label: "Pixely" },
-    { key: "preview", label: "Náhled" },
   ];
 
   return (
@@ -458,7 +373,6 @@ function Detail({ image, onClose }: { image: StudyImage; onClose: () => void }) 
       <div className={styles.body}>
         {/* Plocha: rozměr v poměru stran obrázku nastavuje Card. */}
         <div className={styles.stage} data-stage="">
-          {view === "preview" && <Preview image={image} zoom={current} setZoom={setZoom} loupe={loupe && fine} />}
           {view === "layers" && split ? (
             <Exploded split={split} image={image} gap={gap} preset={preset} onPreset={choosePreset} zoom={current} setZoom={setZoom} focus={hover} setHover={setHover} />
           ) : null}
@@ -488,7 +402,7 @@ function Detail({ image, onClose }: { image: StudyImage; onClose: () => void }) 
               </section>
             </>
           ) : null}
-          {view !== "pixels" ? (
+          {view === "layers" && split ? (
             <section>
               <p className={styles.sideHead}>Přiblížení</p>
               <div className={styles.zoom}>
@@ -497,8 +411,7 @@ function Detail({ image, onClose }: { image: StudyImage; onClose: () => void }) 
                   {Math.round(current * 100)} %
                 </button>
                 <ToolButton icon={ICON.plus} label="Přiblížit (+)" onClick={() => setZoom(clampTo(current * 1.25, range))} disabled={current >= range[1]} />
-                {view === "preview" && fine ? <ToolButton icon={ICON.loupe} label={loupe ? "Vypnout lupu" : "Zapnout lupu"} active={loupe} onClick={() => setLoupe((l) => !l)} /> : null}
-                {view === "layers" ? <ToolButton icon={ICON.reset} label="Výchozí pohled" onClick={() => choosePreset("iso")} /> : null}
+                <ToolButton icon={ICON.reset} label="Výchozí pohled" onClick={() => choosePreset("iso")} />
               </div>
             </section>
           ) : null}
