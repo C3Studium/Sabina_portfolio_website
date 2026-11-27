@@ -23,6 +23,7 @@ import { BuildFrame, RiseLine, SketchText, softMask, useBlockBuild } from "@/com
 import { ease, mix, within, type Window } from "@/components/home/info/choreography";
 import { Block, DupImage, Drawn, useSoftReveal, type Geo } from "./build";
 import LayeredReveal from "@/components/common/layered-reveal";
+import { localBanner } from "@/lib/banner-layers";
 import { TextPanel } from "./text-panel";
 import { useStepDesigner } from "./designer";
 import {
@@ -337,23 +338,22 @@ const MORE_DETAILS: ProcessDetail[] = [
 ];
 
 // Vizuál kroku 04 rozdělený na podklad a nadpis (tools/banner-layers/
-// split-title.mjs) — nadpis jde zvětšit zvlášť. Klíč je JMÉNO souboru
-// obrázku kroku 04 (bez cesty a bez otisku, který přidá úložiště Studia:
-// „…/1e3447e043e9fd52-jordan-banner4.png" i „/assets/banners/jordan_banner4.png"
-// → „jordan_banner4.png"). Box nadpisu je podíl obrázku (x, y, šířka, výška).
-// Jiný obrázek ze Studia rozklad nemá — ukáže se celý, bez zvětšení.
+// split-title.mjs) — nadpis jde zvětšit zvlášť. Klíč je místní banner, ke
+// kterému obrázek kroku 04 patří (localBanner: bez cesty, bez otisku úložiště
+// Studia, `-`/`_` i PŘÍPONA jedno — „…/82f024fc77afb88e-jordan-banner4.webp"
+// i „/assets/banners/jordan_banner4.png"). Dřív klíč nesl příponu `.png`
+// a po převodu nahraných obrázků do WebP (valecms 2.0.0-beta.16) se rozklad
+// nenašel: nadpis nerostl a kurzor letěl mimo. Box nadpisu je podíl obrázku
+// (x, y, šířka, výška). Jiný obrázek ze Studia rozklad nemá — ukáže se celý.
 type TitleSplit = { base: string; title: string; box: [number, number, number, number] };
 const TITLE_SPLIT: Record<string, TitleSplit> = {
-  "jordan_banner4.png": {
+  "/assets/banners/jordan_banner4.png": {
     base: "/assets/banners/split/jordan_banner4_base.png",
     title: "/assets/banners/split/jordan_banner4_title.png",
     box: [0.128, 0.095, 0.739, 0.236],
   },
 };
-const titleSplitFor = (src: string): TitleSplit | undefined => {
-  const file = (src.split("?")[0].split("/").pop() ?? "").toLowerCase();
-  return TITLE_SPLIT[file.replace(/^[0-9a-f]{12,}-/, "").replace(/-/g, "_")];
-};
+const titleSplitFor = (src: string): TitleSplit | undefined => TITLE_SPLIT[localBanner(src) ?? ""];
 
 // Kde v `items` bloku `index.process` co bydlí — musí sedět na src/lib/cms/home.ts.
 // 0–1 řádky nadpisu, 2 nápověda posunu.
@@ -864,6 +864,16 @@ const shotOf = (
 const ratioOf = (image: { width?: number; height?: number }) =>
   image.width && image.height ? image.width / image.height : 4 / 5;
 const aspectOf = (image: { width?: number; height?: number }) => ({ aspectRatio: `${ratioOf(image)}` });
+
+// Fotka na snímku prezentace (krok 06): celá a uprostřed pravé části snímku,
+// svisle i vodorovně (styles .slideImageSlot). Pravá část má poměr stran
+// ~0,84 (40 % šířky snímku 16 : 9 bez okrajů) — širší fotka se do ní vejde
+// šířkou, užší výškou. Dřív stála nahoře vpravo a široká byla jen proužek.
+const SLIDE_IMAGE_AREA = 0.84;
+const slideImageStyle = (image: { width?: number; height?: number }) => {
+  const ratio = ratioOf(image);
+  return { aspectRatio: `${ratio}`, ...(ratio >= SLIDE_IMAGE_AREA ? { width: "40%" } : { height: "calc(100% - 4.4vh)" }) };
+};
 
 // Prvky Procesu jsou v registru jen pro umělou myš (najde je a „napíše") —
 // kurzor návštěvníka se na ně nerozkládá.
@@ -1865,7 +1875,7 @@ export default function Process({
                     still={still}
                     className={styles.slideImageSlot}
                     bodyClassName={styles.slideImage}
-                    style={aspectOf(slideImage)}
+                    style={slideImageStyle(slideImage)}
                     {...editSix.set("images")}
                   >
                     <Image

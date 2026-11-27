@@ -20,7 +20,7 @@
 // podle jména se najde tentýž banner v public/assets/banners. Pixely se čtou
 // z místního souboru (stejný původ — canvas se nezamkne).
 
-import { loadLayers } from "@/motion/intro/layered";
+import { bannerName, loadLayers } from "@/motion/intro/layered";
 import { mediaUrl } from "@/lib/media";
 import { groupLayers, type GroupKind, type LayerGroup } from "./banner-groups";
 
@@ -30,11 +30,9 @@ export type GroupedSplit = { width: number; height: number; layers: GroupedLayer
 
 /** Místní banner k adrese (i k obrázku nahranému do CMS), nebo null. */
 export function localBanner(src: string) {
-  const local = src.match(/^\/assets\/banners\/([\w.-]+)\.(?:png|jpe?g|webp)$/i);
-  if (local) return `/assets/banners/${local[1]}.png`;
-  // Nahraný soubor: …/<hash>-gummylife-banner1.png → gummylife_banner1
-  const uploaded = src.match(/([a-z]+)[-_]banner[-_]?(\d+)\.(?:png|jpe?g|webp)(?:\?.*)?$/i);
-  return uploaded ? `/assets/banners/${uploaded[1].toLowerCase()}_banner${uploaded[2]}.png` : null;
+  // Nahraný soubor: …/<hash>-gummylife-banner1.webp → gummylife_banner1
+  const name = bannerName(src);
+  return name ? `/assets/banners/${name}.png` : null;
 }
 
 const loadImage = (src: string) =>

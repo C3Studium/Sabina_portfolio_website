@@ -69,11 +69,41 @@ const MAX_LAYERS = 32;
 
 /* ---------- Data ---------- */
 
-/** Kde leží rozklad k banneru (jen bannery z public/assets/banners). */
-export const layersFor = (src: string) => {
-  const match = src.match(/^\/assets\/banners\/([\w.-]+)\.(?:png|jpe?g|webp)$/i);
-  return match ? { json: `/assets/banners/layers/${match[1]}.json`, map: `/assets/banners/layers/${match[1]}.png` } : null;
+// Nahrané originály, které se jmenují jinak než banner, ke kterému patří
+// rozklad (export z Figmy „Přidat nadpis 3"). Klíč je otisk souboru
+// v úložišti Studia (stejný obsah = stejný otisk), ne jméno — obecné jméno
+// by mohlo potkat jiný obrázek. Kompozice musí sedět (stejný poměr stran):
+// mapa vrstev je v podílech obrázku, kreslí se z obrázku, který přijde.
+const UPLOAD_ALIASES: Record<string, string> = {
+  // „Ručně vyráběná čokoláda" 724 × 904 — originál malého jordan_banner3 (205 × 256).
+  "9cf42cb8be510e41": "jordan_banner3",
+  // „Dubajská čokoláda z Děčína" 723 × 904 — originál jordan_banner2.
+  f4c25fe5d0fe3424: "jordan_banner2",
 };
+
+/**
+ * Kde leží rozklad k banneru — k místnímu (public/assets/banners) i k obrázku
+ * ze Studia. Dřív jen místní cesta: obrázky kroků Procesu jsou z CMS
+ * (…/<otisk>-jordan-banner3.png), rozklad se nenašel a vrstvená stavba
+ * tiše spadla na prosté prolnutí.
+ */
+export const layersFor = (src: string) => {
+  const hash = src.split("?")[0].split("/").pop()?.match(/^([0-9a-f]{16})-/)?.[1];
+  const name = (hash && UPLOAD_ALIASES[hash]) || bannerName(src);
+  return name ? { json: `/assets/banners/layers/${name}.json`, map: `/assets/banners/layers/${name}.png` } : null;
+};
+
+/**
+ * Jméno místního banneru k adrese — místní cesta i obrázek nahraný do CMS
+ * (…/<otisk>-gummylife-banner1.webp → „gummylife_banner1"), jinak null.
+ * Jediná implementace: lib/banner-layers `localBanner` ji jen obalí cestou.
+ */
+export function bannerName(src: string) {
+  const local = src.match(/^\/assets\/banners\/([\w.-]+)\.(?:png|jpe?g|webp)$/i);
+  if (local) return local[1];
+  const uploaded = src.match(/([a-z]+)[-_]banner[-_]?(\d+)\.(?:png|jpe?g|webp)(?:\?.*)?$/i);
+  return uploaded ? `${uploaded[1].toLowerCase()}_banner${uploaded[2]}` : null;
+}
 
 const loadImage = (url: string) =>
   new Promise<HTMLImageElement>((resolve, reject) => {

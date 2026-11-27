@@ -1206,11 +1206,14 @@ $line: rgba(var(--charcoal-rgb), 0.16);
 // Fotka na snímku: šířka 34 % snímku, výška z poměru obrázku ze Studia
 // (inline aspect-ratio; dřív natažená od horního k dolnímu okraji snímku).
 // Vyšší než snímek být nesmí — strop a ořez (object-fit: cover v .slideImage).
+// Fotka uprostřed pravé části snímku (vlevo nadpis a graf) — svisle
+// i vodorovně, celá; šířku / výšku podle tvaru volí slideImageStyle (index.tsx).
 .slideImageSlot {
   position: absolute;
-  top: 2.2vh;
-  right: 1.4vw;
-  width: 34%;
+  top: 50%;
+  left: 75%;
+  translate: -50% -50%;
+  max-width: 40%;
   max-height: calc(100% - 4.4vh);
   aspect-ratio: 4 / 5;
 }
